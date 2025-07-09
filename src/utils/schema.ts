@@ -26,8 +26,8 @@ export const restaurantSchema = z.object({
   logo:fileListSchema,
   rating: z
     .number()
-    .min(0, "Rating must be between 0 and 10")
-    .max(10, "Rating must be between 0 and 10"),
+    .min(0, "Rating must be between 0 and 5")
+    .max(5, "Rating must be between 0 and 5"),
   deliveryTime: z
     .string()
     .min(1, "Delivery time is required")
@@ -71,5 +71,27 @@ export const menuItemSchema = z.object({
     .max(36, "Restaurant ID is too long"),
 });
 
+export const featuredItemSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Featured name is required")
+    .max(255, "Name is too long"),
+  price: z.string().min(1, "Price is required").max(50, "Price is too long"),
+  image: fileListSchema,
+  rating: z
+    .number()
+    .min(0, "Rating must be between 0 and 5")
+    .max(5, "Rating must be between 0 and 5"),
+  restaurantId: z
+    .string()
+    .min(1, "Restaurant is required")
+    .max(36, "Restaurant ID is too long"),
+  description: z
+    .string()
+    .min(1, "Description is required")
+    .max(1000, "Description is too long"),
+});
+
+export type FeaturedItemFormData = z.infer<typeof featuredItemSchema>;
 export type RestaurantFormData = z.infer<typeof restaurantSchema>;
 export type MenuItemFormData = z.infer<typeof menuItemSchema>;

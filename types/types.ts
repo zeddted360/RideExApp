@@ -1,30 +1,18 @@
 import { Models } from "appwrite";
 
-
-export interface IfeaturedRestaurant {
-  id: string;
-  name: string;
-  logo: string; 
-  rating: number;
-  deliveryTime: string;
-  category: string;
-  distance: string;
-  vegetables: { id: number; name: string; description: string; price: string; originalPrice: string; image: string; rating: number; cookTime: string }[];
-  nonVegetables: { id: number; name: string; description: string; price: string; originalPrice: string; image: string; rating: number; cookTime: string }[];
-}
-
+//Post menu items
 export interface IMenuItem {
-  id: string;
   name: string;
   description: string;
   price: string;
   originalPrice: string;
   image: string;
-  category: string;
+  category: "veg" | "non-veg";
   rating: number;
   cookTime: string;
 }
 
+//fetched menu items
 export interface IMenuItemFetched extends Models.Document {
   name: string;
   description: string;
@@ -36,19 +24,18 @@ export interface IMenuItemFetched extends Models.Document {
   cookTime: string;
 }
 
-
-export interface Restaurant {
-  id: string;
+// post Restaurant
+export interface IRestaurant {
   name: string;
-  logo: string; 
+  logo: FileList; 
   rating: number;
   deliveryTime: string;
   category: string;
   distance: string;
+  
 }
 // fetched IRestaurant
 export interface IRestaurantFetched extends Models.Document {
-  id: string;
   name: string;
   logo: string; 
   rating: number;
@@ -57,30 +44,45 @@ export interface IRestaurantFetched extends Models.Document {
   distance: string;
 }
 
-
-export interface MenuItem {
-  id: string;
-  name: string;
-  description: string;
-  price: string;
-  originalPrice: string;
-  image: string; // File ID
-  rating: number;
-  cookTime: string;
-  category: "veg" | "non-veg";
-  restaurantId: string;
-}
-
 export interface IFeaturedItem {
-  id: string;
   name: string;
   price: string;
-    image: string;
-    description: string;
+  image: string;
   rating: number;
   restaurant: string;
+  description: string;
+  category: string;
 }
 
+export interface IFeaturedItemFetched extends Models.Document {
+  name: string;
+  price: string;
+  image: string;
+  description: string;
+  rating: number;
+  restaurant: string;
+};
+
+// inital cart item
+export interface ICartItem {
+  userId: string;
+  itemId: string;
+  name: string;
+  image: string;
+  price: string;
+  restaurantId: string;
+  quantity: number;
+  category: string;
+}
+
+//  cart item order processed
+export interface ICartItemOrder extends ICartItem {
+  specialInstructions?: string;
+  totalPrice: number;
+  status: "pending" | "processing" | "success";
+}
+
+ export interface ICartItemFetched extends ICartItemOrder, Models.Document {}
 
 export interface IPromoOffer {
   id: number;

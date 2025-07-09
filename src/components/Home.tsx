@@ -4,8 +4,8 @@ import FeaturedItem from "@/components/FeaturedItem";
 import Hero from "@/components/Hero";
 import Menu from "@/components/Menu";
 import { useState } from "react";
-import { featuredRestaurants } from "../../data/featuredRestaurants";
 import PromotionalBanner from "./PromotionalBanner";
+import AddToCartModal from "./ui/AddToCartModal";
 
 export default function HomeClient() {
   const [favorites, setFavorites] = useState(new Set());
@@ -25,17 +25,14 @@ export default function HomeClient() {
  
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6">
-      <Hero setIsMobile={setIsMobile} isMobile={isMobile} />
-      <Menu
-        favorites={favorites}
-        featuredRestaurants={featuredRestaurants}
-      />
-      <FeaturedItem
-        toggleFavorite={toggleFavorite}
-        favorites={favorites}
-          />
-          <PromotionalBanner/>
-    </div>
+    <>
+      <AddToCartModal/>
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <Hero setIsMobile={setIsMobile} isMobile={isMobile} />
+        <Menu />
+        <FeaturedItem toggleFavorite={toggleFavorite} favorites={favorites} />
+        <PromotionalBanner />
+      </div>
+    </>
   );
 }

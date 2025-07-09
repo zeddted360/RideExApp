@@ -1,110 +1,182 @@
+"use client";
 import { ChevronLeft, ChevronRight, Star } from "lucide-react";
-import React, { useRef } from "react";
+import React, { useEffect, useRef, Suspense } from "react";
 import Image from "next/image";
-import { IfeaturedRestaurant } from "../../types/types";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/state/store";
+import { listAsyncRestaurants } from "@/state/restaurantSlice";
+import { fileUrl, validateEnv } from "@/utils/appwrite";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { IRestaurantFetched } from "../../types/types";
+import { useRouter } from "next/navigation";
+import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 
-interface IMenuProps {
-  featuredRestaurants: IfeaturedRestaurant[];
-  favorites: any;
-}
+const RestaurantCardSkeleton = () => (
+  <div className="bg-white rounded-xl shadow-md overflow-hidden flex-shrink-0 w-[200px] sm:w-auto animate-pulse">
+    <Skeleton className="w-full h-36 rounded-t-xl" />
+    <div className="p-4 space-y-3">
+      <Skeleton className="h-5 w-3/4" />
+      <Skeleton className="h-4 w-1/2" />
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-4 w-12" />
+        <Skeleton className="h-4 w-12" />
+      </div>
+    </div>
+  </div>
+);
 
-const Menu = ({ featuredRestaurants }: IMenuProps) => {
+const RestaurantCard = ({
+  restaurant,
+  router,
+}: {
+  restaurant: IRestaurantFetched;
+  router: AppRouterInstance;
+}) => (
+  <div
+    onClick={() => router.push(`/menu`)}
+    className="group bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden flex-shrink-0 w-[200px] sm:w-auto hover:scale-105"
+  >
+    <div className="relative">
+      <div className="w-full h-36 overflow-hidden rounded-t-xl">
+        <Image
+          src={fileUrl(validateEnv().restaurantBucketId, restaurant.logo)}
+          alt={restaurant.name}
+          width={200}
+          height={150}
+          quality={100}
+          priority
+          className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-110"
+          sizes="(max-width: 768px) 50vw, 25vw"
+        />
+      </div>
+      <div className="absolute bottom-2 left-2 bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 transition-opacity duration-200 group-hover:opacity-90">
+        <Star className="w-3 h-3 fill-current" />
+        {restaurant.rating}
+      </div>
+    </div>
+    <div className="p-4">
+      <h3 className="text-base font-bold text-gray-900 mb-2 line-clamp-1">
+        {restaurant.name}
+      </h3>
+      <div className="text-xs text-gray-600 space-y-2">
+        <p className="line-clamp-1 font-medium">{restaurant.category}</p>
+        <div className="flex items-center gap-4 text-gray-500">
+          <span>{restaurant.deliveryTime}</span>
+          <span>{restaurant.distance}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const Menu = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  // Function to scroll left
+  const dispatch = useDispatch<AppDispatch>();
+  const { error, loading, restaurants } = useSelector(
+    (state: RootState) => state.restaurant
+  );
+  const router = useRouter();
+  // Scroll functions
   const scrollLeft = () => {
     if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: -200, behavior: "smooth" });
+      scrollRef.current.scrollBy({ left: -300, behavior: "smooth" });
     }
   };
 
-  // Function to scroll right
   const scrollRight = () => {
     if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: 200, behavior: "smooth" });
+      scrollRef.current.scrollBy({ left: 300, behavior: "smooth" });
     }
   };
 
+  useEffect(() => {
+    if (loading === "idle") {
+      dispatch(listAsyncRestaurants());
+    }
+  }, [dispatch, loading]);
+
   return (
-    <div>
-      {/* Our Menu Section */}
-      <section className="py-12">
+    <div className="bg-gray-50">
+      <section className="py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-2xl lg:text-3xl font-bold text-gray-900">
+          <div className="flex justify-between items-center mb-10">
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900">
               Our Menu
             </h2>
-            <button className="bg-orange-100 text-orange-600 px-4 py-1.5 rounded-full font-semibold hover:bg-orange-200 transition-colors duration-200 text-sm">
+            <Button
+              variant="outline"
+              className="bg-orange-100 text-orange-600 hover:bg-orange-200 hover:text-orange-700 transition-colors duration-200"
+            >
               View All
-            </button>
+            </Button>
           </div>
 
-          {/* Responsive container with navigation arrows */}
           <div className="relative">
-            {/* Left Arrow */}
-            <button
+            {/* Navigation Arrows */}
+            <Button
               onClick={scrollLeft}
-              className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-md hover:bg-white transition-colors duration-200 sm:hidden z-10"
+              variant="outline"
+              size="icon"
+              className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-sm shadow-md hover:bg-white z-10 hidden sm:flex"
             >
-              <ChevronLeft className="w-5 h-5 text-gray-600" />
-            </button>
-
-            {/* Right Arrow */}
-            <button
+              <ChevronLeft className="w-6 h-6 text-gray-600" />
+            </Button>
+            <Button
               onClick={scrollRight}
-              className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur-sm p-2 rounded-full shadow-md hover:bg-white transition-colors duration-200 sm:hidden z-10"
+              variant="outline"
+              size="icon"
+              className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-sm shadow-md hover:bg-white z-10 hidden sm:flex"
             >
-              <ChevronRight className="w-5 h-5 text-gray-600" />
-            </button>
+              <ChevronRight className="w-6 h-6 text-gray-600" />
+            </Button>
 
             {/* Scrollable/grid container */}
-            <div
-              ref={scrollRef}
-              className="flex overflow-x-auto space-x-4 pb-4 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-4 sm:overflow-visible scrollbar-hide"
-            >
-              {featuredRestaurants.map((restaurant) => (
-                <div
-                  key={restaurant.id}
-                  className="group bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden flex-shrink-0 w-[200px] sm:w-auto"
-                >
-                  <div className="relative">
-                    <div className="w-full h-36 overflow-hidden rounded-t-xl">
-                      <Image
-                        src={restaurant.image}
-                        alt={restaurant.name}
-                        width={200}
-                        height={150}
-                        quality={100}
-                        priority
-                        className="object-cover w-full h-full"
-                        sizes="(max-width: 768px) 50vw, 25vw"
-                      />
-                    </div>
-                    <div className="absolute bottom-2 left-2 bg-orange-500 text-white px-1.5 py-0.5 rounded-full text-xs font-medium flex items-center gap-0.5">
-                      <Star className="w-2.5 h-2.5 fill-current" />
-                      {restaurant.rating}
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <h3 className="text-base font-bold text-gray-900 mb-1 line-clamp-1">
-                      {restaurant.name}
-                    </h3>
-                    <div className="text-xs text-gray-600 mb-3 space-y-1">
-                      <p className="line-clamp-1">{restaurant.category}</p>
-                      <div className="flex items-center gap-3">
-                        <span>{restaurant.deliveryTime}</span>
-                        <span>{restaurant.distance}</span>
-                      </div>
-                    </div>
-                  </div>
+            <Suspense
+              fallback={
+                <div className="flex overflow-x-auto space-x-4 pb-4 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-6 sm:overflow-visible scrollbar-hide">
+                  {[...Array(4)].map((_, index) => (
+                    <RestaurantCardSkeleton key={index} />
+                  ))}
                 </div>
-              ))}
-            </div>
+              }
+            >
+              <div
+                ref={scrollRef}
+                className="flex overflow-x-auto space-x-4 pb-4 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-6 sm:overflow-visible scrollbar-hide snap-x snap-mandatory"
+              >
+                {loading === "idle" || loading === "pending" ? (
+                  [...Array(4)].map((_, index) => (
+                    <RestaurantCardSkeleton key={index} />
+                  ))
+                ) : loading === "failed" ? (
+                  <div className="col-span-full text-center py-12">
+                    <p className="text-red-500 text-lg">
+                      Error loading restaurants: {error}
+                    </p>
+                  </div>
+                ) : restaurants.length > 0 ? (
+                  restaurants.map((restaurant, index) => (
+                    <RestaurantCard
+                      key={`${restaurant.$id}-${index}`}
+                      restaurant={restaurant}
+                      router={router}
+                    />
+                  ))
+                ) : (
+                  <div className="col-span-full text-center py-12">
+                    <p className="text-gray-500 text-lg">
+                      No restaurants available
+                    </p>
+                  </div>
+                )}
+              </div>
+            </Suspense>
           </div>
         </div>
       </section>
 
-      {/* CSS to hide scrollbar */}
+      {/* CSS for smooth scrolling and snap */}
       <style jsx>{`
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
@@ -112,6 +184,12 @@ const Menu = ({ featuredRestaurants }: IMenuProps) => {
         .scrollbar-hide {
           -ms-overflow-style: none;
           scrollbar-width: none;
+        }
+        .snap-x {
+          scroll-snap-type: x mandatory;
+        }
+        .snap-mandatory > div {
+          scroll-snap-align: start;
         }
       `}</style>
     </div>

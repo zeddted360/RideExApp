@@ -39,16 +39,12 @@ export default function Header() {
   }, []);
 
   const navItems = [
-    { title: t("header.home"), path: "/" },
-    { title: t("header.menu"), path: "/menu" },
-    { title: t("header.offers"), path: "/offers" },
-    { title: t("header.contact"), path: "/contact" },
-    { title: t("header.add-item"), path: "/add-item" },
+    { title: "home", path: "/" },
+    { title: "menu", path: "/menu" },
+    { title: "offers", path: "/offers" },
+    { title: "contact", path: "/contact" },
+    { title: "add-item", path: "/add-item" },
   ];
-
-  const changeLanguage = (lng: string) => {
-    i18n.changeLanguage(lng);
-  };
 
   return (
     <header
@@ -157,18 +153,12 @@ export default function Header() {
                   }`}
                 >
                   <Globe className="h-5 w-5" />
-                  <span className="sr-only">
-                    {t("header.language.english")}
-                  </span>
+                  <span className="sr-only">english</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => changeLanguage("en")}>
-                  {t("header.language.english")}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => changeLanguage("ig")}>
-                  {t("header.language.igbo")}
-                </DropdownMenuItem>
+                <DropdownMenuItem>english</DropdownMenuItem>
+                <DropdownMenuItem>igbo</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -193,13 +183,13 @@ export default function Header() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => setTheme("light")}>
-                  {t("header.light", { defaultValue: "Light" })}
+                  Light
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setTheme("dark")}>
-                  {t("header.dark", { defaultValue: "Dark" })}
+                  dark
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setTheme("system")}>
-                  {t("header.system", { defaultValue: "System" })}
+                  system
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -262,7 +252,7 @@ export default function Header() {
             <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between px-4 py-3">
                 <span className="text-gray-700 dark:text-gray-200 font-medium">
-                  {t("header.notifications")}
+                  notifications
                 </span>
                 <div className="flex items-center space-x-2">
                   <div className="w-2 h-2 bg-red-500 rounded-full"></div>
@@ -273,7 +263,7 @@ export default function Header() {
               </div>
               <div className="flex items-center justify-between px-4 py-3">
                 <span className="text-gray-700 dark:text-gray-200 font-medium">
-                  {t("header.cartItems")}
+                  cartItems
                 </span>
                 <span className="bg-orange-500 text-white px-2 py-1 rounded-full text-sm font-bold">
                   0 {/* Placeholder for order count */}

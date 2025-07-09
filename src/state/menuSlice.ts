@@ -1,7 +1,7 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { databases, storage, validateEnv } from "@/utils/appwrite";
-import { ID } from "appwrite";
-import {  MenuItemFormData } from "@/utils/schema";
+import { ID, Query } from "appwrite";
+import { MenuItemFormData } from "@/utils/schema";
 import { IMenuItemFetched } from "../../types/types";
 import toast from "react-hot-toast";
 
@@ -17,10 +17,7 @@ const initialState: IMenuItemProp = {
   error: null,
 };
 
-const formatErrorMessage = (error: unknown): string => {
-  if (error instanceof Error) return error.message;
-  return "An unexpected error occurred";
-};
+// fuction to create a menu
 
 export const createAsyncMenuItem = createAsyncThunk<
   IMenuItemFetched,
@@ -28,8 +25,7 @@ export const createAsyncMenuItem = createAsyncThunk<
   { rejectValue: string }
 >("menuItem/createMenuItem", async (data, { rejectWithValue }) => {
   try {
-    const { databaseId, menuBucketId, menuItemsCollectionId } =
-      validateEnv();
+    const { databaseId, menuBucketId, menuItemsCollectionId } = validateEnv();
     if (!data.image?.[0]) throw new Error("Menu item image is required");
 
     const imageFile = await storage.createFile(
@@ -57,21 +53,50 @@ export const createAsyncMenuItem = createAsyncThunk<
 
     return createdDocument as IMenuItemFetched;
   } catch (error) {
-    const errorMessage = formatErrorMessage(error);
-    toast.error(`Failed to create menu item: ${errorMessage}`);
-    return rejectWithValue(errorMessage);
+    toast.error(
+      `Failed to create menu item: ${
+        error instanceof Error ? error.message : "Failed to load resturant"
+      }`
+    );
+    return rejectWithValue(
+      error instanceof Error ? error.message : "Failed to load resturant"
+    );
+  }
+});
+
+// function to list menus
+
+export const listAsyncMenusItem = createAsyncThunk<
+  IMenuItemFetched[],
+  void,
+  { rejectValue: string }
+>("menuItem/listMenuItem", async (_, { rejectWithValue }) => {
+  try {
+    const { databaseId, menuItemsCollectionId } = validateEnv();
+
+    // Fetch all restaurant documents
+    const response = await databases.listDocuments(
+      databaseId,
+      menuItemsCollectionId,
+      [Query.orderDesc("createdAt")]
+    );
+    return response.documents as IMenuItemFetched[];
+  } catch (error) {
+    toast.error(
+      `Failed to fetch restaurants: ${
+        error instanceof Error ? error.message : "Failed to load resturant"
+      }`
+    );
+    return rejectWithValue(
+      error instanceof Error ? error.message : "Failed to load resturant"
+    );
   }
 });
 
 export const menuSlice = createSlice({
   name: "menuItem",
   initialState,
-  reducers: {
-    resetError: (state) => {
-      state.error = null;
-    },
-    resetMenuItemState: () => initialState,
-  },
+  reducers: {},
   extraReducers: (builder) => {
     builder
       .addCase(createAsyncMenuItem.pending, (state) => {
@@ -92,17 +117,29 @@ export const menuSlice = createSlice({
           state.loading = "failed";
           state.error = action.payload || "Failed to create menu item";
         }
+      )
+      // handle list menuItems Case
+      .addCase(listAsyncMenusItem.pending, (state) => {
+        state.loading = "pending";
+        state.error = null;
+      })
+      .addCase(
+        listAsyncMenusItem.fulfilled,
+        (state, action: PayloadAction<IMenuItemFetched[]>) => {
+          state.loading = "succeeded";
+          state.menuItems = action.payload;
+          state.error = null;
+        }
+      )
+      .addCase(
+        listAsyncMenusItem.rejected,
+        (state, action: PayloadAction<string | undefined>) => {
+          state.loading = "failed";
+          state.error = action.payload || "Failed to fetch menu items";
+        }
       );
   },
 });
 
-export const { resetError, resetMenuItemState } = menuSlice.actions;
-
-export const selectMenuItems = (state: { menuItem: IMenuItemProp }) =>
-  state.menuItem.menuItems;
-export const selectMenuItemLoading = (state: { menuItem: IMenuItemProp }) =>
-  state.menuItem.loading;
-export const selectMenuItemError = (state: { menuItem: IMenuItemProp }) =>
-  state.menuItem.error;
 
 export default menuSlice.reducer;

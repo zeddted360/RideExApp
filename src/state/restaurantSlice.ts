@@ -1,8 +1,8 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { IRestaurantFetched, Restaurant } from "../../types/types";
 import { databases, storage, validateEnv } from "@/utils/appwrite";
 import { ID, Query } from "appwrite";
 import toast from "react-hot-toast";
+import { IRestaurant, IRestaurantFetched } from "../../types/types";
 
 interface IResProp {
   restaurants: IRestaurantFetched[];
@@ -10,14 +10,7 @@ interface IResProp {
   error: string | null;
 }
 
-interface InputObject {
-  name: string;
-  rating: number;
-  deliveryTime: string;
-  category: string;
-  distance: string;
-  logo: FileList;
-}
+
 
 const initialState: IResProp = {
   restaurants: [],
@@ -25,18 +18,11 @@ const initialState: IResProp = {
   error: null,
 };
 
-// Helper function to format error messages
-const formatErrorMessage = (error: unknown): string => {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return "An unexpected error occurred";
-};
 
 // Async thunk for creating restaurant
 export const createAsyncRestaurant = createAsyncThunk<
   IRestaurantFetched,
-  InputObject,
+  IRestaurant,
   { rejectValue: string }
 >("restaurant/createRestaurant", async (data, { rejectWithValue }) => {
   try {
@@ -74,9 +60,14 @@ export const createAsyncRestaurant = createAsyncThunk<
     toast.success("Restaurant created successfully!");
     return createdDocument as IRestaurantFetched;
   } catch (error) {
-    const errorMessage = formatErrorMessage(error);
-    toast.error(`Failed to create restaurant: ${errorMessage}`);
-    return rejectWithValue(errorMessage);
+    toast.error(
+      `Failed to create restaurant: ${
+        error instanceof Error ? error.message : "Failed to load resturant"
+      }`
+    );
+    return rejectWithValue(
+      error instanceof Error ? error.message : "Failed to load resturant"
+    );
   }
 });
 
@@ -93,13 +84,14 @@ export const listAsyncRestaurants = createAsyncThunk<
     const response = await databases.listDocuments(
       databaseId,
       restaurantsCollectionId,
-      [Query.orderDesc("createdAt")] // Optional: Sort by creation date
+      [Query.orderDesc("createdAt")] 
     );
     return response.documents as IRestaurantFetched[];
   } catch (error) {
-    const errorMessage = formatErrorMessage(error);
-    toast.error(`Failed to fetch restaurants: ${errorMessage}`);
-    return rejectWithValue(errorMessage);
+    toast.error(`Failed to fetch restaurants: ${error instanceof Error ? error.message : "Failed to load resturant"}`);
+    return rejectWithValue(
+      error instanceof Error ? error.message : "Failed to load resturant"
+    );
   }
 });
 
@@ -107,14 +99,7 @@ export const listAsyncRestaurants = createAsyncThunk<
 export const restaurantSlice = createSlice({
   name: "restaurant",
   initialState,
-  reducers: {
-    // Reset error state
-    resetError: (state) => {
-      state.error = null;
-    },
-    // Reset entire state
-    resetRestaurantState: () => initialState,
-  },
+  reducers: {},
   extraReducers: (builder) => {
     // Handle createAsyncRestaurant
     builder
@@ -159,16 +144,5 @@ export const restaurantSlice = createSlice({
       );
   },
 });
-
-// Export actions
-export const { resetError, resetRestaurantState } = restaurantSlice.actions;
-
-// Selectors
-export const selectRestaurants = (state: { restaurant: IResProp }) =>
-  state.restaurant.restaurants;
-export const selectRestaurantLoading = (state: { restaurant: IResProp }) =>
-  state.restaurant.loading;
-export const selectRestaurantError = (state: { restaurant: IResProp }) =>
-  state.restaurant.error;
 
 export default restaurantSlice.reducer;

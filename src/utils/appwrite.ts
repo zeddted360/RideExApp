@@ -10,6 +10,7 @@ interface EnvConfig {
   menuItemsCollectionId: string;
   restaurantBucketId: string;
   menuBucketId: string;
+  orderId: string;
 }
 
 // Validate environment variables
@@ -24,6 +25,7 @@ export function validateEnv(): EnvConfig {
       process.env.NEXT_PUBLIC_APPWRITE_FOODIEHUB_MENU_ITEMS_COLLECTION_ID,
     restaurantBucketId: process.env.NEXT_PUBLIC_APPWRITE_RESTAURANT_BUCKET_ID,
     menuBucketId: process.env.NEXT_PUBLIC_APPWRITE_MENU_BUCKET_ID,
+    orderId: process.env.NEXT_PUBLIC_APPWRITE_ORDER_ID,
   };
 
   // Check for undefined environment variables
@@ -46,15 +48,14 @@ export function validateEnv(): EnvConfig {
     menuItemsCollectionId: requiredEnvVars.menuItemsCollectionId!,
     restaurantBucketId: requiredEnvVars.restaurantBucketId!,
     menuBucketId: requiredEnvVars.menuBucketId!,
+    orderId: requiredEnvVars.orderId!,
   };
 }
 
 // Initialize Appwrite client with validated environment variables
 const env = validateEnv();
 
-const client = new Client()
-  .setEndpoint(env.endpoint)
-  .setProject(env.projectId);
+const client = new Client().setEndpoint(env.endpoint).setProject(env.projectId);
 
 const databases = new Databases(client);
 const storage = new Storage(client);
@@ -67,6 +68,12 @@ export const config = {
   menuItemsCollectionId: env.menuItemsCollectionId,
   restaurantBucketId: env.restaurantBucketId,
   menuBucketId: env.menuBucketId,
+  orderId: env.orderId,
 };
 
-export { databases, storage, account };
+const fileUrl = (bucketId: string, fileId: string) =>
+  `https://fra.cloud.appwrite.io/v1/storage/buckets/${bucketId}/files/${fileId}/view?project=${
+    validateEnv().projectId
+  }&mode=admin`;
+
+export { databases, storage, account, fileUrl };

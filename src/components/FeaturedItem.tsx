@@ -9,6 +9,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import { featuredItems } from "../../data/featuredItems";
 import { IFeaturedItem } from "../../types/types";
+import { useShowCart } from "@/context/showCart";
 
 interface IFeaturedItemProps {
   toggleFavorite: (id: string) => void;
@@ -38,6 +39,8 @@ const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
       setCurrentPage(currentPage - 1);
     }
   };
+
+  const { setIsOpen, setItem } = useShowCart();
 
   return (
     <div>
@@ -81,9 +84,9 @@ const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
             </button>
 
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {displayedItems.map((item: IFeaturedItem) => (
+              {displayedItems.map((item: IFeaturedItem, index) => (
                 <div
-                  key={item.id}
+                  key={index}
                   className="group bg-gradient-to-br from-orange-50 to-red-50 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
                 >
                   <div className="relative">
@@ -98,12 +101,12 @@ const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
                       />
                     </div>
                     <button
-                      onClick={() => toggleFavorite(`item-${item.id}`)}
+                      // onClick={() => toggleFavorite(`item-${item.id}`)}
                       className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm p-1.5 rounded-full hover:bg-white transition-colors duration-200"
                     >
                       <Heart
                         className={`w-3.5 h-3.5 ${
-                          favorites.has(`item-${item.id}`)
+                          favorites.has(`item-${index}`)
                             ? "fill-red-500 text-red-500"
                             : "text-gray-600"
                         }`}
@@ -132,6 +135,19 @@ const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
                         {item.price}
                       </span>
                       <button
+                        onClick={() => {
+                          setItem({
+                            userId: "zedd",
+                            itemId: item.rating.toString(),
+                            name: item.name,
+                            image: item.image,
+                            price: item.price,
+                            restaurantId: item.restaurant,
+                            quantity: 1,
+                            category: item.category,
+                          });
+                          setIsOpen(true);
+                        }}
                         aria-label={`Add ${item.name} to cart`}
                         className="flex items-center bg-gradient-to-r from-orange-500 to-orange-600 text-white px-3 py-1.5 rounded-full font-semibold text-xs hover:from-orange-600 hover:to-orange-700 transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-opacity-50"
                       >
