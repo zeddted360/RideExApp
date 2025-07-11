@@ -1,5 +1,19 @@
 import { Models } from "appwrite";
 
+
+export interface IUser {
+  userId: string;
+  username: string;
+  email: string;
+  role: "admin" | "user";
+}
+
+export interface AuthState {
+  user: IUser | null;
+  loading: "idle" | "pending" | "succeeded" | "failed";
+  error: string | null;
+}
+
 //Post menu items
 export interface IMenuItem {
   name: string;
@@ -27,17 +41,16 @@ export interface IMenuItemFetched extends Models.Document {
 // post Restaurant
 export interface IRestaurant {
   name: string;
-  logo: FileList; 
+  logo: FileList;
   rating: number;
   deliveryTime: string;
   category: string;
   distance: string;
-  
 }
 // fetched IRestaurant
 export interface IRestaurantFetched extends Models.Document {
   name: string;
-  logo: string; 
+  logo: string;
   rating: number;
   deliveryTime: string;
   category: string;
@@ -54,14 +67,7 @@ export interface IFeaturedItem {
   category: string;
 }
 
-export interface IFeaturedItemFetched extends Models.Document {
-  name: string;
-  price: string;
-  image: string;
-  description: string;
-  rating: number;
-  restaurant: string;
-};
+export interface IFeaturedItemFetched extends IFeaturedItem, Models.Document {}
 
 // inital cart item
 export interface ICartItem {
@@ -73,6 +79,7 @@ export interface ICartItem {
   restaurantId: string;
   quantity: number;
   category: string;
+  source: "menu" | "featured" | "popular";
 }
 
 //  cart item order processed
@@ -82,7 +89,7 @@ export interface ICartItemOrder extends ICartItem {
   status: "pending" | "processing" | "success";
 }
 
- export interface ICartItemFetched extends ICartItemOrder, Models.Document {}
+export interface ICartItemFetched extends ICartItemOrder, Models.Document {}
 
 export interface IPromoOffer {
   id: number;
@@ -108,4 +115,23 @@ export interface IPopularItem {
   cookingTime: string;
   isPopular: boolean;
   discount: string;
+}
+
+// Fetched popular item (from DB)
+export interface IPopularItemFetched extends IPopularItem, Models.Document {}
+
+// Form data for popular item (for react-hook-form)
+export interface PopularItemFormData {
+  name: string;
+  description: string;
+  price: string;
+  originalPrice: string;
+  rating: number;
+  reviewCount: number;
+  image: FileList;
+  category: string;
+  cookingTime: string;
+  isPopular: boolean;
+  discount: string;
+  restaurantId: string;
 }

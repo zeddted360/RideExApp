@@ -14,7 +14,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import RestaurantCardSkeleton from "./restaurantCardSkeleton";
-import MenuItemCardSkeleton from "./MenuItemCardSkeleton"; 
+import MenuItemCardSkeleton from "./MenuItemCardSkeleton";
 import { Alert, AlertDescription, AlertTitle } from "./alert";
 import { Button } from "./button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs";
@@ -23,6 +23,7 @@ import Image from "next/image";
 import { fileUrl, validateEnv } from "@/utils/appwrite";
 import { cn } from "@/lib/utils";
 import { listAsyncMenusItem } from "@/state/menuSlice";
+import { useShowCart } from "@/context/showCart";
 
 const RestaurantList = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -35,6 +36,7 @@ const RestaurantList = () => {
     loading: menuLoading,
     error: menuError,
   } = useSelector((state: RootState) => state.menuItem);
+  const { setIsOpen, setItem } = useShowCart();
 
   // State for view mode (grid or list)
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -104,7 +106,7 @@ const RestaurantList = () => {
               ))}
             </div>
           ) : (
-            <MenuItemCardSkeleton /> 
+            <MenuItemCardSkeleton />
           )}
         </div>
       </div>
@@ -371,6 +373,20 @@ const RestaurantList = () => {
                                       : "bg-red-500 hover:bg-red-600 text-white"
                                   )}
                                   aria-label={`Add ${item.name} to cart`}
+                                  onClick={() => {
+                                    setItem({
+                                      userId: "zedd",
+                                      itemId: item.$id,
+                                      name: item.name,
+                                      image: item.image,
+                                      price: item.price,
+                                      restaurantId: item.restaurantId,
+                                      quantity: 1,
+                                      category: item.category,
+                                      source: "menu",
+                                    });
+                                    setIsOpen(true);
+                                  }}
                                 >
                                   <ShoppingCart className="w-4 h-4 mr-2" />
                                   Add to Cart
@@ -484,6 +500,20 @@ const RestaurantList = () => {
                                   <Button
                                     className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg py-2 transition-all duration-300"
                                     aria-label={`Add ${item.name} to cart`}
+                                    onClick={() => {
+                                      setItem({
+                                        userId: "zedd",
+                                        itemId: item.$id,
+                                        name: item.name,
+                                        image: item.image,
+                                        price: item.price,
+                                        restaurantId: item.restaurantId,
+                                        quantity: 1,
+                                        category: item.category,
+                                        source: "menu",
+                                      });
+                                      setIsOpen(true);
+                                    }}
                                   >
                                     <ShoppingCart className="w-4 h-4 mr-2" />
                                     Add to Cart
@@ -597,6 +627,20 @@ const RestaurantList = () => {
                                   <Button
                                     className="w-full bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg py-2 transition-all duration-300"
                                     aria-label={`Add ${item.name} to cart`}
+                                    onClick={() => {
+                                      setItem({
+                                        userId: "zedd",
+                                        itemId: item.$id,
+                                        name: item.name,
+                                        image: item.image,
+                                        price: item.price,
+                                        restaurantId: item.restaurantId,
+                                        quantity: 1,
+                                        category: item.category,
+                                        source: "menu",
+                                      });
+                                      setIsOpen(true);
+                                    }}
                                   >
                                     <ShoppingCart className="w-4 h-4 mr-2" />
                                     Add to Cart

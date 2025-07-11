@@ -30,6 +30,8 @@ import {
   menuItemSchema,
   RestaurantFormData,
   restaurantSchema,
+  PopularItemFormData,
+  popularItemSchema,
 } from "@/utils/schema";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/state/store";
@@ -37,19 +39,32 @@ import {
   createAsyncRestaurant,
   listAsyncRestaurants,
 } from "@/state/restaurantSlice";
-import toast from "react-hot-toast";
 import { createAsyncMenuItem } from "@/state/menuSlice";
+import toast from "react-hot-toast";
+import {
+  createAsyncFeaturedItem,
+  listAsyncFeaturedItems,
+} from "@/state/featuredSlice";
+import {
+  createAsyncPopularItem,
+  listAsyncPopularItems,
+} from "@/state/popularSlice";
 
 const AddFoodItemForm = () => {
   const [activeTab, setActiveTab] = useState<
-    "restaurant" | "menu-item" | "featured-item"
+    "restaurant" | "menu-item" | "featured-item" | "popular-item"
   >("restaurant");
   const [restaurantLoading, setRestaurantLoading] = useState(false);
   const [menuItemLoading, setMenuItemLoading] = useState(false);
   const [featuredItemLoading, setFeaturedItemLoading] =
     useState<boolean>(false);
+  const [popularItemLoading, setPopularItemLoading] = useState<boolean>(false);
   const dispatch = useDispatch<AppDispatch>();
   const { restaurants } = useSelector((state: RootState) => state.restaurant);
+  const { featuredItems } = useSelector(
+    (state: RootState) => state.featuredItem
+  );
+  const { popularItems } = useSelector((state: RootState) => state.popularItem);
 
   // Restaurant Form
   const restaurantForm = useForm<RestaurantFormData>({
@@ -80,7 +95,7 @@ const AddFoodItemForm = () => {
     mode: "onChange",
   });
 
-  // Featured item form
+  // Featured Item Form
   const featuredItemForm = useForm<FeaturedItemFormData>({
     resolver: zodResolver(featuredItemSchema),
     defaultValues: {
@@ -88,6 +103,27 @@ const AddFoodItemForm = () => {
       description: "",
       price: "",
       rating: 0,
+      restaurantId: "",
+      category: "non-veg",
+    },
+    mode: "onChange",
+  });
+
+  // Popular Item Form
+  const popularItemForm = useForm<PopularItemFormData>({
+    resolver: zodResolver(popularItemSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      price: "",
+      originalPrice: "",
+      rating: 0,
+      reviewCount: 0,
+      image: undefined,
+      category: "",
+      cookingTime: "",
+      isPopular: true,
+      discount: "",
       restaurantId: "",
     },
     mode: "onChange",
@@ -129,22 +165,17 @@ const AddFoodItemForm = () => {
     }
   };
 
-  // Featured form submit
+  // Handle Featured Item Form Submission
   const onFeaturedSubmit = async (data: FeaturedItemFormData) => {
     if (!restaurants.length) {
       toast.error("Please add a restaurant first!");
       return;
     }
     setFeaturedItemLoading(true);
-
     try {
-      // TODO: Implement featured item creation logic
-      console.log("The featured data are:", data);
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
+      await dispatch(createAsyncFeaturedItem(data)).unwrap();
       featuredItemForm.reset();
+      await dispatch(listAsyncFeaturedItems());
       toast.success("Featured item added successfully!");
     } catch (error) {
       toast.error("Failed to add featured item");
@@ -154,12 +185,35 @@ const AddFoodItemForm = () => {
     }
   };
 
-  // Load restaurants on component mount
-  useEffect(() => {
-    async function getRestaurant() {
-      await dispatch(listAsyncRestaurants());
+  // Handle Popular Item Form Submission
+  const onPopularSubmit = async (data: PopularItemFormData) => {
+    if (!restaurants.length) {
+      toast.error("Please add a restaurant first!");
+      return;
     }
-    getRestaurant();
+    setPopularItemLoading(true);
+    try {
+      await dispatch(createAsyncPopularItem(data)).unwrap();
+      popularItemForm.reset();
+      await dispatch(listAsyncPopularItems());
+      toast.success("Popular item added successfully!");
+    } catch (error) {
+      toast.error("Failed to add popular item");
+    } finally {
+      setPopularItemLoading(false);
+    }
+  };
+
+  // Load restaurants, featured items, and popular items on component mount
+  useEffect(() => {
+    async function loadData() {
+      await Promise.all([
+        dispatch(listAsyncRestaurants()),
+        dispatch(listAsyncFeaturedItems()),
+        dispatch(listAsyncPopularItems()),
+      ]);
+    }
+    loadData();
   }, [dispatch]);
 
   return (
@@ -177,11 +231,17 @@ const AddFoodItemForm = () => {
         <Tabs
           value={activeTab}
           onValueChange={(value) =>
-            setActiveTab(value as "restaurant" | "menu-item" | "featured-item")
+            setActiveTab(
+              value as
+                | "restaurant"
+                | "menu-item"
+                | "featured-item"
+                | "popular-item"
+            )
           }
           className="w-full"
         >
-          <TabsList className="grid w-full grid-cols-3 mb-8 bg-white shadow-sm border">
+          <TabsList className="grid w-full grid-cols-4 mb-8 bg-white shadow-sm border">
             <TabsTrigger
               value="restaurant"
               className="flex items-center gap-2 data-[state=active]:bg-orange-50 data-[state=active]:text-orange-700"
@@ -202,6 +262,13 @@ const AddFoodItemForm = () => {
             >
               <Star className="w-4 h-4" />
               Featured Item
+            </TabsTrigger>
+            <TabsTrigger
+              value="popular-item"
+              className="flex items-center gap-2 data-[state=active]:bg-orange-50 data-[state=active]:text-orange-700"
+            >
+              <Star className="w-4 h-4" />
+              Popular Item
             </TabsTrigger>
           </TabsList>
 
@@ -479,7 +546,7 @@ const AddFoodItemForm = () => {
                         id="menu-price"
                         {...menuItemForm.register("price")}
                         className="h-11"
-                        placeholder="₦8,500"
+                        placeholder="8500"
                       />
                       {menuItemForm.formState.errors.price && (
                         <p className="text-sm text-red-500">
@@ -499,7 +566,7 @@ const AddFoodItemForm = () => {
                         id="menu-original-price"
                         {...menuItemForm.register("originalPrice")}
                         className="h-11"
-                        placeholder="₦10,500"
+                        placeholder="10500"
                       />
                       {menuItemForm.formState.errors.originalPrice && (
                         <p className="text-sm text-red-500">
@@ -657,24 +724,59 @@ const AddFoodItemForm = () => {
                   onSubmit={featuredItemForm.handleSubmit(onFeaturedSubmit)}
                   className="space-y-6"
                 >
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="featured-name"
-                      className="text-sm font-medium text-gray-700"
-                    >
-                      Featured Item Name
-                    </Label>
-                    <Input
-                      id="featured-name"
-                      {...featuredItemForm.register("name")}
-                      className="h-11"
-                      placeholder="Enter featured item name"
-                    />
-                    {featuredItemForm.formState.errors.name && (
-                      <p className="text-sm text-red-500">
-                        {featuredItemForm.formState.errors.name.message}
-                      </p>
-                    )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="featured-name"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Featured Item Name
+                      </Label>
+                      <Input
+                        id="featured-name"
+                        {...featuredItemForm.register("name")}
+                        className="h-11"
+                        placeholder="Enter featured item name"
+                      />
+                      {featuredItemForm.formState.errors.name && (
+                        <p className="text-sm text-red-500">
+                          {featuredItemForm.formState.errors.name.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="featured-category"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Category
+                      </Label>
+                      <Select
+                        onValueChange={(value) =>
+                          featuredItemForm.setValue(
+                            "category",
+                            value as "veg" | "non-veg"
+                          )
+                        }
+                        value={featuredItemForm.watch("category")}
+                      >
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="veg">🥬 Vegetarian</SelectItem>
+                          <SelectItem value="non-veg">
+                            🍖 Non-Vegetarian
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {featuredItemForm.formState.errors.category && (
+                        <p className="text-sm text-red-500">
+                          {featuredItemForm.formState.errors.category.message}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   <div className="space-y-2">
@@ -709,7 +811,7 @@ const AddFoodItemForm = () => {
                         id="featured-price"
                         {...featuredItemForm.register("price")}
                         className="h-11"
-                        placeholder="₦8,500"
+                        placeholder="8500"
                       />
                       {featuredItemForm.formState.errors.price && (
                         <p className="text-sm text-red-500">
@@ -821,6 +923,312 @@ const AddFoodItemForm = () => {
                   {!restaurants.length && (
                     <p className="text-sm text-amber-600 text-center bg-amber-50 p-3 rounded-md">
                       Please add a restaurant first before creating featured
+                      items
+                    </p>
+                  )}
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Popular Item Form */}
+          <TabsContent value="popular-item">
+            <Card className="shadow-lg border-0">
+              <CardHeader className="bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-t-lg">
+                <CardTitle className="flex items-center gap-2">
+                  <Star className="w-5 h-5" />
+                  Add a New Popular Item
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-8">
+                <form
+                  onSubmit={popularItemForm.handleSubmit(onPopularSubmit)}
+                  className="space-y-6"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="popular-name"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Popular Item Name
+                      </Label>
+                      <Input
+                        id="popular-name"
+                        {...popularItemForm.register("name")}
+                        className="h-11"
+                        placeholder="Enter popular item name"
+                      />
+                      {popularItemForm.formState.errors.name && (
+                        <p className="text-sm text-red-500">
+                          {popularItemForm.formState.errors.name.message}
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="popular-category"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Category
+                      </Label>
+                      <Select
+                        onValueChange={(value) =>
+                          popularItemForm.setValue(
+                            "category",
+                            value as "veg" | "non-veg"
+                          )
+                        }
+                        value={popularItemForm.watch("category")}
+                      >
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="veg">🥬 Vegetarian</SelectItem>
+                          <SelectItem value="non-veg">
+                            🍖 Non-Vegetarian
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {popularItemForm.formState.errors.category && (
+                        <p className="text-sm text-red-500">
+                          {popularItemForm.formState.errors.category.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="popular-description"
+                      className="text-sm font-medium text-gray-700"
+                    >
+                      Description
+                    </Label>
+                    <Textarea
+                      id="popular-description"
+                      {...popularItemForm.register("description")}
+                      className="min-h-[100px]"
+                      placeholder="Describe the popular item..."
+                    />
+                    {popularItemForm.formState.errors.description && (
+                      <p className="text-sm text-red-500">
+                        {popularItemForm.formState.errors.description.message}
+                      </p>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="popular-price"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Price
+                      </Label>
+                      <Input
+                        id="popular-price"
+                        {...popularItemForm.register("price")}
+                        className="h-11"
+                        placeholder="8500"
+                      />
+                      {popularItemForm.formState.errors.price && (
+                        <p className="text-sm text-red-500">
+                          {popularItemForm.formState.errors.price.message}
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="popular-original-price"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Original Price
+                      </Label>
+                      <Input
+                        id="popular-original-price"
+                        {...popularItemForm.register("originalPrice")}
+                        className="h-11"
+                        placeholder="10500"
+                      />
+                      {popularItemForm.formState.errors.originalPrice && (
+                        <p className="text-sm text-red-500">
+                          {
+                            popularItemForm.formState.errors.originalPrice
+                              .message
+                          }
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="popular-image"
+                      className="text-sm font-medium text-gray-700"
+                    >
+                      Item Image
+                    </Label>
+                    <div className="flex items-center space-x-2">
+                      <ImageIcon className="w-5 h-5 text-gray-400" />
+                      <Input
+                        id="popular-image"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        {...popularItemForm.register("image")}
+                        className="h-11"
+                      />
+                    </div>
+                    {popularItemForm.formState.errors.image && (
+                      <p className="text-sm text-red-500">
+                        {popularItemForm.formState.errors.image.message}
+                      </p>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="popular-rating"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Rating (0-5)
+                      </Label>
+                      <div className="relative">
+                        <Star className="w-5 h-5 text-yellow-400 absolute left-3 top-3" />
+                        <Input
+                          id="popular-rating"
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          max="5"
+                          {...popularItemForm.register("rating", {
+                            valueAsNumber: true,
+                          })}
+                          className="h-11 pl-10"
+                          placeholder="4.5"
+                        />
+                      </div>
+                      {popularItemForm.formState.errors.rating && (
+                        <p className="text-sm text-red-500">
+                          {popularItemForm.formState.errors.rating.message}
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="popular-review-count"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Review Count
+                      </Label>
+                      <Input
+                        id="popular-review-count"
+                        type="number"
+                        min="0"
+                        {...popularItemForm.register("reviewCount", {
+                          valueAsNumber: true,
+                        })}
+                        className="h-11"
+                        placeholder="100"
+                      />
+                      {popularItemForm.formState.errors.reviewCount && (
+                        <p className="text-sm text-red-500">
+                          {popularItemForm.formState.errors.reviewCount.message}
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="popular-cooking-time"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Cooking Time
+                      </Label>
+                      <div className="relative">
+                        <Clock className="w-5 h-5 text-gray-400 absolute left-3 top-3" />
+                        <Input
+                          id="popular-cooking-time"
+                          {...popularItemForm.register("cookingTime")}
+                          className="h-11 pl-10"
+                          placeholder="20-25 mins"
+                        />
+                      </div>
+                      {popularItemForm.formState.errors.cookingTime && (
+                        <p className="text-sm text-red-500">
+                          {popularItemForm.formState.errors.cookingTime.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="popular-discount"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Discount
+                      </Label>
+                      <Input
+                        id="popular-discount"
+                        {...popularItemForm.register("discount")}
+                        className="h-11"
+                        placeholder="10%"
+                      />
+                      {popularItemForm.formState.errors.discount && (
+                        <p className="text-sm text-red-500">
+                          {popularItemForm.formState.errors.discount.message}
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="popular-restaurant"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Restaurant
+                      </Label>
+                      <Select
+                        onValueChange={(value) =>
+                          popularItemForm.setValue("restaurantId", value)
+                        }
+                      >
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Select restaurant" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {restaurants.map((restaurant) => (
+                            <SelectItem
+                              key={restaurant.$id}
+                              value={restaurant.$id}
+                            >
+                              {restaurant.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {popularItemForm.formState.errors.restaurantId && (
+                        <p className="text-sm text-red-500">
+                          {
+                            popularItemForm.formState.errors.restaurantId
+                              .message
+                          }
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={popularItemLoading || !restaurants.length}
+                    className="w-full h-12 bg-orange-600 hover:bg-orange-700 text-white font-medium transition-colors"
+                  >
+                    {popularItemLoading ? (
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    ) : (
+                      <Star className="mr-2 h-5 w-5" />
+                    )}
+                    Add Popular Item
+                  </Button>
+                  {!restaurants.length && (
+                    <p className="text-sm text-amber-600 text-center bg-amber-50 p-3 rounded-md">
+                      Please add a restaurant first before creating popular
                       items
                     </p>
                   )}

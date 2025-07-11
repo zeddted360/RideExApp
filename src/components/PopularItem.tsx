@@ -10,34 +10,34 @@ import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/state/store";
-import { IFeaturedItemFetched } from "../../types/types";
+import { IPopularItemFetched } from "../../types/types";
 import { useShowCart } from "@/context/showCart";
 import { fileUrl, validateEnv } from "@/utils/appwrite";
 import toast from "react-hot-toast";
-import { listAsyncFeaturedItems } from "@/state/featuredSlice";
+import { listAsyncPopularItems } from "@/state/popularSlice";
 
-interface IFeaturedItemProps {
+interface IPopularItemProps {
   toggleFavorite: (id: string) => void;
   favorites: Set<string>;
 }
 
-const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
+const PopularItem = ({ toggleFavorite, favorites }: IPopularItemProps) => {
   const [currentPage, setCurrentPage] = useState(0);
   const itemsPerPage = 8;
   const dispatch = useDispatch<AppDispatch>();
-  const { featuredItems, loading, error } = useSelector(
-    (state: RootState) => state.featuredItem
+  const { popularItems, loading, error } = useSelector(
+    (state: RootState) => state.popularItem
   );
   const { setIsOpen, setItem } = useShowCart();
 
-  // Fetch featured items on mount
+  // Fetch popular items on mount
   useEffect(() => {
     if (loading === "idle") {
-      dispatch(listAsyncFeaturedItems())
+      dispatch(listAsyncPopularItems())
         .unwrap()
         .catch((err) => {
           toast.error(
-            `Failed to fetch featured items: ${
+            `Failed to fetch popular items: ${
               err instanceof Error ? err.message : "Unknown error"
             }`
           );
@@ -47,14 +47,14 @@ const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
 
   // Calculate the items to display based on the current page
   const startIndex = currentPage * itemsPerPage;
-  const displayedItems = featuredItems.slice(
+  const displayedItems = popularItems.slice(
     startIndex,
     startIndex + itemsPerPage
   );
 
   // Navigation handlers
   const handleNext = () => {
-    if (startIndex + itemsPerPage < featuredItems.length) {
+    if (startIndex + itemsPerPage < popularItems.length) {
       setCurrentPage(currentPage + 1);
     }
   };
@@ -69,7 +69,7 @@ const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
   if (loading === "pending") {
     return (
       <div className="text-center py-12">
-        <p>Loading featured items...</p>
+        <p>Loading popular items...</p>
       </div>
     );
   }
@@ -88,10 +88,10 @@ const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
             <h2 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-3">
-              Featured Items
+              Popular Items
             </h2>
             <p className="text-gray-600 text-base">
-              Discover our most popular dishes
+              Discover our trending dishes
             </p>
           </div>
 
@@ -113,9 +113,9 @@ const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
             {/* Next Button */}
             <button
               onClick={handleNext}
-              disabled={startIndex + itemsPerPage >= featuredItems.length}
+              disabled={startIndex + itemsPerPage >= popularItems.length}
               className={`absolute right-0 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-md transition-colors duration-200 z-10 ${
-                startIndex + itemsPerPage >= featuredItems.length
+                startIndex + itemsPerPage >= popularItems.length
                   ? "opacity-50 cursor-not-allowed"
                   : "hover:bg-white"
               }`}
@@ -124,7 +124,7 @@ const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
             </button>
 
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {displayedItems.map((item: IFeaturedItemFetched) => (
+              {displayedItems.map((item: IPopularItemFetched) => (
                 <div
                   key={item.$id}
                   className="group bg-gradient-to-br from-orange-50 to-red-50 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
@@ -133,7 +133,7 @@ const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
                     <div className="w-full h-32 overflow-hidden">
                       <Image
                         src={fileUrl(
-                          validateEnv().featuredBucketId,
+                          validateEnv().popularBucketId,
                           item.image
                         )}
                         alt={item.name}
@@ -168,7 +168,7 @@ const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
                       {item.name}
                     </h3>
                     <p className="text-xs text-gray-600 mb-1 line-clamp-1">
-                      {item.restaurant}
+                      {item.category}
                     </p>
                     <p className="text-xs text-gray-500 mb-2 line-clamp-2">
                       {item.description}
@@ -185,10 +185,10 @@ const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
                             name: item.name,
                             image: item.image,
                             price: item.price,
-                            restaurantId: item.restaurant,
+                            restaurantId: item.restaurantId,
                             quantity: 1,
                             category: item.category,
-                            source: "featured",
+                            source: "popular",
                           });
                           setIsOpen(true);
                         }}
@@ -210,4 +210,4 @@ const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
   );
 };
 
-export default FeaturedItem;
+export default PopularItem; 

@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
@@ -22,14 +21,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useShowCart } from "@/context/showCart";
+import { useSelector } from "react-redux";
+import { RootState } from "@/state/store";
+import { current } from "@reduxjs/toolkit";
 
 export default function Header() {
+  const { setActiveCart } = useShowCart();
   const { t, i18n } = useTranslation();
   const { theme, setTheme } = useTheme();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
+  const { orders } = useSelector((state: RootState) => state.orders);
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 10);
@@ -45,7 +50,6 @@ export default function Header() {
     { title: "contact", path: "/contact" },
     { title: "add-item", path: "/add-item" },
   ];
-
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300   ${
@@ -113,6 +117,7 @@ export default function Header() {
             {/* Cart with Order Count */}
             <Button
               variant="ghost"
+              onClick={() => setActiveCart((prev) => !prev)}
               size="icon"
               className={`relative rounded-lg transition-all duration-300 hover:scale-105 ${
                 scrolled
@@ -121,9 +126,11 @@ export default function Header() {
               }`}
             >
               <ShoppingBag className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
-                0 {/* Placeholder for order count */}
-              </span>
+              {Array.isArray(orders) && orders.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                  {orders.length}
+                </span>
+              )}
             </Button>
 
             {/* Search */}
@@ -257,7 +264,7 @@ export default function Header() {
                 <div className="flex items-center space-x-2">
                   <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                   <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {t("header.newNotifications")}
+                    newNotifications
                   </span>
                 </div>
               </div>

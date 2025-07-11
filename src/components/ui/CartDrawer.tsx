@@ -1,5 +1,5 @@
-"use client"
-import React, { useState } from "react";
+"use client";
+import React, { useEffect, useCallback, useMemo, useState } from "react";
 import {
   Drawer,
   DrawerContent,
@@ -9,104 +9,183 @@ import {
   DrawerFooter,
   DrawerClose,
 } from "@/components/ui/drawer";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X, Plus, Minus, ShoppingCart, Loader2 } from "lucide-react";
+import { X, Plus, Minus, ShoppingCart, Loader2, Trash2 } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { debounce } from "lodash";
 import { cn } from "@/lib/utils";
+import { useShowCart } from "@/context/showCart";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/state/store";
+import {
+  fetchOrdersByUserIdAsync,
+  updateOrderAsync,
+  deleteOrderAsync,
+  updateQuantity,
+  deleteOrder,
+  addOrder,
+} from "@/state/orderSlice";
+import { ICartItemFetched } from "../../../types/types";
+import { fileUrl, validateEnv } from "@/utils/appwrite";
 
 const CartDrawer = () => {
-  const [isOpen, setIsOpen] = useState(true);
-  const [loading, setLoading] = useState(false); // Local loading state for async actions
-  const [error, setError] = useState<string | null>(null); // Local error state
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      name: "Amala, Gbegiri And Ewedu & Assorted",
-      price: 8000,
-      quantity: 1,
-      image: "/api/placeholder/60/60",
-      instruction: "Good one at that",
-    },
-    {
-      id: 2,
-      name: "Fayrouz",
-      price: 1200,
-      quantity: 2,
-      image: "/api/placeholder/60/60",
-    },
-  ]);
+  const dispatch = useDispatch<AppDispatch>();
+  const { error, loading, orders } = useSelector(
+    (state: RootState) => state.orders
+  );
+  const { activeCart, setActiveCart } = useShowCart();
+  const userId = "zedd"; // Replace with actual logged-in user ID
+  const [showEmptyCartDialog, setShowEmptyCartDialog] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const router = useRouter();
 
-  const updateQuantity = async (id: number, change: number) => {
-    setLoading(true);
-    setError(null);
-    try {
-      setCartItems((items) =>
-        items
-          .map((item) =>
-            item.id === id
-              ? { ...item, quantity: Math.max(0, item.quantity + change) }
-              : item
-          )
-          .filter((item) => item.quantity > 0)
-      );
-      const item = cartItems.find((item) => item.id === id);
-      toast.success(`${item?.name} ${change > 0 ? "added" : "removed"}`, {
-        duration: 3000,
-        position: "top-right",
-      });
-    } catch (err) {
-      setError("Failed to update quantity");
-      toast.error("Failed to update quantity", {
-        duration: 4000,
-        position: "top-right",
-      });
-    } finally {
-      setLoading(false);
+  // Fetch orders on mount or when userId changes
+  useEffect(() => {
+    if (userId && !orders && !loading) {
+      dispatch(fetchOrdersByUserIdAsync(userId))
+        .unwrap()
+        .catch((err) => {
+          toast.error(err || "Failed to fetch orders", {
+            duration: 4000,
+            position: "top-right",
+          });
+        });
     }
-  };
+  }, [dispatch, userId, orders, loading]);
 
-  const handleCheckout = async () => {
-    setLoading(true);
-    setError(null);
+  // Show dialog when cart is empty after fetching
+  useEffect(() => {
+    if (!loading && (!orders || orders.length === 0) && activeCart) {
+      setShowEmptyCartDialog(true);
+    } else {
+      setShowEmptyCartDialog(false);
+    }
+  }, [orders, loading, activeCart]);
+
+  // Memoized update quantity handler with debounced optimistic update
+  const handleUpdateQuantity = useCallback(
+    debounce(async (order: ICartItemFetched, change: number) => {
+      const newQuantity = Math.max(0, order.quantity + change);
+      const newTotalPrice =
+        (typeof order.price === "string"
+          ? Number(order.price.replace(/[₦,]/g, ""))
+          : order.price) * newQuantity;
+
+      // Optimistic update
+      dispatch(updateQuantity({ orderId: order.$id, change }));
+
+      if (newQuantity === 0) {
+        // Delete order if quantity reaches 0
+        try {
+          await dispatch(deleteOrderAsync(order.$id)).unwrap();
+        } catch (err) {
+          toast.error("Failed to remove item", {
+            duration: 4000,
+            position: "top-right",
+          });
+          // Revert optimistic update
+          dispatch(updateQuantity({ orderId: order.$id, change: -change }));
+        }
+      } else {
+        // Update order quantity and totalPrice
+        try {
+          await dispatch(
+            updateOrderAsync({
+              orderId: order.$id,
+              orderData: { quantity: newQuantity, totalPrice: newTotalPrice },
+            })
+          ).unwrap();
+        } catch (err) {
+          toast.error("Failed to update quantity", {
+            duration: 4000,
+            position: "top-right",
+          });
+          // Revert optimistic update
+          dispatch(updateQuantity({ orderId: order.$id, change: -change }));
+        }
+      }
+    }, 300),
+    [dispatch]
+  );
+
+  // Memoized delete handler with debounced optimistic update
+  const handleDeleteOrder = useCallback(
+    debounce(async (order: ICartItemFetched) => {
+      // Optimistic delete
+      dispatch(deleteOrder(order.$id));
+
+      try {
+        await dispatch(deleteOrderAsync(order.$id)).unwrap();
+      } catch (err) {
+        toast.error("Failed to delete item", {
+          duration: 4000,
+          position: "top-right",
+        });
+        // Revert optimistic delete
+        dispatch(addOrder(order));
+      }
+    }, 300),
+    [dispatch]
+  );
+
+  // Memoized checkout handler
+  const handleCheckout = useCallback(async () => {
+    setIsCheckingOut(true);
     try {
-      // Simulate async checkout (replace with your API call)
+      // Placeholder: Simulate async checkout
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      setCartItems([]);
+      // Clear orders
+      await Promise.all(
+        orders?.map((order) =>
+          dispatch(deleteOrderAsync(order.$id)).unwrap()
+        ) || []
+      );
       toast.success("Checkout successful!", {
         duration: 3000,
         position: "top-right",
       });
-      setIsOpen(false);
+      setActiveCart(false);
+      // Refetch orders to ensure state is in sync
+      await dispatch(fetchOrdersByUserIdAsync(userId)).unwrap();
     } catch (err) {
-      setError("Failed to checkout");
       toast.error("Checkout failed", {
         duration: 4000,
         position: "top-right",
       });
     } finally {
-      setLoading(false);
+      setIsCheckingOut(false);
     }
-  };
+  }, [dispatch, orders, setActiveCart, userId]);
 
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
+  // Memoized subtotal calculation using totalPrice
+  const subtotal = useMemo(
+    () => orders?.reduce((sum, item) => sum + (item.totalPrice || 0), 0) || 0,
+    [orders]
   );
 
   return (
     <div className="p-4">
       <Button
-        onClick={() => setIsOpen(true)}
+        onClick={() => setActiveCart(true)}
         className="bg-orange-500 text-white px-6 py-3 rounded-lg flex items-center gap-2 hover:bg-orange-600 transition-colors"
         disabled={loading}
-        aria-label={`View cart with ${cartItems.length} items`}
+        aria-label={`View cart with ${orders?.length || 0} items`}
       >
         <ShoppingCart size={20} />
-        View Cart ({cartItems.length})
+        View Cart ({orders?.length || 0})
       </Button>
 
-      <Drawer open={isOpen} onOpenChange={setIsOpen}>
+      <Drawer open={activeCart} onOpenChange={setActiveCart}>
         <DrawerContent className="bg-gray-50 rounded-t-3xl max-w-md mx-auto h-[80vh] flex flex-col">
           <DrawerHeader className="border-b bg-white p-4">
             <DrawerTitle className="text-2xl font-bold text-gray-800">
@@ -134,7 +213,7 @@ const CartDrawer = () => {
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {loading && !cartItems.length && (
+            {loading && !orders?.length && (
               <div className="text-center">
                 <Loader2 className="animate-spin h-8 w-8 text-orange-500 mx-auto" />
                 <p className="text-gray-600 mt-2">Loading cart...</p>
@@ -148,12 +227,9 @@ const CartDrawer = () => {
                 {error}
               </p>
             )}
-            {!loading && cartItems.length === 0 && (
-              <p className="text-gray-600 text-center">Your cart is empty</p>
-            )}
-            {cartItems.map((item) => (
+            {orders?.map((item) => (
               <div
-                key={item.id}
+                key={item.$id}
                 className={cn(
                   "bg-white rounded-lg p-4 shadow-sm transition-all duration-200",
                   loading && "opacity-50"
@@ -162,8 +238,15 @@ const CartDrawer = () => {
                 <div className="flex items-start gap-3">
                   <div className="w-16 h-16 bg-orange-100 rounded-lg flex items-center justify-center overflow-hidden">
                     <Image
-                      src={item.image}
-                      alt={item.name}
+                      src={fileUrl(
+                        item.source === "featured"
+                          ? validateEnv().featuredBucketId
+                          : item.source === "popular"
+                          ? validateEnv().popularBucketId
+                          : validateEnv().menuBucketId,
+                        item.image
+                      )}
+                      alt={item.name || "Item"}
                       className="w-full h-full object-cover"
                       width={64}
                       height={64}
@@ -174,15 +257,23 @@ const CartDrawer = () => {
                   </div>
                   <div className="flex-1">
                     <h3 className="font-medium text-gray-800 mb-1">
-                      {item.name}
+                      {item.name || "Unknown Item"}
                     </h3>
-                    <p className="text-lg font-bold text-gray-900">
-                      ₦{item.price.toLocaleString()}
+                    <p className="text-sm text-gray-600">
+                      <span className="font-medium">Price:</span> ₦
+                      {(typeof item.price === "string"
+                        ? Number(item.price.replace(/[₦,]/g, ""))
+                        : item.price
+                      ).toLocaleString()}{" "}
+                      x {item.quantity}
                     </p>
-                    {item.instruction && (
+                    <p className="text-lg font-bold text-gray-900 mt-1">
+                      Total: ₦{item.totalPrice.toLocaleString()}
+                    </p>
+                    {item.specialInstructions && (
                       <p className="text-sm text-gray-600 mt-1">
                         <span className="font-medium">Instruction:</span>{" "}
-                        {item.instruction}
+                        {item.specialInstructions}
                       </p>
                     )}
                   </div>
@@ -190,7 +281,7 @@ const CartDrawer = () => {
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => updateQuantity(item.id, -1)}
+                      onClick={() => handleUpdateQuantity(item, -1)}
                       className="w-8 h-8 bg-gray-100 rounded-full hover:bg-gray-200"
                       disabled={loading || item.quantity <= 0}
                       aria-label={`Decrease quantity of ${item.name}`}
@@ -198,17 +289,27 @@ const CartDrawer = () => {
                       <Minus size={16} className="text-gray-600" />
                     </Button>
                     <span className="w-8 text-center font-medium">
-                      {item.quantity}
+                      {item.quantity || 0}
                     </span>
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => updateQuantity(item.id, 1)}
+                      onClick={() => handleUpdateQuantity(item, 1)}
                       className="w-8 h-8 bg-orange-500 rounded-full text-white hover:bg-orange-600"
                       disabled={loading}
                       aria-label={`Increase quantity of ${item.name}`}
                     >
                       <Plus size={16} className="text-white" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleDeleteOrder(item)}
+                      className="w-8 h-8 bg-red-500 rounded-full text-white hover:bg-red-600"
+                      disabled={loading}
+                      aria-label={`Delete ${item.name} from cart`}
+                    >
+                      <Trash2 size={16} className="text-white" />
                     </Button>
                   </div>
                 </div>
@@ -230,12 +331,12 @@ const CartDrawer = () => {
               className={cn(
                 "w-full py-4 text-lg font-medium rounded-lg transition-all duration-200",
                 "bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white",
-                loading && "opacity-50 cursor-not-allowed"
+                isCheckingOut && "opacity-50 cursor-not-allowed"
               )}
-              disabled={loading || cartItems.length === 0}
+              disabled={isCheckingOut || !orders || orders.length === 0}
               aria-label="Proceed to checkout"
             >
-              {loading ? (
+              {isCheckingOut ? (
                 <span className="flex items-center">
                   <Loader2 className="animate-spin mr-2 h-5 w-5 text-white" />
                   Processing...
@@ -247,6 +348,30 @@ const CartDrawer = () => {
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
+
+      <Dialog open={showEmptyCartDialog} onOpenChange={setShowEmptyCartDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Your Cart is Empty</DialogTitle>
+            <DialogDescription>
+              It looks like you haven't added any items to your cart yet. Add
+              some delicious items to proceed!
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                setShowEmptyCartDialog(false);
+                setActiveCart(!activeCart);
+                router.push("/menu");
+              }}
+              className="bg-orange-500 text-white hover:bg-orange-600"
+            >
+              Browse Items
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

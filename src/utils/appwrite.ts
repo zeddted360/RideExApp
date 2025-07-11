@@ -11,6 +11,10 @@ interface EnvConfig {
   restaurantBucketId: string;
   menuBucketId: string;
   orderId: string;
+  featuredId: string;
+  featuredBucketId: string;
+  popularBucketId: string;
+  popularItemsCollectionId: string;
 }
 
 // Validate environment variables
@@ -26,6 +30,10 @@ export function validateEnv(): EnvConfig {
     restaurantBucketId: process.env.NEXT_PUBLIC_APPWRITE_RESTAURANT_BUCKET_ID,
     menuBucketId: process.env.NEXT_PUBLIC_APPWRITE_MENU_BUCKET_ID,
     orderId: process.env.NEXT_PUBLIC_APPWRITE_ORDER_ID,
+    featuredId: process.env.NEXT_PUBLIC_APPWRITE_FEATURED_ID,
+    featuredBucketId: process.env.NEXT_PUBLIC_APPWRITE_FEATURED_BUCKET_ID,
+    popularBucketId: process.env.NEXT_PUBLIC_APPWRITE_POPULAR_BUCKET_ID,
+    popularItemsCollectionId: process.env.NEXT_PUBLIC_APPWRITE_POPULAR_ID,
   };
 
   // Check for undefined environment variables
@@ -49,6 +57,10 @@ export function validateEnv(): EnvConfig {
     restaurantBucketId: requiredEnvVars.restaurantBucketId!,
     menuBucketId: requiredEnvVars.menuBucketId!,
     orderId: requiredEnvVars.orderId!,
+    featuredId: requiredEnvVars.featuredId!,
+    featuredBucketId: requiredEnvVars.featuredBucketId!,
+    popularItemsCollectionId: requiredEnvVars.popularItemsCollectionId!,
+    popularBucketId: requiredEnvVars.popularBucketId!,
   };
 }
 
@@ -69,6 +81,8 @@ export const config = {
   restaurantBucketId: env.restaurantBucketId,
   menuBucketId: env.menuBucketId,
   orderId: env.orderId,
+  featuredId: env.featuredId,
+  featuredBucketId: env.featuredBucketId,
 };
 
 const fileUrl = (bucketId: string, fileId: string) =>

@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -12,17 +13,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { Minus, Plus, Info, ShoppingCart } from "lucide-react";
 import Image from "next/image";
 import toast from "react-hot-toast";
-import { fileUrl, validateEnv } from "@/utils/appwrite";
 import { cn } from "@/lib/utils";
 import { useShowCart } from "@/context/showCart";
-import { ICartItemOrder } from "../../../types/types";
-import { createOrderAsync, resetOrders } from "@/state/orderSlice";
+import { ICartItemOrder, ICartItemFetched } from "../../../types/types";
+import {
+  createOrderAsync,
+  resetOrders,
+  addOrder,
+  deleteOrder,
+  updateOrderAsync,
+} from "@/state/orderSlice";
 import { AppDispatch, RootState } from "@/state/store";
+import { fileUrl, validateEnv } from "@/utils/appwrite";
 
 const AddToCartModal = () => {
   const { isOpen, setIsOpen, item } = useShowCart();
   const dispatch = useDispatch<AppDispatch>();
-  const { loading, error } = useSelector((state: RootState) => state.orders);
+  const { error, orders } = useSelector((state: RootState) => state.orders);
   const [quantity, setQuantity] = useState(item.quantity || 1);
   const [specialInstructions, setSpecialInstructions] = useState("");
   const maxInstructionsLength = 200;
@@ -33,7 +40,7 @@ const AddToCartModal = () => {
       setQuantity(item.quantity || 1);
       setSpecialInstructions("");
       if (error) {
-        dispatch(resetOrders()); 
+        dispatch(resetOrders());
       }
     }
   }, [isOpen, item.quantity, dispatch, error]);
@@ -52,32 +59,103 @@ const AddToCartModal = () => {
     setQuantity((prev) => (prev > 1 ? prev - 1 : 1));
 
   const handleAddToCart = async () => {
-    const newItem: ICartItemOrder = {
-      userId: item.userId,
-      itemId: item.itemId,
-      image: item.image,
-      name: item.name,
-      category: item.category,
-      price: item.price,
-      quantity,
-      totalPrice,
-      restaurantId: item.restaurantId,
-      specialInstructions,
-      status: "pending",
-    };
+    // Check if the item already exists in the cart
+    const existingOrder = orders?.find(
+      (order) => order.itemId === item.itemId && order.userId === item.userId
+    );
 
-    try {
-      await dispatch(createOrderAsync(newItem)).unwrap();
+    if (existingOrder) {
+      // Update existing order
+      const newQuantity = existingOrder.quantity + quantity;
+      const newTotalPrice = itemPrice * newQuantity;
+
+      // Optimistic update
+      dispatch(
+        addOrder({
+          ...existingOrder,
+          quantity: newQuantity,
+          totalPrice: newTotalPrice,
+          specialInstructions:
+            specialInstructions || existingOrder.specialInstructions,
+        })
+      );
+      toast.success(`${item.name} quantity updated in cart!`, {
+        duration: 3000,
+        position: "top-right",
+      });
+
+      try {
+        await dispatch(
+          updateOrderAsync({
+            orderId: existingOrder.$id,
+            orderData: {
+              quantity: newQuantity,
+              totalPrice: newTotalPrice,
+              specialInstructions:
+                specialInstructions || existingOrder.specialInstructions,
+            },
+          })
+        ).unwrap();
+        setIsOpen(false);
+      } catch (err) {
+        toast.error(`Failed to update ${item.name} in cart`, {
+          duration: 4000,
+          position: "top-right",
+        });
+        // Revert optimistic update
+        dispatch(
+          addOrder({
+            ...existingOrder,
+            quantity: existingOrder.quantity,
+            totalPrice: existingOrder.totalPrice,
+            specialInstructions: existingOrder.specialInstructions,
+          })
+        );
+      }
+    } else {
+      // Add new order
+      const tempId = `temp-${Date.now()}-${Math.random()}`;
+      const newItem: ICartItemFetched = {
+        $id: tempId,
+        userId: item.userId,
+        itemId: item.itemId,
+        image: item.image,
+        name: item.name,
+        category: item.category,
+        price: item.price,
+        quantity,
+        totalPrice,
+        restaurantId: item.restaurantId,
+        specialInstructions,
+        status: "pending",
+        source: item.source, // Ensure source is included
+      } as unknown as ICartItemFetched;
+
+      // Optimistic update
+      dispatch(addOrder(newItem));
       toast.success(`${newItem.name} added to cart!`, {
         duration: 3000,
         position: "top-right",
       });
-      setIsOpen(false);
-    } catch (err) {
-      toast.error(`Failed to add ${newItem.name} to cart`, {
-        duration: 4000,
-        position: "top-right",
-      });
+
+      try {
+        // Exclude $id from the payload sent to Appwrite
+        const { $id, ...orderData } = newItem;
+        await dispatch(
+          createOrderAsync({
+            ...orderData,
+            $id: tempId,
+            source: item.source,
+          } as ICartItemOrder)
+        ).unwrap();
+        setIsOpen(false);
+      } catch (err) {
+        toast.error(`Failed to add ${newItem.name} to cart`, {
+          duration: 4000,
+          position: "top-right",
+        });
+        dispatch(deleteOrder(tempId));
+      }
     }
   };
 
@@ -99,13 +177,20 @@ const AddToCartModal = () => {
           <div className="flex items-start space-x-4">
             <div className="relative w-24 h-24 bg-orange-200 rounded-xl overflow-hidden flex-shrink-0 group">
               <Image
-                src={item.image} 
+                src={fileUrl(
+                  item.source === "featured"
+                    ? validateEnv().featuredBucketId
+                    : item.source === "popular"
+                    ? validateEnv().popularBucketId
+                    : validateEnv().menuBucketId,
+                  item.image
+                )}
                 alt={item.name}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 width={96}
                 height={96}
                 sizes="96px"
-                quality={85}
+                quality={100}
                 loading="lazy"
               />
             </div>
@@ -144,7 +229,7 @@ const AddToCartModal = () => {
                     ? "opacity-50 cursor-not-allowed"
                     : "hover:scale-105"
                 )}
-                disabled={quantity <= 1 || loading}
+                disabled={quantity <= 1}
                 aria-label="Decrease quantity"
               >
                 <Minus className="w-6 h-6 text-orange-600" />
@@ -157,7 +242,6 @@ const AddToCartModal = () => {
                 variant="outline"
                 size="icon"
                 className="w-12 h-12 rounded-full border-2 border-orange-300 hover:bg-orange-100 hover:scale-105 transition-all duration-200"
-                disabled={loading}
                 aria-label="Increase quantity"
               >
                 <Plus className="w-6 h-6 text-orange-600" />
@@ -178,7 +262,6 @@ const AddToCartModal = () => {
                   )
                 }
                 className="min-h-[120px] resize-none bg-white border-orange-200 focus:border-orange-400 focus:ring-orange-400 placeholder:text-gray-400 rounded-xl"
-                disabled={loading}
                 aria-label="Special instructions"
               />
               <span className="absolute bottom-2 right-2 text-xs text-gray-400">
@@ -197,43 +280,13 @@ const AddToCartModal = () => {
               "w-full py-4 text-lg font-semibold rounded-xl transition-all duration-300 relative overflow-hidden group",
               item.category === "veg"
                 ? "bg-green-500 hover:bg-green-600 text-white"
-                : "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white",
-              loading && "opacity-50 cursor-not-allowed"
+                : "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white"
             )}
-            disabled={loading}
             aria-label={`Add ${item.name} to cart`}
           >
             <span className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-            {loading ? (
-              <span className="flex items-center">
-                <svg
-                  className="animate-spin mr-2 h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                Adding...
-              </span>
-            ) : (
-              <>
-                <ShoppingCart className="w-5 h-5 mr-2" />
-                Add to Cart - ₦{totalPrice.toLocaleString()}
-              </>
-            )}
+            <ShoppingCart className="w-5 h-5 mr-2" />
+            Add to Cart - ₦{totalPrice.toLocaleString()}
           </Button>
         </div>
       </DialogContent>

@@ -3,31 +3,39 @@ import { createContext, Dispatch, FC, ReactNode, SetStateAction, useContext, use
 import { ICartItem } from "../../types/types";
 
 interface IContextProps {
-    isOpen: boolean;
-    setIsOpen: Dispatch<SetStateAction<boolean>>;
-    item: ICartItem;
-    setItem: Dispatch<SetStateAction<ICartItem>>;
+  isOpen: boolean;
+  setIsOpen: Dispatch<SetStateAction<boolean>>;
+  item: ICartItem;
+  setItem: Dispatch<SetStateAction<ICartItem>>;
+  activeCart: boolean;
+  setActiveCart: Dispatch<SetStateAction<boolean>>;
 }
 
 const ShowCartContext = createContext<IContextProps | undefined>(undefined);
 
+export const ShowCartContextProvider: FC<{ children: ReactNode }> = ({
+  children,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [item, setItem] = useState<ICartItem>({
+    userId: "",
+    itemId: "",
+    name: "",
+    price: "",
+    quantity: 1,
+    image: "",
+    restaurantId: "",
+    category: "",
+  });
+  const [activeCart, setActiveCart] = useState<boolean>(false);
 
-
-
-export const ShowCartContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [item, setItem] = useState<ICartItem>({
-        userId:"",
-      itemId: "",
-      name: "",
-      price: "",
-      quantity: 1,
-      image: "",
-      restaurantId: "",
-      category:""
-    });
-    
-    return <ShowCartContext.Provider value={{ isOpen, setIsOpen,item,setItem }}>{children}</ShowCartContext.Provider>
+  return (
+    <ShowCartContext.Provider
+      value={{ isOpen, setIsOpen, item, setItem, activeCart, setActiveCart }}
+    >
+      {children}
+    </ShowCartContext.Provider>
+  );
 };
 
 export const useShowCart = () => {
