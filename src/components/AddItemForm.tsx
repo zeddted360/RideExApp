@@ -49,6 +49,7 @@ import {
   createAsyncPopularItem,
   listAsyncPopularItems,
 } from "@/state/popularSlice";
+import { IRestaurant } from "../../types/types";
 
 const AddFoodItemForm = () => {
   const [activeTab, setActiveTab] = useState<
@@ -133,9 +134,16 @@ const AddFoodItemForm = () => {
   const onRestaurantSubmit = async (data: RestaurantFormData) => {
     setRestaurantLoading(true);
     try {
-      await dispatch(
-        createAsyncRestaurant(restaurantForm.getValues())
-      ).unwrap();
+      // Type assertion to match IRestaurant interface
+      const restaurantData: IRestaurant = {
+        name: data.name,
+        logo: data.logo as FileList,
+        rating: data.rating,
+        deliveryTime: data.deliveryTime,
+        category: data.category,
+        distance: data.distance,
+      };
+      await dispatch(createAsyncRestaurant(restaurantData)).unwrap();
       restaurantForm.reset();
       await dispatch(listAsyncRestaurants());
       toast.success("Restaurant added successfully!");

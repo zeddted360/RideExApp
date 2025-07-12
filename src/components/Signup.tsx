@@ -247,7 +247,7 @@ const Signup = () => {
 
         // 5. Store phone in localStorage (optional, for legacy reasons)
         try {
-          storeUserPhone(phoneNumber, user.$id);
+          storeUserPhone(phoneNumber, true); // Mark as verified since user just signed up
         } catch (storageError) {
           // If localStorage fails, still create account but warn user
           console.warn("Failed to store phone number:", storageError);

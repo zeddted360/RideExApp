@@ -3,27 +3,36 @@ import { z } from "zod";
 
 // Custom refinement to validate FileList and extract the first File
 const fileListSchema = z
-  .instanceof(FileList)
-  .refine((fileList) => fileList.length > 0, "At least one file is required")
-  .refine(
-    (fileList) =>
-      Array.from(fileList).every((file) => file.size <= 5 * 1024 * 1024),
-    "File must be less than 5MB"
-  )
-  .refine(
-    (fileList) =>
-      Array.from(fileList).every((file) =>
-        ["image/jpeg", "image/png", "image/webp", "image/jpg"].includes(file.type)
-      ),
-    "File must be JPEG, PNG, JPG, or WebP"
-  );
+  .custom<FileList>((value) => {
+    // Check if we're in a browser environment and if the value is a FileList
+    if (typeof window !== "undefined" && value instanceof FileList) {
+      return value.length > 0;
+    }
+    return true; // Allow during SSR
+  }, "At least one file is required")
+  .refine((value) => {
+    if (typeof window !== "undefined" && value instanceof FileList) {
+      return Array.from(value).every((file) => file.size <= 5 * 1024 * 1024);
+    }
+    return true; // Allow during SSR
+  }, "File must be less than 5MB")
+  .refine((value) => {
+    if (typeof window !== "undefined" && value instanceof FileList) {
+      return Array.from(value).every((file) =>
+        ["image/jpeg", "image/png", "image/webp", "image/jpg"].includes(
+          file.type
+        )
+      );
+    }
+    return true; // Allow during SSR
+  }, "File must be JPEG, PNG, JPG, or WebP");
 
 export const restaurantSchema = z.object({
   name: z
     .string()
     .min(1, "Restaurant name is required")
     .max(255, "Name is too long"),
-  logo:fileListSchema,
+  logo: fileListSchema,
   rating: z
     .number()
     .min(0, "Rating must be between 0 and 5")

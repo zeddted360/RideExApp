@@ -262,7 +262,7 @@ const ProfileDropdown = ({ children }: ProfileDropdownProps) => {
       if (result.success) {
         // Store the new phone number
         if (safeUser?.userId) {
-          storeUserPhone(formData.phone, safeUser.userId);
+          storeUserPhone(formData.phone, true); // Mark as verified since it was just verified
         }
 
         // Update user in auth context
