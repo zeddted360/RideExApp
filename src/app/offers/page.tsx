@@ -2,6 +2,25 @@ import React from "react";
 import { ShoppingCart, Download, Smartphone } from "lucide-react";
 import Link from "next/link";
 
+export const metadata = {
+  title: "Offers",
+  description:
+    "Discover the latest food offers and discounts on RideEx Food Ordering App. Save more on your favorite meals!",
+  openGraph: {
+    title: "Offers | RideEx Food Ordering App",
+    description:
+      "Discover the latest food offers and discounts on RideEx Food Ordering App. Save more on your favorite meals!",
+    url: "/offers",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Offers | RideEx Food Ordering App",
+    description:
+      "Discover the latest food offers and discounts on RideEx Food Ordering App. Save more on your favorite meals!",
+  },
+};
+
 export default function OffersPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 p-4">

@@ -1,5 +1,5 @@
 import { Dispatch, SetStateAction, useEffect } from "react";
-import { Home, Menu, ShoppingBag, User, Clock, MapPin } from "lucide-react";
+import { Clock, MapPin } from "lucide-react";
 import Image from "next/image";
 
 export default function Hero({
@@ -18,7 +18,7 @@ export default function Hero({
     window.addEventListener("resize", checkMobile);
 
     return () => window.removeEventListener("resize", checkMobile);
-  }, []);
+  }, [setIsMobile]);
 
   return (
     <div className="min-h-fit bg-gradient-to-br from-orange-50 to-red-50 md:pb-0">
@@ -133,37 +133,6 @@ export default function Hero({
           </div>
         </div>
       </section>
-
-      {isMobile && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-gray-200 z-50">
-          <div className="flex items-center justify-around py-2">
-            <button className="flex flex-col items-center py-2 px-4 text-orange-500">
-              <Home className="w-6 h-6 mb-1" />
-              <span className="text-xs font-medium">Home</span>
-            </button>
-
-            <button className="flex flex-col items-center py-2 px-4 text-gray-500 hover:text-orange-500 transition-colors">
-              <Menu className="w-6 h-6 mb-1" />
-              <span className="text-xs font-medium">Menu</span>
-            </button>
-
-            <button className="flex flex-col items-center py-2 px-4 text-gray-500 hover:text-orange-500 transition-colors relative">
-              <div className="relative">
-                <ShoppingBag className="w-6 h-6 mb-1" />
-                <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                  3
-                </span>
-              </div>
-              <span className="text-xs font-medium">Cart</span>
-            </button>
-
-            <button className="flex flex-col items-center py-2 px-4 text-gray-500 hover:text-orange-500 transition-colors">
-              <User className="w-6 h-6 mb-1" />
-              <span className="text-xs font-medium">Profile</span>
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

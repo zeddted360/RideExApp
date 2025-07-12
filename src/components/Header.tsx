@@ -13,6 +13,7 @@ import {
   ShoppingBag,
   Bell,
   Globe,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,11 +21,14 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { useShowCart } from "@/context/showCart";
+import { useAuth } from "@/context/authContext";
 import { useSelector } from "react-redux";
 import { RootState } from "@/state/store";
-import { current } from "@reduxjs/toolkit";
+import { useRouter } from "next/navigation";
+import ProfileDropdown from "./ui/ProfileDropdown";
 
 export default function Header() {
   const { setActiveCart } = useShowCart();
@@ -33,6 +37,8 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const router = useRouter();
+  const { username, email, role, isLoading, isAuthenticated } = useAuth();
 
   const { orders } = useSelector((state: RootState) => state.orders);
   useEffect(() => {
@@ -50,6 +56,7 @@ export default function Header() {
     { title: "contact", path: "/contact" },
     { title: "add-item", path: "/add-item" },
   ];
+
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300   ${
@@ -75,7 +82,7 @@ export default function Header() {
                 scrolled ? "text-transparent" : "text-white"
               } transition-all duration-300`}
             >
-              FoodieHub
+              RideEx
             </h1>
           </Link>
 
@@ -200,6 +207,58 @@ export default function Header() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* Authentication Section */}
+            {isLoading ? (
+              // Loading state
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : isAuthenticated ? (
+              // User is logged in - show profile dropdown (desktop only)
+              <div className="hidden md:block">
+                <ProfileDropdown>
+                  <div className="relative">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={`rounded-full bg-white dark:bg-gray-900 shadow-md ring-2 ring-green-500 transition-all duration-300 hover:scale-105 p-0`}
+                    >
+                      <User className="h-6 w-6 text-green-600" />
+                    </Button>
+                    {/* Status dot */}
+                    <span className="absolute bottom-0 right-0 block w-2.5 h-2.5 bg-green-500 border-2 border-white dark:border-gray-900 rounded-full" />
+                  </div>
+                </ProfileDropdown>
+              </div>
+            ) : (
+              // User is not logged in - show login/signup buttons
+              <div className="flex items-center space-x-2">
+                <Link href="/login">
+                  <Button
+                    variant="ghost"
+                    className={`text-sm font-medium transition-all duration-300 hover:scale-105 ${
+                      scrolled
+                        ? "text-gray-700 dark:text-gray-200 hover:text-orange-500 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                        : "text-white/90 hover:text-white hover:bg-white/10"
+                    }`}
+                  >
+                    Sign In
+                  </Button>
+                </Link>
+                <Link href="/signup">
+                  <Button
+                    className={`text-sm font-medium transition-all duration-300 hover:scale-105 ${
+                      scrolled
+                        ? "bg-orange-500 hover:bg-orange-600 text-white"
+                        : "bg-white/20 hover:bg-white/30 text-white backdrop-blur-sm"
+                    }`}
+                  >
+                    Sign Up
+                  </Button>
+                </Link>
+              </div>
+            )}
 
             {/* Mobile Menu Toggle */}
             <Button

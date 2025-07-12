@@ -15,6 +15,8 @@ interface EnvConfig {
   featuredBucketId: string;
   popularBucketId: string;
   popularItemsCollectionId: string;
+  userCollectionId: string;
+  googleMapsApiKey: string; // Added for Google Maps
 }
 
 // Validate environment variables
@@ -34,6 +36,8 @@ export function validateEnv(): EnvConfig {
     featuredBucketId: process.env.NEXT_PUBLIC_APPWRITE_FEATURED_BUCKET_ID,
     popularBucketId: process.env.NEXT_PUBLIC_APPWRITE_POPULAR_BUCKET_ID,
     popularItemsCollectionId: process.env.NEXT_PUBLIC_APPWRITE_POPULAR_ID,
+    userCollectionId: process.env.NEXT_PUBLIC_APPWRITE_USER_COLLECTION_ID,
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_API_KEY, // Added for Google Maps
   };
 
   // Check for undefined environment variables
@@ -61,6 +65,8 @@ export function validateEnv(): EnvConfig {
     featuredBucketId: requiredEnvVars.featuredBucketId!,
     popularItemsCollectionId: requiredEnvVars.popularItemsCollectionId!,
     popularBucketId: requiredEnvVars.popularBucketId!,
+    userCollectionId: requiredEnvVars.userCollectionId!,
+    googleMapsApiKey: requiredEnvVars.googleMapsApiKey!, // Added for Google Maps
   };
 }
 
@@ -83,6 +89,7 @@ export const config = {
   orderId: env.orderId,
   featuredId: env.featuredId,
   featuredBucketId: env.featuredBucketId,
+  googleMapsApiKey: env.googleMapsApiKey, // Added for Google Maps
 };
 
 const fileUrl = (bucketId: string, fileId: string) =>

@@ -15,7 +15,6 @@ export default function PromotionalBanner() {
   const { popularItems } = useSelector((state: RootState) => state.popularItem);
   const { setIsOpen, setItem } = useShowCart();
 
-  console.log("the popular items are:",popularItems)
 
   useEffect(() => {
     dispatch(listAsyncPopularItems());

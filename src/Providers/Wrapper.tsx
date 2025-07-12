@@ -10,6 +10,7 @@ import i18n from "@/app/lib/i18n";
 import { ShowCartProvider } from "./ShowCartProvider";
 import AddToCartModal from "@/components/ui/AddToCartModal";
 import CartDrawer from "@/components/ui/CartDrawer";
+import MobileNavigation from "@/components/ui/MobileNavigation";
 import { AuthProvider } from "@/context/authContext";
 
 export const Wrapper = ({ children }: { children: ReactNode }) => {
@@ -28,6 +29,7 @@ export const Wrapper = ({ children }: { children: ReactNode }) => {
                 {children}
               </main>
               <Footer />
+              <MobileNavigation />
             </ShowCartProvider>
           </AuthProvider>
         </StoreProvider>

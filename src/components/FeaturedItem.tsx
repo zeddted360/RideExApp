@@ -13,6 +13,7 @@ import { AppDispatch, RootState } from "@/state/store";
 import { IFeaturedItemFetched } from "../../types/types";
 import { useShowCart } from "@/context/showCart";
 import { fileUrl, validateEnv } from "@/utils/appwrite";
+import { getRestaurantNamesByIds } from "@/utils/restaurantUtils";
 import toast from "react-hot-toast";
 import { listAsyncFeaturedItems } from "@/state/featuredSlice";
 
@@ -23,6 +24,9 @@ interface IFeaturedItemProps {
 
 const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
   const [currentPage, setCurrentPage] = useState(0);
+  const [restaurantNames, setRestaurantNames] = useState<Map<string, string>>(
+    new Map()
+  );
   const itemsPerPage = 8;
   const dispatch = useDispatch<AppDispatch>();
   const { featuredItems, loading, error } = useSelector(
@@ -44,6 +48,22 @@ const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
         });
     }
   }, [dispatch, loading]);
+
+  // Fetch restaurant names when featured items change
+  useEffect(() => {
+    if (featuredItems.length > 0) {
+      const restaurantIds = [
+        ...new Set(featuredItems.map((item) => item.restaurant)),
+      ];
+      getRestaurantNamesByIds(restaurantIds)
+        .then((names) => {
+          setRestaurantNames(names);
+        })
+        .catch((error) => {
+          console.warn("Failed to fetch restaurant names:", error);
+        });
+    }
+  }, [featuredItems]);
 
   // Calculate the items to display based on the current page
   const startIndex = currentPage * itemsPerPage;
@@ -167,8 +187,9 @@ const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
                     <h3 className="font-bold text-gray-900 text-sm mb-1 line-clamp-1">
                       {item.name}
                     </h3>
-                    <p className="text-xs text-gray-600 mb-1 line-clamp-1">
-                      {item.restaurant}
+                    <p className="text-xs text-gray-400 font-medium tracking-wide mb-1 line-clamp-1">
+                      {restaurantNames.get(item.restaurant) ||
+                        `Restaurant ${item.restaurant.slice(-4)}`}
                     </p>
                     <p className="text-xs text-gray-500 mb-2 line-clamp-2">
                       {item.description}

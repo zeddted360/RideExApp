@@ -327,23 +327,19 @@ const CartDrawer = () => {
               </span>
             </div>
             <Button
-              onClick={handleCheckout}
+              onClick={() => {
+                setActiveCart(false);
+                router.push("/checkout");
+              }}
               className={cn(
                 "w-full py-4 text-lg font-medium rounded-lg transition-all duration-200",
                 "bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white",
                 isCheckingOut && "opacity-50 cursor-not-allowed"
               )}
-              disabled={isCheckingOut || !orders || orders.length === 0}
+              disabled={!orders || orders.length === 0}
               aria-label="Proceed to checkout"
             >
-              {isCheckingOut ? (
-                <span className="flex items-center">
-                  <Loader2 className="animate-spin mr-2 h-5 w-5 text-white" />
-                  Processing...
-                </span>
-              ) : (
-                "Proceed To Checkout"
-              )}
+              Proceed To Checkout
             </Button>
           </DrawerFooter>
         </DrawerContent>
