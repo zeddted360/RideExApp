@@ -81,7 +81,7 @@ export interface ICartItem {
   restaurantId: string;
   quantity: number;
   category: string;
-  source: "menu" | "featured" | "popular";
+  source: "menu" | "featured" | "popular" | "";
 }
 
 //  cart item order processed

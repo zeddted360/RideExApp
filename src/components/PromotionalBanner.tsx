@@ -31,7 +31,7 @@ export default function PromotionalBanner() {
   };
 
   return (
-    <div className="py-12 bg-gradient-to-br from-orange-50 to-red-50">
+    <div className="py-12 bg-gradient-to-br from-orange-50 to-red-50 dark:from-gray-900 dark:to-gray-800">
       {/* Promotional Banners */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16">
         <div className="space-y-6">
@@ -49,7 +49,7 @@ export default function PromotionalBanner() {
                     >
                       {offer.title}
                     </h3>
-                    <p className="text-gray-700 text-lg lg:text-xl">
+                    <p className="text-gray-700 dark:text-gray-300 text-lg lg:text-xl">
                       {offer.subtitle}
                     </p>
                   </div>
@@ -100,7 +100,7 @@ export default function PromotionalBanner() {
       {/* Most Popular Items */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-12">
-          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
             Most Popular Items
           </h2>
           <div className="w-20 h-1 bg-gradient-to-r from-orange-500 to-red-500 rounded-full"></div>
@@ -112,7 +112,7 @@ export default function PromotionalBanner() {
               key={item.$id}
               className={`flex flex-col ${
                 index % 2 === 0 ? "lg:flex-row" : "lg:flex-row-reverse"
-              } bg-white rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group`}
+              } bg-white dark:bg-gray-800 rounded-3xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group`}
             >
               {/* Image Section */}
               <div className="relative lg:w-2/5">

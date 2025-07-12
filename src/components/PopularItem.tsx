@@ -84,13 +84,13 @@ const PopularItem = ({ toggleFavorite, favorites }: IPopularItemProps) => {
 
   return (
     <div>
-      <section className="py-12 bg-white">
+      <section className="py-12 bg-white dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
-            <h2 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-3">
+            <h2 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-3">
               Popular Items
             </h2>
-            <p className="text-gray-600 text-base">
+            <p className="text-gray-600 dark:text-gray-400 text-base">
               Discover our trending dishes
             </p>
           </div>
@@ -132,10 +132,7 @@ const PopularItem = ({ toggleFavorite, favorites }: IPopularItemProps) => {
                   <div className="relative">
                     <div className="w-full h-32 overflow-hidden">
                       <Image
-                        src={fileUrl(
-                          validateEnv().popularBucketId,
-                          item.image
-                        )}
+                        src={fileUrl(validateEnv().popularBucketId, item.image)}
                         alt={item.name}
                         width={200}
                         height={150}

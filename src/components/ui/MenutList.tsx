@@ -25,8 +25,10 @@ const MenutList = () => {
   if (loading === "pending") {
     return (
       <div className="col-span-full flex flex-col items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
-        <span className="text-gray-600 mt-2">Loading restaurants...</span>
+        <Loader2 className="w-8 h-8 animate-spin text-orange-500 mb-4" />
+        <span className="text-gray-600 dark:text-gray-400 mt-2">
+          Loading restaurants...
+        </span>
         <div className="flex overflow-x-auto sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-4">
           {[...Array(4)].map((_, index) => (
             <RestaurantCardSkeleton key={index} />

@@ -18,22 +18,22 @@ export const Wrapper = ({ children }: { children: ReactNode }) => {
     <html suppressHydrationWarning={true}>
       <body className="min-h-screen flex flex-col">
         <Toaster position="top-right" />
-        {/* <_ThemeProvider> */}
-        <StoreProvider>
-          <AuthProvider>
-            <ShowCartProvider>
-              <Header />
-              <main className="flex-grow mt-20">
-                <AddToCartModal />
-                <CartDrawer />
-                {children}
-              </main>
-              <Footer />
-              <MobileNavigation />
-            </ShowCartProvider>
-          </AuthProvider>
-        </StoreProvider>
-        {/* </_ThemeProvider> */}
+        <_ThemeProvider>
+          <StoreProvider>
+            <AuthProvider>
+              <ShowCartProvider>
+                <Header />
+                <main className="flex-grow mt-20">
+                  <AddToCartModal />
+                  <CartDrawer />
+                  {children}
+                </main>
+                <Footer />
+                <MobileNavigation />
+              </ShowCartProvider>
+            </AuthProvider>
+          </StoreProvider>
+        </_ThemeProvider>
       </body>
     </html>
   );

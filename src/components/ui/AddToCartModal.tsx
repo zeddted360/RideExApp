@@ -207,87 +207,72 @@ const AddToCartModal = () => {
             </div>
           </div>
         </DialogHeader>
-        <div className="px-6 py-6 space-y-6 bg-white/90 backdrop-blur-sm">
-          {item.name === "Jollof" && (
-            <p className="text-sm text-gray-600 leading-relaxed">
-              A vibrant West African rice dish cooked in a spicy tomato-based
-              sauce with onions, peppers, and spices like thyme and chili.
+        
+        <div className="px-6 py-6 space-y-6 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm">
+          <div className="text-center">
+            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+              Customize your order and add it to your cart
             </p>
-          )}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">
-              Quantity
-            </h3>
-            <div className="flex items-center space-x-4">
-              <Button
-                onClick={decreaseQuantity}
-                variant="outline"
-                size="icon"
-                className={cn(
-                  "w-12 h-12 rounded-full border-2 border-orange-300 hover:bg-orange-100 transition-all duration-200",
-                  quantity <= 1
-                    ? "opacity-50 cursor-not-allowed"
-                    : "hover:scale-105"
-                )}
-                disabled={quantity <= 1}
-                aria-label="Decrease quantity"
-              >
-                <Minus className="w-6 h-6 text-orange-600" />
-              </Button>
-              <span className="text-2xl font-semibold text-gray-900 min-w-[2.5rem] text-center">
-                {quantity}
-              </span>
-              <Button
-                onClick={increaseQuantity}
-                variant="outline"
-                size="icon"
-                className="w-12 h-12 rounded-full border-2 border-orange-300 hover:bg-orange-100 hover:scale-105 transition-all duration-200"
-                aria-label="Increase quantity"
-              >
-                <Plus className="w-6 h-6 text-orange-600" />
-              </Button>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                Quantity
+              </h3>
+              <div className="flex items-center justify-center gap-4">
+                <button
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-orange-200 dark:border-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                >
+                  <Minus className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                </button>
+                <span className="text-2xl font-semibold text-gray-900 dark:text-gray-100 min-w-[2.5rem] text-center">
+                  {quantity}
+                </span>
+                <button
+                  onClick={() => setQuantity(quantity + 1)}
+                  className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-orange-200 dark:border-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                >
+                  <Plus className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                Special Instructions
+              </h3>
+              <div className="relative">
+                <textarea
+                  value={specialInstructions}
+                  onChange={(e) => setSpecialInstructions(e.target.value)}
+                  placeholder="Any special requests? (optional)"
+                  className="min-h-[120px] resize-none bg-white dark:bg-gray-700 border-orange-200 dark:border-orange-600 focus:border-orange-400 dark:focus:border-orange-500 focus:ring-orange-400 dark:focus:ring-orange-500 placeholder:text-gray-400 dark:placeholder:text-gray-500 rounded-xl p-3 w-full text-gray-900 dark:text-gray-100"
+                />
+                <span className="absolute bottom-2 right-2 text-xs text-gray-400 dark:text-gray-500">
+                  {specialInstructions.length}/200
+                </span>
+              </div>
             </div>
           </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">
-              Special Instructions
-            </h3>
-            <div className="relative">
-              <Textarea
-                placeholder="Add note (e.g., extra spice, no onions)"
-                value={specialInstructions}
-                onChange={(e) =>
-                  setSpecialInstructions(
-                    e.target.value.slice(0, maxInstructionsLength)
-                  )
-                }
-                className="min-h-[120px] resize-none bg-white border-orange-200 focus:border-orange-400 focus:ring-orange-400 placeholder:text-gray-400 rounded-xl"
-                aria-label="Special instructions"
-              />
-              <span className="absolute bottom-2 right-2 text-xs text-gray-400">
-                {specialInstructions.length}/{maxInstructionsLength}
-              </span>
-            </div>
+
+          <div className="relative">
+            <span className="absolute inset-0 bg-white/20 dark:bg-gray-800/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+            <Button
+              onClick={handleAddToCart}
+              className={cn(
+                "w-full py-4 text-lg font-semibold rounded-xl transition-all duration-300 relative overflow-hidden group",
+                item.category === "veg"
+                  ? "bg-green-500 hover:bg-green-600 text-white"
+                  : "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white"
+              )}
+              aria-label={`Add ${item.name} to cart`}
+            >
+              <ShoppingCart className="w-5 h-5 mr-2" />
+              Add to Cart - ₦{totalPrice.toLocaleString()}
+            </Button>
           </div>
-          {error && (
-            <p className="text-red-500 text-sm text-center" role="alert">
-              {error}
-            </p>
-          )}
-          <Button
-            onClick={handleAddToCart}
-            className={cn(
-              "w-full py-4 text-lg font-semibold rounded-xl transition-all duration-300 relative overflow-hidden group",
-              item.category === "veg"
-                ? "bg-green-500 hover:bg-green-600 text-white"
-                : "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white"
-            )}
-            aria-label={`Add ${item.name} to cart`}
-          >
-            <span className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-            <ShoppingCart className="w-5 h-5 mr-2" />
-            Add to Cart - ₦{totalPrice.toLocaleString()}
-          </Button>
         </div>
       </DialogContent>
     </Dialog>

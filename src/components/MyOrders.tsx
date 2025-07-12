@@ -46,16 +46,22 @@ const MyOrders = () => {
     }
   };
 
-  const getStatusColor = (status: ICartItemFetched['status']) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'processing':
-        return 'bg-orange-100 text-orange-800';
-      case 'success':
-        return 'bg-green-100 text-green-800';
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "pending":
+        return "bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200";
+      case "confirmed":
+        return "bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200";
+      case "preparing":
+        return "bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-200";
+      case "ready":
+        return "bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200";
+      case "delivered":
+        return "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200";
+      case "cancelled":
+        return "bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-200";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200";
     }
   };
 

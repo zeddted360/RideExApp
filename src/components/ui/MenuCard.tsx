@@ -26,12 +26,12 @@ const MenuCard = ({ menuItems }: { menuItems: IMenuItemFetched }) => {
         </div>
       </div>
       <div className="p-4">
-        <h3 className="text-base font-bold text-gray-900 mb-2 line-clamp-1">
+        <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-2 line-clamp-1">
           {menuItems.name}
         </h3>
-        <div className="text-xs text-gray-600 space-y-2">
-          <p className="line-clamp-1 font-medium">{menuItems.category}</p>
-          <div className="flex items-center gap-4 text-gray-500">
+        <div className="text-xs text-gray-600 dark:text-gray-400 space-y-2">
+          <p className="line-clamp-2">{menuItems.description}</p>
+          <div className="flex items-center gap-4 text-gray-500 dark:text-gray-400">
             <span>{menuItems.deliveryTime}</span>
             <span>{menuItems.distance}</span>
           </div>

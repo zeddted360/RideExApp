@@ -1,26 +1,10 @@
 import "./globals.css";
 import { Wrapper } from "@/Providers/Wrapper";
+import { Metadata } from "next";
 
-export const metadata = {
-  title: {
-    default: "RideEx Food Ordering App",
-    template: "%s | RideEx Food Ordering App",
-  },
-  description:
-    "Order delicious food from your favorite restaurants. Fast delivery, easy ordering, and great offers await you!",
-  openGraph: {
-    title: "Food Ordering App",
-    description:
-      "Order delicious food from your favorite restaurants. Fast delivery, easy ordering, and great offers await you!",
-    url: "/",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Food Ordering App",
-    description:
-      "Order delicious food from your favorite restaurants. Fast delivery, easy ordering, and great offers await you!",
-  },
+export const metadata: Metadata = {
+  title: "RideEx",
+  description: "Your trusted food delivery platform",
 };
 
 export default function RootLayout({

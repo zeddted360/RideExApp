@@ -218,1025 +218,309 @@ const AddFoodItemForm = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Food Management System
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+            Add New Item
           </h1>
-          <p className="text-gray-600">
-            Add restaurants, menu items, and featured items
+          <p className="text-gray-600 dark:text-gray-400">
+            Fill in the details below to add a new item to your menu.
           </p>
         </div>
 
-        <Tabs
-          value={activeTab}
-          onValueChange={(value) =>
-            setActiveTab(
-              value as
-                | "restaurant"
-                | "menu-item"
-                | "featured-item"
-                | "popular-item"
-            )
-          }
-          className="w-full"
-        >
-          <TabsList className="grid w-full grid-cols-4 mb-8 bg-white shadow-sm border">
+        <Tabs defaultValue="basic" className="w-full">
+          <TabsList className="grid w-full grid-cols-4 mb-8 bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
             <TabsTrigger
-              value="restaurant"
-              className="flex items-center gap-2 data-[state=active]:bg-orange-50 data-[state=active]:text-orange-700"
+              value="basic"
+              className="text-gray-700 dark:text-gray-300"
             >
-              <MapPin className="w-4 h-4" />
-              Restaurant
+              Basic Info
             </TabsTrigger>
             <TabsTrigger
-              value="menu-item"
-              className="flex items-center gap-2 data-[state=active]:bg-orange-50 data-[state=active]:text-orange-700"
+              value="details"
+              className="text-gray-700 dark:text-gray-300"
             >
-              <ChefHat className="w-4 h-4" />
-              Menu Item
+              Details
             </TabsTrigger>
             <TabsTrigger
-              value="featured-item"
-              className="flex items-center gap-2 data-[state=active]:bg-orange-50 data-[state=active]:text-orange-700"
+              value="pricing"
+              className="text-gray-700 dark:text-gray-300"
             >
-              <Star className="w-4 h-4" />
-              Featured Item
+              Pricing
             </TabsTrigger>
             <TabsTrigger
-              value="popular-item"
-              className="flex items-center gap-2 data-[state=active]:bg-orange-50 data-[state=active]:text-orange-700"
+              value="media"
+              className="text-gray-700 dark:text-gray-300"
             >
-              <Star className="w-4 h-4" />
-              Popular Item
+              Media
             </TabsTrigger>
           </TabsList>
 
-          {/* Restaurant Form */}
-          <TabsContent value="restaurant">
-            <Card className="shadow-lg border-0">
-              <CardHeader className="bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-t-lg">
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="w-5 h-5" />
-                  Add a New Restaurant
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-8">
-                <form
-                  onSubmit={restaurantForm.handleSubmit(onRestaurantSubmit)}
-                  className="space-y-6"
+          <TabsContent value="basic" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label
+                  htmlFor="name"
+                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="restaurant-name"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Restaurant Name
-                      </Label>
-                      <Input
-                        id="restaurant-name"
-                        {...restaurantForm.register("name")}
-                        className="h-11"
-                        placeholder="Enter restaurant name"
-                      />
-                      {restaurantForm.formState.errors.name && (
-                        <p className="text-sm text-red-500">
-                          {restaurantForm.formState.errors.name.message}
-                        </p>
-                      )}
-                    </div>
+                  Item Name
+                </Label>
+                <Input
+                  id="name"
+                  placeholder="Enter item name"
+                  className="h-12"
+                />
+              </div>
 
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="restaurant-category"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Category
-                      </Label>
-                      <Input
-                        id="restaurant-category"
-                        {...restaurantForm.register("category")}
-                        className="h-11"
-                        placeholder="e.g., Italian, Chinese, Indian"
-                      />
-                      {restaurantForm.formState.errors.category && (
-                        <p className="text-sm text-red-500">
-                          {restaurantForm.formState.errors.category.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="category"
+                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  Category
+                </Label>
+                <Select>
+                  <SelectTrigger className="h-12">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="appetizer">Appetizer</SelectItem>
+                    <SelectItem value="main">Main Course</SelectItem>
+                    <SelectItem value="dessert">Dessert</SelectItem>
+                    <SelectItem value="beverage">Beverage</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="restaurant-logo"
-                      className="text-sm font-medium text-gray-700"
-                    >
-                      Restaurant Logo
-                    </Label>
-                    <div className="flex items-center space-x-2">
-                      <ImageIcon className="w-5 h-5 text-gray-400" />
-                      <Input
-                        id="restaurant-logo"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        {...restaurantForm.register("logo")}
-                        className="h-11"
-                      />
-                    </div>
-                    {restaurantForm.formState.errors.logo && (
-                      <p className="text-sm text-red-500">
-                        {restaurantForm.formState.errors.logo.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="restaurant-rating"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Rating (0-5)
-                      </Label>
-                      <div className="relative">
-                        <Star className="w-5 h-5 text-yellow-400 absolute left-3 top-3" />
-                        <Input
-                          id="restaurant-rating"
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="5"
-                          {...restaurantForm.register("rating", {
-                            valueAsNumber: true,
-                          })}
-                          className="h-11 pl-10"
-                          placeholder="4.5"
-                        />
-                      </div>
-                      {restaurantForm.formState.errors.rating && (
-                        <p className="text-sm text-red-500">
-                          {restaurantForm.formState.errors.rating.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="restaurant-delivery-time"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Delivery Time
-                      </Label>
-                      <div className="relative">
-                        <Clock className="w-5 h-5 text-gray-400 absolute left-3 top-3" />
-                        <Input
-                          id="restaurant-delivery-time"
-                          {...restaurantForm.register("deliveryTime")}
-                          className="h-11 pl-10"
-                          placeholder="20-30 mins"
-                        />
-                      </div>
-                      {restaurantForm.formState.errors.deliveryTime && (
-                        <p className="text-sm text-red-500">
-                          {restaurantForm.formState.errors.deliveryTime.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="restaurant-distance"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Distance
-                      </Label>
-                      <div className="relative">
-                        <MapPin className="w-5 h-5 text-gray-400 absolute left-3 top-3" />
-                        <Input
-                          id="restaurant-distance"
-                          {...restaurantForm.register("distance")}
-                          className="h-11 pl-10"
-                          placeholder="2.5 km"
-                        />
-                      </div>
-                      {restaurantForm.formState.errors.distance && (
-                        <p className="text-sm text-red-500">
-                          {restaurantForm.formState.errors.distance.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    disabled={restaurantLoading}
-                    className="w-full h-12 bg-orange-600 hover:bg-orange-700 text-white font-medium transition-colors"
-                  >
-                    {restaurantLoading ? (
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    ) : (
-                      <MapPin className="mr-2 h-5 w-5" />
-                    )}
-                    Add Restaurant
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
+            <div className="space-y-2">
+              <Label
+                htmlFor="description"
+                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
+                Description
+              </Label>
+              <div className="relative">
+                <Textarea
+                  id="description"
+                  placeholder="Describe your item..."
+                  className="min-h-[120px] resize-none"
+                />
+                <ImageIcon className="w-5 h-5 text-gray-400 dark:text-gray-500 absolute right-3 top-3" />
+              </div>
+            </div>
           </TabsContent>
 
-          {/* Menu Item Form */}
-          <TabsContent value="menu-item">
-            <Card className="shadow-lg border-0">
-              <CardHeader className="bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-t-lg">
-                <CardTitle className="flex items-center gap-2">
-                  <ChefHat className="w-5 h-5" />
-                  Add a New Menu Item
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-8">
-                <form
-                  onSubmit={menuItemForm.handleSubmit(onMenuItemSubmit)}
-                  className="space-y-6"
+          <TabsContent value="details" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label
+                  htmlFor="cookTime"
+                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="menu-name"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Item Name
-                      </Label>
-                      <Input
-                        id="menu-name"
-                        {...menuItemForm.register("name")}
-                        className="h-11"
-                        placeholder="Enter menu item name"
-                      />
-                      {menuItemForm.formState.errors.name && (
-                        <p className="text-sm text-red-500">
-                          {menuItemForm.formState.errors.name.message}
-                        </p>
-                      )}
-                    </div>
+                  Cook Time
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="cookTime"
+                    type="number"
+                    placeholder="Enter cook time in minutes"
+                    className="h-12 pl-10"
+                  />
+                  <Clock className="w-5 h-5 text-gray-400 dark:text-gray-500 absolute left-3 top-3" />
+                </div>
+              </div>
 
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="menu-category"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Category
-                      </Label>
-                      <Select
-                        onValueChange={(value) =>
-                          menuItemForm.setValue(
-                            "category",
-                            value as "veg" | "non-veg"
-                          )
-                        }
-                      >
-                        <SelectTrigger className="h-11">
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="veg">🥬 Vegetarian</SelectItem>
-                          <SelectItem value="non-veg">
-                            🍖 Non-Vegetarian
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {menuItemForm.formState.errors.category && (
-                        <p className="text-sm text-red-500">
-                          {menuItemForm.formState.errors.category.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="location"
+                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  Location
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="location"
+                    placeholder="Enter location"
+                    className="h-12 pl-10"
+                  />
+                  <MapPin className="w-5 h-5 text-gray-400 dark:text-gray-500 absolute left-3 top-3" />
+                </div>
+              </div>
+            </div>
 
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="menu-description"
-                      className="text-sm font-medium text-gray-700"
-                    >
-                      Description
-                    </Label>
-                    <Textarea
-                      id="menu-description"
-                      {...menuItemForm.register("description")}
-                      className="min-h-[100px]"
-                      placeholder="Describe the menu item..."
-                    />
-                    {menuItemForm.formState.errors.description && (
-                      <p className="text-sm text-red-500">
-                        {menuItemForm.formState.errors.description.message}
-                      </p>
-                    )}
-                  </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label
+                  htmlFor="spiceLevel"
+                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  Spice Level
+                </Label>
+                <Select>
+                  <SelectTrigger className="h-12">
+                    <SelectValue placeholder="Select spice level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mild">Mild</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="hot">Hot</SelectItem>
+                    <SelectItem value="extra-hot">Extra Hot</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="menu-price"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Current Price
-                      </Label>
-                      <Input
-                        id="menu-price"
-                        {...menuItemForm.register("price")}
-                        className="h-11"
-                        placeholder="8500"
-                      />
-                      {menuItemForm.formState.errors.price && (
-                        <p className="text-sm text-red-500">
-                          {menuItemForm.formState.errors.price.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="menu-original-price"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Original Price
-                      </Label>
-                      <Input
-                        id="menu-original-price"
-                        {...menuItemForm.register("originalPrice")}
-                        className="h-11"
-                        placeholder="10500"
-                      />
-                      {menuItemForm.formState.errors.originalPrice && (
-                        <p className="text-sm text-red-500">
-                          {menuItemForm.formState.errors.originalPrice.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="menu-image"
-                      className="text-sm font-medium text-gray-700"
-                    >
-                      Item Image
-                    </Label>
-                    <div className="flex items-center space-x-2">
-                      <ImageIcon className="w-5 h-5 text-gray-400" />
-                      <Input
-                        id="menu-image"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        {...menuItemForm.register("image")}
-                        className="h-11"
-                      />
-                    </div>
-                    {menuItemForm.formState.errors.image && (
-                      <p className="text-sm text-red-500">
-                        {menuItemForm.formState.errors.image.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="menu-rating"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Rating (0-5)
-                      </Label>
-                      <div className="relative">
-                        <Star className="w-5 h-5 text-yellow-400 absolute left-3 top-3" />
-                        <Input
-                          id="menu-rating"
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="5"
-                          {...menuItemForm.register("rating", {
-                            valueAsNumber: true,
-                          })}
-                          className="h-11 pl-10"
-                          placeholder="4.5"
-                        />
-                      </div>
-                      {menuItemForm.formState.errors.rating && (
-                        <p className="text-sm text-red-500">
-                          {menuItemForm.formState.errors.rating.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="menu-cook-time"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Cook Time
-                      </Label>
-                      <div className="relative">
-                        <Clock className="w-5 h-5 text-gray-400 absolute left-3 top-3" />
-                        <Input
-                          id="menu-cook-time"
-                          {...menuItemForm.register("cookTime")}
-                          className="h-11 pl-10"
-                          placeholder="20-25 mins"
-                        />
-                      </div>
-                      {menuItemForm.formState.errors.cookTime && (
-                        <p className="text-sm text-red-500">
-                          {menuItemForm.formState.errors.cookTime.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="menu-restaurant"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Restaurant
-                      </Label>
-                      <Select
-                        onValueChange={(value) =>
-                          menuItemForm.setValue("restaurantId", value)
-                        }
-                      >
-                        <SelectTrigger className="h-11">
-                          <SelectValue placeholder="Select restaurant" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {restaurants.map((restaurant) => (
-                            <SelectItem
-                              key={restaurant.$id}
-                              value={restaurant.$id}
-                            >
-                              {restaurant.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {menuItemForm.formState.errors.restaurantId && (
-                        <p className="text-sm text-red-500">
-                          {menuItemForm.formState.errors.restaurantId.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    disabled={menuItemLoading || !restaurants.length}
-                    className="w-full h-12 bg-orange-600 hover:bg-orange-700 text-white font-medium transition-colors"
-                  >
-                    {menuItemLoading ? (
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    ) : (
-                      <ChefHat className="mr-2 h-5 w-5" />
-                    )}
-                    Add Menu Item
-                  </Button>
-
-                  {!restaurants.length && (
-                    <p className="text-sm text-amber-600 text-center bg-amber-50 p-3 rounded-md">
-                      Please add a restaurant first before creating menu items
-                    </p>
-                  )}
-                </form>
-              </CardContent>
-            </Card>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="dietary"
+                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  Dietary Info
+                </Label>
+                <Select>
+                  <SelectTrigger className="h-12">
+                    <SelectValue placeholder="Select dietary info" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="vegetarian">Vegetarian</SelectItem>
+                    <SelectItem value="vegan">Vegan</SelectItem>
+                    <SelectItem value="gluten-free">Gluten Free</SelectItem>
+                    <SelectItem value="halal">Halal</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </TabsContent>
 
-          {/* Featured Item Form */}
-          <TabsContent value="featured-item">
-            <Card className="shadow-lg border-0">
-              <CardHeader className="bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-t-lg">
-                <CardTitle className="flex items-center gap-2">
-                  <Star className="w-5 h-5" />
-                  Add a New Featured Item
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-8">
-                <form
-                  onSubmit={featuredItemForm.handleSubmit(onFeaturedSubmit)}
-                  className="space-y-6"
+          <TabsContent value="pricing" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label
+                  htmlFor="price"
+                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="featured-name"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Featured Item Name
-                      </Label>
-                      <Input
-                        id="featured-name"
-                        {...featuredItemForm.register("name")}
-                        className="h-11"
-                        placeholder="Enter featured item name"
-                      />
-                      {featuredItemForm.formState.errors.name && (
-                        <p className="text-sm text-red-500">
-                          {featuredItemForm.formState.errors.name.message}
-                        </p>
-                      )}
-                    </div>
+                  Price (₦)
+                </Label>
+                <Input
+                  id="price"
+                  type="number"
+                  placeholder="Enter price"
+                  className="h-12"
+                />
+              </div>
 
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="featured-category"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Category
-                      </Label>
-                      <Select
-                        onValueChange={(value) =>
-                          featuredItemForm.setValue(
-                            "category",
-                            value as "veg" | "non-veg"
-                          )
-                        }
-                        value={featuredItemForm.watch("category")}
-                      >
-                        <SelectTrigger className="h-11">
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="veg">🥬 Vegetarian</SelectItem>
-                          <SelectItem value="non-veg">
-                            🍖 Non-Vegetarian
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {featuredItemForm.formState.errors.category && (
-                        <p className="text-sm text-red-500">
-                          {featuredItemForm.formState.errors.category.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="originalPrice"
+                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  Original Price (₦)
+                </Label>
+                <Input
+                  id="originalPrice"
+                  type="number"
+                  placeholder="Enter original price"
+                  className="h-12"
+                />
+              </div>
+            </div>
 
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="featured-description"
-                      className="text-sm font-medium text-gray-700"
-                    >
-                      Description
-                    </Label>
-                    <Textarea
-                      id="featured-description"
-                      {...featuredItemForm.register("description")}
-                      className="min-h-[100px]"
-                      placeholder="Describe why this item is featured..."
-                    />
-                    {featuredItemForm.formState.errors.description && (
-                      <p className="text-sm text-red-500">
-                        {featuredItemForm.formState.errors.description.message}
-                      </p>
-                    )}
-                  </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label
+                  htmlFor="discount"
+                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  Discount (%)
+                </Label>
+                <Input
+                  id="discount"
+                  type="number"
+                  placeholder="Enter discount percentage"
+                  className="h-12"
+                />
+              </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="featured-price"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Price
-                      </Label>
-                      <Input
-                        id="featured-price"
-                        {...featuredItemForm.register("price")}
-                        className="h-11"
-                        placeholder="8500"
-                      />
-                      {featuredItemForm.formState.errors.price && (
-                        <p className="text-sm text-red-500">
-                          {featuredItemForm.formState.errors.price.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="featured-rating"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Rating (0-5)
-                      </Label>
-                      <div className="relative">
-                        <Star className="w-5 h-5 text-yellow-400 absolute left-3 top-3" />
-                        <Input
-                          id="featured-rating"
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="5"
-                          {...featuredItemForm.register("rating", {
-                            valueAsNumber: true,
-                          })}
-                          className="h-11 pl-10"
-                          placeholder="4.5"
-                        />
-                      </div>
-                      {featuredItemForm.formState.errors.rating && (
-                        <p className="text-sm text-red-500">
-                          {featuredItemForm.formState.errors.rating.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="featured-image"
-                      className="text-sm font-medium text-gray-700"
-                    >
-                      Featured Image
-                    </Label>
-                    <div className="flex items-center space-x-2">
-                      <ImageIcon className="w-5 h-5 text-gray-400" />
-                      <Input
-                        id="featured-image"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp,image/jpg"
-                        {...featuredItemForm.register("image")}
-                        className="h-11"
-                      />
-                    </div>
-                    {featuredItemForm.formState.errors.image && (
-                      <p className="text-sm text-red-500">
-                        {featuredItemForm.formState.errors.image.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="featured-restaurant"
-                      className="text-sm font-medium text-gray-700"
-                    >
-                      Restaurant
-                    </Label>
-                    <Select
-                      onValueChange={(value) =>
-                        featuredItemForm.setValue("restaurantId", value)
-                      }
-                    >
-                      <SelectTrigger className="h-11">
-                        <SelectValue placeholder="Select restaurant" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {restaurants.map((restaurant) => (
-                          <SelectItem
-                            key={restaurant.$id}
-                            value={restaurant.$id}
-                          >
-                            {restaurant.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {featuredItemForm.formState.errors.restaurantId && (
-                      <p className="text-sm text-red-500">
-                        {featuredItemForm.formState.errors.restaurantId.message}
-                      </p>
-                    )}
-                  </div>
-
-                  <Button
-                    type="submit"
-                    disabled={featuredItemLoading || !restaurants.length}
-                    className="w-full h-12 bg-orange-600 hover:bg-orange-700 text-white font-medium transition-colors"
-                  >
-                    {featuredItemLoading ? (
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    ) : (
-                      <Star className="mr-2 h-5 w-5" />
-                    )}
-                    Add Featured Item
-                  </Button>
-
-                  {!restaurants.length && (
-                    <p className="text-sm text-amber-600 text-center bg-amber-50 p-3 rounded-md">
-                      Please add a restaurant first before creating featured
-                      items
-                    </p>
-                  )}
-                </form>
-              </CardContent>
-            </Card>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="currency"
+                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  Currency
+                </Label>
+                <Select>
+                  <SelectTrigger className="h-12">
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NGN">NGN (₦)</SelectItem>
+                    <SelectItem value="USD">USD ($)</SelectItem>
+                    <SelectItem value="EUR">EUR (€)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </TabsContent>
 
-          {/* Popular Item Form */}
-          <TabsContent value="popular-item">
-            <Card className="shadow-lg border-0">
-              <CardHeader className="bg-gradient-to-r from-orange-600 to-orange-700 text-white rounded-t-lg">
-                <CardTitle className="flex items-center gap-2">
-                  <Star className="w-5 h-5" />
-                  Add a New Popular Item
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-8">
-                <form
-                  onSubmit={popularItemForm.handleSubmit(onPopularSubmit)}
-                  className="space-y-6"
+          <TabsContent value="media" className="space-y-6">
+            <div className="space-y-2">
+              <Label
+                htmlFor="image"
+                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
+                Item Image
+              </Label>
+              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
+                <ImageIcon className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                <p className="text-gray-600 dark:text-gray-400 mb-2">
+                  Drag and drop your image here, or click to browse
+                </p>
+                <Button variant="outline" className="mt-2">
+                  Choose File
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label
+                  htmlFor="video"
+                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="popular-name"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Popular Item Name
-                      </Label>
-                      <Input
-                        id="popular-name"
-                        {...popularItemForm.register("name")}
-                        className="h-11"
-                        placeholder="Enter popular item name"
-                      />
-                      {popularItemForm.formState.errors.name && (
-                        <p className="text-sm text-red-500">
-                          {popularItemForm.formState.errors.name.message}
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="popular-category"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Category
-                      </Label>
-                      <Select
-                        onValueChange={(value) =>
-                          popularItemForm.setValue(
-                            "category",
-                            value as "veg" | "non-veg"
-                          )
-                        }
-                        value={popularItemForm.watch("category")}
-                      >
-                        <SelectTrigger className="h-11">
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="veg">🥬 Vegetarian</SelectItem>
-                          <SelectItem value="non-veg">
-                            🍖 Non-Vegetarian
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {popularItemForm.formState.errors.category && (
-                        <p className="text-sm text-red-500">
-                          {popularItemForm.formState.errors.category.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="popular-description"
-                      className="text-sm font-medium text-gray-700"
-                    >
-                      Description
-                    </Label>
-                    <Textarea
-                      id="popular-description"
-                      {...popularItemForm.register("description")}
-                      className="min-h-[100px]"
-                      placeholder="Describe the popular item..."
-                    />
-                    {popularItemForm.formState.errors.description && (
-                      <p className="text-sm text-red-500">
-                        {popularItemForm.formState.errors.description.message}
-                      </p>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="popular-price"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Price
-                      </Label>
-                      <Input
-                        id="popular-price"
-                        {...popularItemForm.register("price")}
-                        className="h-11"
-                        placeholder="8500"
-                      />
-                      {popularItemForm.formState.errors.price && (
-                        <p className="text-sm text-red-500">
-                          {popularItemForm.formState.errors.price.message}
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="popular-original-price"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Original Price
-                      </Label>
-                      <Input
-                        id="popular-original-price"
-                        {...popularItemForm.register("originalPrice")}
-                        className="h-11"
-                        placeholder="10500"
-                      />
-                      {popularItemForm.formState.errors.originalPrice && (
-                        <p className="text-sm text-red-500">
-                          {
-                            popularItemForm.formState.errors.originalPrice
-                              .message
-                          }
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="popular-image"
-                      className="text-sm font-medium text-gray-700"
-                    >
-                      Item Image
-                    </Label>
-                    <div className="flex items-center space-x-2">
-                      <ImageIcon className="w-5 h-5 text-gray-400" />
-                      <Input
-                        id="popular-image"
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        {...popularItemForm.register("image")}
-                        className="h-11"
-                      />
-                    </div>
-                    {popularItemForm.formState.errors.image && (
-                      <p className="text-sm text-red-500">
-                        {popularItemForm.formState.errors.image.message}
-                      </p>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="popular-rating"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Rating (0-5)
-                      </Label>
-                      <div className="relative">
-                        <Star className="w-5 h-5 text-yellow-400 absolute left-3 top-3" />
-                        <Input
-                          id="popular-rating"
-                          type="number"
-                          step="0.1"
-                          min="0"
-                          max="5"
-                          {...popularItemForm.register("rating", {
-                            valueAsNumber: true,
-                          })}
-                          className="h-11 pl-10"
-                          placeholder="4.5"
-                        />
-                      </div>
-                      {popularItemForm.formState.errors.rating && (
-                        <p className="text-sm text-red-500">
-                          {popularItemForm.formState.errors.rating.message}
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="popular-review-count"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Review Count
-                      </Label>
-                      <Input
-                        id="popular-review-count"
-                        type="number"
-                        min="0"
-                        {...popularItemForm.register("reviewCount", {
-                          valueAsNumber: true,
-                        })}
-                        className="h-11"
-                        placeholder="100"
-                      />
-                      {popularItemForm.formState.errors.reviewCount && (
-                        <p className="text-sm text-red-500">
-                          {popularItemForm.formState.errors.reviewCount.message}
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="popular-cooking-time"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Cooking Time
-                      </Label>
-                      <div className="relative">
-                        <Clock className="w-5 h-5 text-gray-400 absolute left-3 top-3" />
-                        <Input
-                          id="popular-cooking-time"
-                          {...popularItemForm.register("cookingTime")}
-                          className="h-11 pl-10"
-                          placeholder="20-25 mins"
-                        />
-                      </div>
-                      {popularItemForm.formState.errors.cookingTime && (
-                        <p className="text-sm text-red-500">
-                          {popularItemForm.formState.errors.cookingTime.message}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="popular-discount"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Discount
-                      </Label>
-                      <Input
-                        id="popular-discount"
-                        {...popularItemForm.register("discount")}
-                        className="h-11"
-                        placeholder="10%"
-                      />
-                      {popularItemForm.formState.errors.discount && (
-                        <p className="text-sm text-red-500">
-                          {popularItemForm.formState.errors.discount.message}
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="popular-restaurant"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Restaurant
-                      </Label>
-                      <Select
-                        onValueChange={(value) =>
-                          popularItemForm.setValue("restaurantId", value)
-                        }
-                      >
-                        <SelectTrigger className="h-11">
-                          <SelectValue placeholder="Select restaurant" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {restaurants.map((restaurant) => (
-                            <SelectItem
-                              key={restaurant.$id}
-                              value={restaurant.$id}
-                            >
-                              {restaurant.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {popularItemForm.formState.errors.restaurantId && (
-                        <p className="text-sm text-red-500">
-                          {
-                            popularItemForm.formState.errors.restaurantId
-                              .message
-                          }
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <Button
-                    type="submit"
-                    disabled={popularItemLoading || !restaurants.length}
-                    className="w-full h-12 bg-orange-600 hover:bg-orange-700 text-white font-medium transition-colors"
-                  >
-                    {popularItemLoading ? (
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    ) : (
-                      <Star className="mr-2 h-5 w-5" />
-                    )}
-                    Add Popular Item
-                  </Button>
-                  {!restaurants.length && (
-                    <p className="text-sm text-amber-600 text-center bg-amber-50 p-3 rounded-md">
-                      Please add a restaurant first before creating popular
-                      items
-                    </p>
-                  )}
-                </form>
-              </CardContent>
-            </Card>
+                  Video URL (Optional)
+                </Label>
+                <Input
+                  id="video"
+                  type="url"
+                  placeholder="Enter video URL"
+                  className="h-12"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label
+                  htmlFor="gallery"
+                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  Gallery Images
+                </Label>
+                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center">
+                  <ImageIcon className="w-8 h-8 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Add multiple images
+                  </p>
+                </div>
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
+
+        <div className="flex justify-end gap-4 mt-8">
+          <Button variant="outline" className="px-8">
+            Cancel
+          </Button>
+          <Button className="px-8">Add Item</Button>
+        </div>
       </div>
     </div>
   );

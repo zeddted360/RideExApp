@@ -1,1 +1,83 @@
-// 
+// export const menuItems: IMenuItem[] = [
+[
+  // {
+  //     name: "Margherita Pizza",
+  //     description: "Classic cheese pizza with fresh basil and tomato sauce",
+  //     price: "450",
+  //     originalPrice: "500",
+  //     image: "/images/margherita-pizza.jpg",
+  //     category: "veg",
+  //     rating: 4.5,
+  //     cookTime: "20 mins"
+  //   },
+  //   {
+  //     name: "Chicken Biryani",
+  //     description: "Spiced basmati rice with marinated chicken pieces",
+  //     price: "600",
+  //     originalPrice: "700",
+  //     image: "/images/chicken-biryani.jpg",
+  //     category: "non-veg",
+  //     rating: 4.7,
+  //     cookTime: "30 mins"
+  //   },
+  //   {
+  //     name: "Paneer Butter Masala",
+  //     description: "Cottage cheese cubes in a creamy tomato gravy",
+  //     price: "350",
+  //     originalPrice: "400",
+  //     image: "/images/paneer-butter-masala.jpg",
+  //     category: "veg",
+  //     rating: 4.3,
+  //     cookTime: "25 mins"
+  //   },
+  //   {
+  //     name: "Grilled Chicken Sandwich",
+  //     description: "Grilled chicken breast with lettuce and cheese in a bun",
+  //     price: "280",
+  //     originalPrice: "320",
+  //     image: "/images/grilled-chicken-sandwich.jpg",
+  //     category: "non-veg",
+  //     rating: 4.1,
+  //     cookTime: "15 mins"
+  //   },
+//   {
+//     name: "Veg Fried Rice",
+//     description: "Fried rice with fresh vegetables and soy sauce",
+//     price: "220",
+//     originalPrice: "250",
+//     image: "/images/veg-fried-rice.jpg",
+//     category: "veg",
+//     rating: 4.0,
+//     cookTime: "15 mins",
+//   },
+//   {
+//     name: "Butter Chicken",
+//     description: "Tender chicken pieces in rich butter and tomato sauce",
+//     price: "550",
+//     originalPrice: "600",
+//     image: "/images/butter-chicken.jpg",
+//     category: "non-veg",
+//     rating: 4.8,
+//     cookTime: "35 mins",
+//   },
+//   {
+//     name: "Chole Bhature",
+//     description: "Spiced chickpeas served with deep-fried bread",
+//     price: "180",
+//     originalPrice: "200",
+//     image: "/images/chole-bhature.jpg",
+//     category: "veg",
+//     rating: 4.2,
+//     cookTime: "20 mins",
+//   },
+//   {
+//     name: "Mutton Rogan Josh",
+//     description: "Slow-cooked mutton curry with Kashmiri spices",
+//     price: "700",
+//     originalPrice: "800",
+//     image: "/images/mutton-rogan-josh.jpg",
+//     category: "non-veg",
+//     rating: 4.6,
+//     cookTime: "45 mins",
+//   },
+];

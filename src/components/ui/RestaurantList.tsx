@@ -66,7 +66,7 @@ const RestaurantList = () => {
   // Error state for menu items
   if (menuError) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <Utensils className="w-12 h-12 text-red-500" />
@@ -97,7 +97,7 @@ const RestaurantList = () => {
   // Loading state
   if (loading === "pending" || menuLoading === "pending") {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="flex flex-col items-center justify-center py-20">
           {loading === "pending" ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full max-w-7xl px-4">
@@ -116,11 +116,11 @@ const RestaurantList = () => {
   // Success state with restaurants
   if (loading === "succeeded" && restaurants.length > 0) {
     return (
-      <div className="min-h-screen bg-gray-50 py-12">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <Tabs defaultValue={restaurants[0].$id} className="w-full">
             {/* Restaurant Cards */}
-            <div className="sticky top-0 z-10 bg-gray-50 py-4">
+            <div className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 py-4">
               <div className="relative flex items-center">
                 {restaurants.length > 6 && (
                   <>
@@ -200,10 +200,10 @@ const RestaurantList = () => {
                   className="mt-6"
                 >
                   {/* Restaurant Header */}
-                  <div className="bg-white/90 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-gray-100 mb-8">
+                  <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-8">
                     <div className="">
                       <div className="flex-1 flex items-center justify-between">
-                        <h2 className="text-2xl font-bold text-gray-900">
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                           {restaurant.name}
                         </h2>
                         <div className="flex items-center justify-between">
@@ -213,11 +213,12 @@ const RestaurantList = () => {
                             onClick={() => setViewMode("grid")}
                             className={cn(
                               "p-1",
-                              viewMode === "grid" && "bg-gray-100"
+                              viewMode === "grid" &&
+                                "bg-gray-100 dark:bg-gray-700"
                             )}
                             aria-label="Switch to grid view"
                           >
-                            <Grid className="w-5 h-5 text-gray-600" />
+                            <Grid className="w-5 h-5 text-gray-600 dark:text-gray-300" />
                           </Button>
                           <Button
                             variant="ghost"
@@ -225,11 +226,12 @@ const RestaurantList = () => {
                             onClick={() => setViewMode("list")}
                             className={cn(
                               "p-1",
-                              viewMode === "list" && "bg-gray-100"
+                              viewMode === "list" &&
+                                "bg-gray-100 dark:bg-gray-700"
                             )}
                             aria-label="Switch to list view"
                           >
-                            <List className="w-5 h-5 text-gray-600" />
+                            <List className="w-5 h-5 text-gray-600 dark:text-gray-300" />
                           </Button>
                         </div>
                       </div>
@@ -238,24 +240,24 @@ const RestaurantList = () => {
 
                   {/* Food Category Tabs */}
                   <Tabs defaultValue="all" className="w-full">
-                    <TabsList className="flex justify-center gap-2 p-2 bg-white/90 backdrop-blur-sm rounded-xl border border-gray-100 shadow-sm mb-6">
+                    <TabsList className="flex justify-center gap-2 p-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
                       <TabsTrigger
                         value="all"
-                        className="flex items-center gap-2 px-6 py-2 text-sm font-medium rounded-lg transition-all duration-300 data-[state=active]:bg-blue-500 data-[state=active]:text-white hover:bg-gray-100"
+                        className="flex items-center gap-2 px-6 py-2 text-sm font-medium rounded-lg transition-all duration-300 data-[state=active]:bg-blue-500 data-[state=active]:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
                         <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                         All
                       </TabsTrigger>
                       <TabsTrigger
                         value="veg"
-                        className="flex items-center gap-2 px-6 py-2 text-sm font-medium rounded-lg transition-all duration-300 data-[state=active]:bg-green-500 data-[state=active]:text-white hover:bg-gray-100"
+                        className="flex items-center gap-2 px-6 py-2 text-sm font-medium rounded-lg transition-all duration-300 data-[state=active]:bg-green-500 data-[state=active]:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
                         <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                         Vegetarian
                       </TabsTrigger>
                       <TabsTrigger
                         value="non-veg"
-                        className="flex items-center gap-2 px-6 py-2 text-sm font-medium rounded-lg transition-all duration-300 data-[state=active]:bg-red-500 data-[state=active]:text-white hover:bg-gray-100"
+                        className="flex items-center gap-2 px-6 py-2 text-sm font-medium rounded-lg transition-all duration-300 data-[state=active]:bg-red-500 data-[state=active]:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
                       >
                         <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                         Non-Vegetarian
@@ -267,22 +269,22 @@ const RestaurantList = () => {
                       <div
                         className={cn(
                           viewMode === "grid"
-                            ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+                            ? "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4"
                             : "flex flex-col gap-4"
                         )}
                       >
                         {items.length === 0 ? (
                           <div
                             className={cn(
-                              "bg-white/90 backdrop-blur-sm rounded-xl p-8 text-center shadow-sm border border-gray-100",
+                              "bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl p-8 text-center shadow-sm border border-gray-100 dark:border-gray-700",
                               viewMode === "grid" && "col-span-full"
                             )}
                           >
-                            <ChefHat className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold text-gray-900">
+                            <ChefHat className="w-12 h-12 text-gray-500 dark:text-gray-400 mx-auto mb-4" />
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                               No Menu Items
                             </h3>
-                            <p className="text-gray-600">
+                            <p className="text-gray-600 dark:text-gray-400">
                               No menu items available for this restaurant.
                             </p>
                           </div>
@@ -291,7 +293,7 @@ const RestaurantList = () => {
                             <div
                               key={item.$id}
                               className={cn(
-                                "bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300 group",
+                                "bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all duration-300 group",
                                 viewMode === "list" &&
                                   "flex flex-col sm:flex-row items-start gap-4"
                               )}
@@ -331,12 +333,12 @@ const RestaurantList = () => {
                                   viewMode === "list" && "sm:w-2/3"
                                 )}
                               >
-                                <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">
                                   {item.name}
                                 </h3>
                                 <p
                                   className={cn(
-                                    "text-sm text-gray-600 mb-3",
+                                    "text-sm text-gray-600 dark:text-gray-400 mb-3",
                                     viewMode === "grid"
                                       ? "line-clamp-2"
                                       : "line-clamp-3"
@@ -356,12 +358,12 @@ const RestaurantList = () => {
                                     ₦{item.price}
                                   </span>
                                   {item.originalPrice && (
-                                    <span className="text-sm text-gray-400 line-through">
+                                    <span className="text-sm text-gray-400 dark:text-gray-500 line-through">
                                       ₦{item.originalPrice}
                                     </span>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
+                                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
                                   <Clock className="w-4 h-4" />
                                   {item.cookTime}
                                 </div>
@@ -403,7 +405,7 @@ const RestaurantList = () => {
                       <div
                         className={cn(
                           viewMode === "grid"
-                            ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+                            ? "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4"
                             : "flex flex-col gap-4"
                         )}
                       >
@@ -411,15 +413,15 @@ const RestaurantList = () => {
                           .length === 0 ? (
                           <div
                             className={cn(
-                              "bg-white/90 backdrop-blur-sm rounded-xl p-8 text-center shadow-sm border border-gray-100",
+                              "bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl p-8 text-center shadow-sm border border-gray-100 dark:border-gray-700",
                               viewMode === "grid" && "col-span-full"
                             )}
                           >
                             <ChefHat className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold text-gray-900">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                               No Vegetarian Items
                             </h3>
-                            <p className="text-gray-600">
+                            <p className="text-gray-600 dark:text-gray-400">
                               No vegetarian options available right now.
                             </p>
                           </div>
@@ -430,7 +432,7 @@ const RestaurantList = () => {
                               <div
                                 key={item.$id}
                                 className={cn(
-                                  "bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300 group",
+                                  "bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all duration-300 group",
                                   viewMode === "list" &&
                                     "flex flex-col sm:flex-row items-start gap-4"
                                 )}
@@ -470,12 +472,12 @@ const RestaurantList = () => {
                                     viewMode === "list" && "sm:w-2/3"
                                   )}
                                 >
-                                  <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">
+                                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">
                                     {item.name}
                                   </h3>
                                   <p
                                     className={cn(
-                                      "text-sm text-gray-600 mb-3",
+                                      "text-sm text-gray-600 dark:text-gray-400 mb-3",
                                       viewMode === "grid"
                                         ? "line-clamp-2"
                                         : "line-clamp-3"
@@ -488,12 +490,12 @@ const RestaurantList = () => {
                                       ₦{item.price}
                                     </span>
                                     {item.originalPrice && (
-                                      <span className="text-sm text-gray-400 line-through">
+                                      <span className="text-sm text-gray-400 dark:text-gray-500 line-through">
                                         ₦{item.originalPrice}
                                       </span>
                                     )}
                                   </div>
-                                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
+                                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
                                     <Clock className="w-4 h-4" />
                                     {item.cookTime}
                                   </div>
@@ -530,7 +532,7 @@ const RestaurantList = () => {
                       <div
                         className={cn(
                           viewMode === "grid"
-                            ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+                            ? "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4"
                             : "flex flex-col gap-4"
                         )}
                       >
@@ -538,15 +540,15 @@ const RestaurantList = () => {
                           .length === 0 ? (
                           <div
                             className={cn(
-                              "bg-white/90 backdrop-blur-sm rounded-xl p-8 text-center shadow-sm border border-gray-100",
+                              "bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl p-8 text-center shadow-sm border border-gray-100 dark:border-gray-700",
                               viewMode === "grid" && "col-span-full"
                             )}
                           >
                             <ChefHat className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold text-gray-900">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                               No Non-Vegetarian Items
                             </h3>
-                            <p className="text-gray-600">
+                            <p className="text-gray-600 dark:text-gray-400">
                               No non-vegetarian options available right now.
                             </p>
                           </div>
@@ -557,7 +559,7 @@ const RestaurantList = () => {
                               <div
                                 key={item.$id}
                                 className={cn(
-                                  "bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300 group",
+                                  "bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all duration-300 group",
                                   viewMode === "list" &&
                                     "flex flex-col sm:flex-row items-start gap-4"
                                 )}
@@ -597,12 +599,12 @@ const RestaurantList = () => {
                                     viewMode === "list" && "sm:w-2/3"
                                   )}
                                 >
-                                  <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">
+                                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">
                                     {item.name}
                                   </h3>
                                   <p
                                     className={cn(
-                                      "text-sm text-gray-600 mb-3",
+                                      "text-sm text-gray-600 dark:text-gray-400 mb-3",
                                       viewMode === "grid"
                                         ? "line-clamp-2"
                                         : "line-clamp-3"
@@ -615,12 +617,12 @@ const RestaurantList = () => {
                                       ₦{item.price}
                                     </span>
                                     {item.originalPrice && (
-                                      <span className="text-sm text-gray-400 line-through">
+                                      <span className="text-sm text-gray-400 dark:text-gray-500 line-through">
                                         ₦{item.originalPrice}
                                       </span>
                                     )}
                                   </div>
-                                  <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
+                                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
                                     <Clock className="w-4 h-4" />
                                     {item.cookTime}
                                   </div>
@@ -664,7 +666,7 @@ const RestaurantList = () => {
   // No restaurants found
   if (loading === "succeeded" && restaurants.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="w-24 h-24 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <Utensils className="w-12 h-12 text-orange-500" />
@@ -689,7 +691,7 @@ const RestaurantList = () => {
   // Error state for restaurants
   if (loading === "failed") {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <Utensils className="w-12 h-12 text-red-500" />

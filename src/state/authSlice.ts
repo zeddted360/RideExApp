@@ -9,6 +9,39 @@ const initialState: AuthState = {
   error: null,
 };
 
+// Helper function to safely access localStorage
+const getLocalStorage = (key: string) => {
+  if (typeof window !== 'undefined') {
+    try {
+      return localStorage.getItem(key);
+    } catch (error) {
+      console.warn(`Failed to get ${key} from localStorage:`, error);
+      return null;
+    }
+  }
+  return null;
+};
+
+const setLocalStorage = (key: string, value: string) => {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(key, value);
+    } catch (error) {
+      console.warn(`Failed to set ${key} in localStorage:`, error);
+    }
+  }
+};
+
+const removeLocalStorage = (key: string) => {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.removeItem(key);
+    } catch (error) {
+      console.warn(`Failed to remove ${key} from localStorage:`, error);
+    }
+  }
+};
+
 // Async thunk to log in user
 export const loginAsync = createAsyncThunk<
   IUser,
@@ -26,15 +59,11 @@ export const loginAsync = createAsyncThunk<
       let phoneNumber: string | undefined;
       let phoneVerified: boolean | undefined;
 
-      try {
-        const phoneData = localStorage.getItem("userPhoneData");
-        if (phoneData) {
-          const parsed = JSON.parse(phoneData);
-          phoneNumber = parsed.phoneNumber;
-          phoneVerified = parsed.verified;
-        }
-      } catch (error) {
-        console.warn("Failed to get phone data from localStorage:", error);
+      const phoneData = getLocalStorage("userPhoneData");
+      if (phoneData) {
+        const parsed = JSON.parse(phoneData);
+        phoneNumber = parsed.phoneNumber;
+        phoneVerified = parsed.verified;
       }
 
       return {
@@ -64,7 +93,7 @@ export const loginAsGuestAsync = createAsyncThunk<
 >("auth/loginAsGuest", async (_, { rejectWithValue }) => {
   try {
     // Get guest user data from localStorage (set by the modal)
-    const guestData = localStorage.getItem("guestUserData");
+    const guestData = getLocalStorage("guestUserData");
 
     if (guestData) {
       const guestUser = JSON.parse(guestData);
@@ -83,7 +112,7 @@ export const loginAsGuestAsync = createAsyncThunk<
         phoneVerified: false,
       };
 
-      localStorage.setItem("guestUserData", JSON.stringify(guestUser));
+      setLocalStorage("guestUserData", JSON.stringify(guestUser));
       toast.success("Logged in as guest! You can browse and order food.");
       return guestUser;
     }
@@ -105,7 +134,7 @@ export const logoutAsync = createAsyncThunk<
 >("auth/logout", async (_, { rejectWithValue }) => {
   try {
     // Clear guest user data if exists
-    localStorage.removeItem("guestUserData");
+    removeLocalStorage("guestUserData");
 
     // Try to delete Appwrite session if user was authenticated
     try {
@@ -132,14 +161,10 @@ export const getCurrentUserAsync = createAsyncThunk<
 >("auth/getCurrentUser", async (_, { rejectWithValue }) => {
   try {
     // First check if there's a guest user in localStorage
-    try {
-      const guestData = localStorage.getItem("guestUserData");
-      if (guestData) {
-        const guestUser = JSON.parse(guestData);
-        return guestUser;
-      }
-    } catch (error) {
-      console.warn("Failed to get guest data from localStorage:", error);
+    const guestData = getLocalStorage("guestUserData");
+    if (guestData) {
+      const guestUser = JSON.parse(guestData);
+      return guestUser;
     }
 
     // If no guest user, try to get authenticated user from Appwrite
@@ -149,15 +174,11 @@ export const getCurrentUserAsync = createAsyncThunk<
     let phoneNumber: string | undefined;
     let phoneVerified: boolean | undefined;
 
-    try {
-      const phoneData = localStorage.getItem("userPhoneData");
-      if (phoneData) {
-        const parsed = JSON.parse(phoneData);
-        phoneNumber = parsed.phoneNumber;
-        phoneVerified = parsed.verified;
-      }
-    } catch (error) {
-      console.warn("Failed to get phone data from localStorage:", error);
+    const phoneData = getLocalStorage("userPhoneData");
+    if (phoneData) {
+      const parsed = JSON.parse(phoneData);
+      phoneNumber = parsed.phoneNumber;
+      phoneVerified = parsed.verified;
     }
 
     return {
@@ -198,9 +219,25 @@ const authSlice = createSlice({
       })
       .addCase(
         loginAsync.rejected,
-        (state, action: PayloadAction<string | undefined>) => {
+        (state, action) => {
           state.loading = "failed";
           state.error = action.payload || "Login failed";
+        }
+      )
+      .addCase(loginAsGuestAsync.pending, (state) => {
+        state.loading = "pending";
+        state.error = null;
+      })
+      .addCase(loginAsGuestAsync.fulfilled, (state, action: PayloadAction<IUser>) => {
+        state.loading = "succeeded";
+        state.user = action.payload;
+        state.error = null;
+      })
+      .addCase(
+        loginAsGuestAsync.rejected,
+        (state, action) => {
+          state.loading = "failed";
+          state.error = action.payload || "Guest login failed";
         }
       )
       .addCase(logoutAsync.pending, (state) => {
@@ -214,7 +251,7 @@ const authSlice = createSlice({
       })
       .addCase(
         logoutAsync.rejected,
-        (state, action: PayloadAction<string | undefined>) => {
+        (state, action) => {
           state.loading = "failed";
           state.error = action.payload || "Logout failed";
         }
@@ -223,39 +260,16 @@ const authSlice = createSlice({
         state.loading = "pending";
         state.error = null;
       })
-      .addCase(
-        getCurrentUserAsync.fulfilled,
-        (state, action: PayloadAction<IUser | null>) => {
-          state.loading = "succeeded";
-          state.user = action.payload;
-          state.error = null;
-        }
-      )
-      .addCase(
-        getCurrentUserAsync.rejected,
-        (state, action: PayloadAction<string | undefined>) => {
-          state.loading = "failed";
-          state.error = action.payload || "Failed to fetch user";
-        }
-      )
-      // Guest login cases
-      .addCase(loginAsGuestAsync.pending, (state) => {
-        state.loading = "pending";
+      .addCase(getCurrentUserAsync.fulfilled, (state, action: PayloadAction<IUser | null>) => {
+        state.loading = "succeeded";
+        state.user = action.payload;
         state.error = null;
       })
       .addCase(
-        loginAsGuestAsync.fulfilled,
-        (state, action: PayloadAction<IUser>) => {
-          state.loading = "succeeded";
-          state.user = action.payload;
-          state.error = null;
-        }
-      )
-      .addCase(
-        loginAsGuestAsync.rejected,
-        (state, action: PayloadAction<string | undefined>) => {
+        getCurrentUserAsync.rejected,
+        (state, action) => {
           state.loading = "failed";
-          state.error = action.payload || "Guest login failed";
+          state.error = action.payload || "Failed to get current user";
         }
       );
   },

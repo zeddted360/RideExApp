@@ -155,7 +155,13 @@ const Login = () => {
       };
 
       // Store in localStorage
-      localStorage.setItem("guestUserData", JSON.stringify(guestUser));
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem("guestUserData", JSON.stringify(guestUser));
+        } catch (error) {
+          console.warn("Failed to store guest user data:", error);
+        }
+      }
 
       // Dispatch guest login
       const result = await dispatch(loginAsGuestAsync());
@@ -286,12 +292,10 @@ const Login = () => {
               </Button>
 
               <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-gray-300" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">or</span>
-                </div>
+                <span className="w-full border-t border-gray-300 dark:border-gray-600" />
+                <span className="px-2 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400">
+                  or
+                </span>
               </div>
 
               <Button
@@ -299,7 +303,7 @@ const Login = () => {
                 onClick={handleGuestLogin}
                 disabled={loading === "pending"}
                 variant="outline"
-                className="w-full h-12 border-2 border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold transition-all duration-200"
+                className="w-full h-12 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 font-semibold transition-all duration-200 rounded-xl flex items-center justify-center gap-3"
               >
                 <UserCircle className="w-4 h-4 mr-2" />
                 Continue as Guest

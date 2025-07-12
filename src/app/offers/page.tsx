@@ -23,10 +23,10 @@ export const metadata = {
 
 export default function OffersPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50 dark:from-gray-900 dark:to-gray-800 p-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <h1 className="text-5xl font-bold text-orange-600 mb-8 text-left">
+        <h1 className="text-5xl font-bold text-orange-600 dark:text-orange-400 mb-8 text-left">
           All Offers
         </h1>
 

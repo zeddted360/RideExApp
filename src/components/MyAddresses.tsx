@@ -92,6 +92,17 @@ const MyAddresses = () => {
     }
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "active":
+        return "bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200";
+      case "inactive":
+        return "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200";
+      default:
+        return "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200";
+    }
+  };
+
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };

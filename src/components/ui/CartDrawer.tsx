@@ -186,9 +186,9 @@ const CartDrawer = () => {
       </Button>
 
       <Drawer open={activeCart} onOpenChange={setActiveCart}>
-        <DrawerContent className="bg-gray-50 rounded-t-3xl max-w-md mx-auto h-[80vh] flex flex-col">
-          <DrawerHeader className="border-b bg-white p-4">
-            <DrawerTitle className="text-2xl font-bold text-gray-800">
+        <DrawerContent className="bg-gray-50 dark:bg-gray-900 rounded-t-3xl max-w-md mx-auto h-[80vh] flex flex-col">
+          <DrawerHeader className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+            <DrawerTitle className="text-2xl font-bold text-gray-800 dark:text-gray-100">
               My Cart
             </DrawerTitle>
             <DrawerDescription className="sr-only">

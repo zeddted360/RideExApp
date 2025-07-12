@@ -175,8 +175,11 @@ const ProfileDropdown = ({ children }: ProfileDropdownProps) => {
 
     setIsUpdating(true);
     try {
-      await account.updateEmail(formData.email);
-      toast.success("Email update initiated. Please check your email for verification.");
+      // hardcode for now
+      await account.updateEmail(formData.email, formData.currentPassword);
+      toast.success(
+        "Email update initiated. Please check your email for verification."
+      );
       setEditingField(null);
       setShowEditDialog(false);
     } catch (error) {
@@ -222,7 +225,7 @@ const ProfileDropdown = ({ children }: ProfileDropdownProps) => {
 
       const result = await response.json();
       if (result.success) {
-        setFormData(prev => ({ ...prev, phone: formattedPhone }));
+        setFormData((prev) => ({ ...prev, phone: formattedPhone }));
         setShowPhoneVerification(true);
         setResendCountdown(60);
         setShowEditDialog(false);
@@ -261,12 +264,16 @@ const ProfileDropdown = ({ children }: ProfileDropdownProps) => {
         if (safeUser?.userId) {
           storeUserPhone(formData.phone, safeUser.userId);
         }
-        
+
         // Update user in auth context
         if (safeUser) {
-          updateUser({ ...safeUser, phoneNumber: formData.phone, phoneVerified: true });
+          updateUser({
+            ...safeUser,
+            phoneNumber: formData.phone,
+            phoneVerified: true,
+          });
         }
-        
+
         toast.success("Phone number updated successfully!");
         setShowPhoneVerification(false);
         setEditingField(null);
@@ -310,7 +317,11 @@ const ProfileDropdown = ({ children }: ProfileDropdownProps) => {
   };
 
   const handleUpdatePassword = async () => {
-    if (!formData.currentPassword || !formData.newPassword || !formData.confirmPassword) {
+    if (
+      !formData.currentPassword ||
+      !formData.newPassword ||
+      !formData.confirmPassword
+    ) {
       toast.error("Please fill in all password fields");
       return;
     }
@@ -329,11 +340,11 @@ const ProfileDropdown = ({ children }: ProfileDropdownProps) => {
     try {
       await account.updatePassword(formData.newPassword);
       toast.success("Password updated successfully!");
-      setFormData(prev => ({ 
-        ...prev, 
-        currentPassword: "", 
-        newPassword: "", 
-        confirmPassword: "" 
+      setFormData((prev) => ({
+        ...prev,
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
       }));
       setEditingField(null);
       setShowEditDialog(false);
@@ -375,11 +386,10 @@ const ProfileDropdown = ({ children }: ProfileDropdownProps) => {
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-gray-900">
-                    {isGuestUser && hasExistingAccount 
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                    {isGuestUser && hasExistingAccount
                       ? safeUser?.existingUserData?.name || safeUser?.name
-                      : safeUser?.name || "User"
-                    }
+                      : safeUser?.name || "User"}
                   </h3>
                   {isGuestUser && (
                     <Badge className="bg-yellow-100 text-yellow-800 text-xs">
@@ -387,16 +397,15 @@ const ProfileDropdown = ({ children }: ProfileDropdownProps) => {
                     </Badge>
                   )}
                 </div>
-                <p className="text-sm text-gray-600">
-                  {isGuestUser && hasExistingAccount 
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {isGuestUser && hasExistingAccount
                     ? "Guest session - existing account"
-                    : safeUser?.email || "No email"
-                  }
+                    : safeUser?.email || "No email"}
                 </p>
                 {safeUser?.phoneNumber && (
                   <div className="flex items-center gap-1 mt-1">
-                    <Phone className="w-3 h-3 text-gray-500" />
-                    <span className="text-xs text-gray-600">
+                    <Phone className="w-3 h-3 text-gray-500 dark:text-gray-400" />
+                    <span className="text-xs text-gray-600 dark:text-gray-400">
                       {safeUser.phoneNumber}
                     </span>
                   </div>
@@ -532,7 +541,7 @@ const ProfileDropdown = ({ children }: ProfileDropdownProps) => {
               {editingField === "phone" && <Phone className="w-5 h-5" />}
               {editingField === "password" && <Lock className="w-5 h-5" />}
               Edit{" "}
-              {editingField?.charAt(0).toUpperCase() + editingField?.slice(1)}
+              {/* {editingField?.charAt(0).toUpperCase() + editingField?.slice(1)} */}
             </DialogTitle>
             <DialogDescription>
               Update your {editingField} information
