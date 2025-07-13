@@ -163,19 +163,20 @@ const AddToCartModal = () => {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent
         className={cn(
-          "sm:max-w-md md:max-w-lg bg-orange-50 border-orange-200 p-0 overflow-hidden rounded-2xl shadow-lg",
+          "sm:max-w-md md:max-w-lg lg:max-w-xl bg-orange-50 dark:bg-gray-900 border-orange-200 dark:border-gray-700 p-0 overflow-hidden rounded-2xl shadow-lg",
           "animate-in fade-in-50 slide-in-from-bottom-10 duration-300"
         )}
         aria-describedby="dialog-description"
       >
-        <DialogHeader className="relative bg-gradient-to-r from-orange-500 to-red-500 p-6 pb-4">
+        <DialogHeader className="relative bg-gradient-to-r from-orange-500 to-red-500 p-4 sm:p-6 pb-4">
           <DialogTitle className="sr-only">Add {item.name} to Cart</DialogTitle>
           <DialogDescription id="dialog-description" className="sr-only">
             Customize your order for {item.name}. Adjust quantity and add
             special instructions.
           </DialogDescription>
-          <div className="flex items-start space-x-4">
-            <div className="relative w-24 h-24 bg-orange-200 rounded-xl overflow-hidden flex-shrink-0 group">
+          <div className="flex items-start space-x-3 sm:space-x-4">
+            {/* Larger Image for Mobile */}
+            <div className="relative w-20 h-20 sm:w-24 sm:h-24 bg-orange-200 dark:bg-orange-800 rounded-xl overflow-hidden flex-shrink-0 group">
               <Image
                 src={fileUrl(
                   item.source === "featured"
@@ -189,17 +190,17 @@ const AddToCartModal = () => {
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 width={96}
                 height={96}
-                sizes="96px"
+                sizes="(max-width: 640px) 80px, 96px"
                 quality={100}
                 loading="lazy"
               />
             </div>
-            <div className="flex-1">
-              <DialogTitle className="text-2xl font-bold text-white mb-2 tracking-tight">
+            <div className="flex-1 min-w-0">
+              <DialogTitle className="text-lg sm:text-2xl font-bold text-white mb-2 tracking-tight line-clamp-2">
                 {item.name === "Jollof" ? "African Jollof" : item.name}
               </DialogTitle>
               <div className="flex items-center space-x-2">
-                <span className="text-2xl font-semibold text-white">
+                <span className="text-lg sm:text-2xl font-semibold text-white">
                   ₦{itemPrice.toLocaleString()}
                 </span>
                 <Info className="w-4 h-4 text-orange-200" aria-hidden="true" />
@@ -207,40 +208,40 @@ const AddToCartModal = () => {
             </div>
           </div>
         </DialogHeader>
-        
-        <div className="px-6 py-6 space-y-6 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm">
+
+        <div className="px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm">
           <div className="text-center">
             <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
               Customize your order and add it to your cart
             </p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-4 sm:space-y-6">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
                 Quantity
               </h3>
-              <div className="flex items-center justify-center gap-4">
+              <div className="flex items-center justify-center gap-3 sm:gap-4">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-orange-200 dark:border-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                  className="w-12 h-12 sm:w-10 sm:h-10 flex items-center justify-center rounded-full border-2 border-orange-200 dark:border-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors touch-manipulation"
                 >
-                  <Minus className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                  <Minus className="w-5 h-5 sm:w-4 sm:h-4 text-orange-600 dark:text-orange-400" />
                 </button>
-                <span className="text-2xl font-semibold text-gray-900 dark:text-gray-100 min-w-[2.5rem] text-center">
+                <span className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-gray-100 min-w-[3rem] sm:min-w-[2.5rem] text-center">
                   {quantity}
                 </span>
                 <button
                   onClick={() => setQuantity(quantity + 1)}
-                  className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-orange-200 dark:border-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                  className="w-12 h-12 sm:w-10 sm:h-10 flex items-center justify-center rounded-full border-2 border-orange-200 dark:border-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors touch-manipulation"
                 >
-                  <Plus className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                  <Plus className="w-5 h-5 sm:w-4 sm:h-4 text-orange-600 dark:text-orange-400" />
                 </button>
               </div>
             </div>
 
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
                 Special Instructions
               </h3>
               <div className="relative">
@@ -248,10 +249,11 @@ const AddToCartModal = () => {
                   value={specialInstructions}
                   onChange={(e) => setSpecialInstructions(e.target.value)}
                   placeholder="Any special requests? (optional)"
-                  className="min-h-[120px] resize-none bg-white dark:bg-gray-700 border-orange-200 dark:border-orange-600 focus:border-orange-400 dark:focus:border-orange-500 focus:ring-orange-400 dark:focus:ring-orange-500 placeholder:text-gray-400 dark:placeholder:text-gray-500 rounded-xl p-3 w-full text-gray-900 dark:text-gray-100"
+                  maxLength={maxInstructionsLength}
+                  className="min-h-[100px] sm:min-h-[120px] resize-none bg-white dark:bg-gray-700 border-orange-200 dark:border-orange-600 focus:border-orange-400 dark:focus:border-orange-500 focus:ring-orange-400 dark:focus:ring-orange-500 placeholder:text-gray-400 dark:placeholder:text-gray-500 rounded-xl p-3 w-full text-gray-900 dark:text-gray-100 text-sm"
                 />
                 <span className="absolute bottom-2 right-2 text-xs text-gray-400 dark:text-gray-500">
-                  {specialInstructions.length}/200
+                  {specialInstructions.length}/{maxInstructionsLength}
                 </span>
               </div>
             </div>
@@ -262,14 +264,14 @@ const AddToCartModal = () => {
             <Button
               onClick={handleAddToCart}
               className={cn(
-                "w-full py-4 text-lg font-semibold rounded-xl transition-all duration-300 relative overflow-hidden group",
+                "w-full py-3 sm:py-4 text-base sm:text-lg font-semibold rounded-xl transition-all duration-300 relative overflow-hidden group touch-manipulation",
                 item.category === "veg"
                   ? "bg-green-500 hover:bg-green-600 text-white"
                   : "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white"
               )}
               aria-label={`Add ${item.name} to cart`}
             >
-              <ShoppingCart className="w-5 h-5 mr-2" />
+              <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
               Add to Cart - ₦{totalPrice.toLocaleString()}
             </Button>
           </div>

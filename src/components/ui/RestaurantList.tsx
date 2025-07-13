@@ -63,51 +63,50 @@ const RestaurantList = () => {
     }
   };
 
-  // Error state for menu items
-  if (menuError) {
+  // Loading state
+  if (loading === "pending") {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Utensils className="w-12 h-12 text-red-500" />
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto"></div>
+            <p className="mt-4 text-gray-600 dark:text-gray-400">
+              Loading restaurants...
+            </p>
           </div>
-          <Alert
-            variant="destructive"
-            className="max-w-md bg-white/90 backdrop-blur-sm border-red-100 shadow-sm"
-          >
-            <AlertTitle className="text-xl font-semibold text-red-800">
-              Failed to Load Menu
-            </AlertTitle>
-            <AlertDescription className="text-red-600 mt-2">
-              {menuError || "Failed to load menu items. Please try again."}
-            </AlertDescription>
-            <Button
-              className="w-full mt-4 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg py-2 transition-all duration-300"
-              onClick={() => dispatch(listAsyncMenusItem())}
-              aria-label="Retry loading menu items"
-            >
-              Try Again
-            </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (loading === "failed" && error) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <Alert variant="destructive">
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
           </Alert>
         </div>
       </div>
     );
   }
 
-  // Loading state
-  if (loading === "pending" || menuLoading === "pending") {
+  // No restaurants state
+  if (loading === "succeeded" && restaurants.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="flex flex-col items-center justify-center py-20">
-          {loading === "pending" ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full max-w-7xl px-4">
-              {[...Array(4)].map((_, index) => (
-                <RestaurantCardSkeleton key={index} />
-              ))}
-            </div>
-          ) : (
-            <MenuItemCardSkeleton />
-          )}
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
+        <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <Utensils className="w-12 h-12 text-gray-500 dark:text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              No Restaurants
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              No restaurants available at the moment.
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -116,72 +115,124 @@ const RestaurantList = () => {
   // Success state with restaurants
   if (loading === "succeeded" && restaurants.length > 0) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 sm:py-12">
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <Tabs defaultValue={restaurants[0].$id} className="w-full">
-            {/* Restaurant Cards */}
-            <div className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-900 py-4">
-              <div className="relative flex items-center">
-                {restaurants.length > 6 && (
-                  <>
-                    <Button
-                      onClick={scrollLeft}
-                      variant="outline"
-                      size="icon"
-                      className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-sm shadow-sm hover:bg-white rounded-full z-20 hidden sm:flex"
-                      aria-label="Scroll left"
-                    >
-                      <ChevronLeft className="w-5 h-5 text-gray-600" />
-                    </Button>
-                    <Button
-                      onClick={scrollRight}
-                      variant="outline"
-                      size="icon"
-                      className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-sm shadow-sm hover:bg-white rounded-full z-20 hidden sm:flex"
-                      aria-label="Scroll right"
-                    >
-                      <ChevronRight className="w-5 h-5 text-gray-600" />
-                    </Button>
-                  </>
-                )}
-                <TabsList
-                  ref={scrollRef}
-                  className={cn(
-                    "flex flex-row flex-nowrap gap-4 p-0 bg-transparent w-full h-fit mx-4",
-                    restaurants.length > 6 &&
-                      "overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+            {/* Restaurant Selection Header */}
+            <div className="sticky top-0 z-10 bg-gray-50/80 dark:bg-gray-900/80 backdrop-blur-lg py-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="mb-4">
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                  Choose Your Restaurant
+                </h2>
+                <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">
+                  Select a restaurant to explore their menu
+                </p>
+              </div>
+
+              {/* Desktop: Horizontal scroll with arrows */}
+              <div className="hidden lg:block">
+                <div className="relative">
+                  {restaurants.length > 6 && (
+                    <>
+                      <Button
+                        onClick={scrollLeft}
+                        variant="outline"
+                        size="icon"
+                        className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-lg hover:bg-white dark:hover:bg-gray-700 rounded-full z-20 border-0"
+                        aria-label="Scroll left"
+                      >
+                        <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                      </Button>
+                      <Button
+                        onClick={scrollRight}
+                        variant="outline"
+                        size="icon"
+                        className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-lg hover:bg-white dark:hover:bg-gray-700 rounded-full z-20 border-0"
+                        aria-label="Scroll right"
+                      >
+                        <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                      </Button>
+                    </>
                   )}
-                >
+                  <TabsList
+                    ref={scrollRef}
+                    className={cn(
+                      "flex flex-row flex-nowrap gap-4 p-0 bg-transparent w-full h-fit mx-4",
+                      restaurants.length > 6 &&
+                        "overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+                    )}
+                  >
+                    {restaurants.map((restaurant) => (
+                      <TabsTrigger
+                        key={restaurant.$id}
+                        value={restaurant.$id}
+                        className={cn(
+                          "flex flex-col items-center gap-3 p-4 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 hover:shadow-xl transition-all duration-300 flex-shrink-0",
+                          "min-w-[160px] max-w-[200px]",
+                          "data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-red-500 data-[state=active]:text-white data-[state=active]:shadow-xl data-[state=active]:scale-105"
+                        )}
+                      >
+                        <div className="relative w-16 h-16">
+                          <Image
+                            src={fileUrl(
+                              validateEnv().restaurantBucketId,
+                              restaurant.logo
+                            )}
+                            alt={restaurant.name}
+                            className="rounded-full object-cover ring-4 ring-white/50 shadow-lg"
+                            fill
+                            sizes="64px"
+                            priority
+                            quality={90}
+                          />
+                        </div>
+                        <div className="text-center w-full">
+                          <h3 className="font-bold text-base truncate mb-1">
+                            {restaurant.name}
+                          </h3>
+                          <p className="text-xs opacity-75 truncate">
+                            {restaurant.category}
+                          </p>
+                        </div>
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </div>
+              </div>
+
+              {/* Mobile: Grid layout */}
+              <div className="lg:hidden">
+                <TabsList className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-0 bg-transparent">
                   {restaurants.map((restaurant) => (
                     <TabsTrigger
                       key={restaurant.$id}
                       value={restaurant.$id}
                       className={cn(
-                        "flex flex-col items-center h-fit w-fit gap-2 p-3 bg-white/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300 flex-shrink-0",
-                        "min-w-[100px] max-w-[120px] sm:min-w-[140px] sm:max-w-[180px]",
-                        "data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-red-500 data-[state=active]:text-white data-[state=active]:shadow-lg"
+                        "flex flex-col items-center gap-3 p-4 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 hover:shadow-xl transition-all duration-300",
+                        "data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-red-500 data-[state=active]:text-white data-[state=active]:shadow-xl data-[state=active]:scale-105"
                       )}
                     >
-                      <div className="relative w-8 h-8 sm:w-10 sm:h-10">
+                      <div className="relative w-14 h-14">
                         <Image
                           src={fileUrl(
                             validateEnv().restaurantBucketId,
                             restaurant.logo
                           )}
                           alt={restaurant.name}
-                          className="rounded-full object-cover ring-2 ring-white/50"
+                          className="rounded-full object-cover ring-4 ring-white/50 shadow-lg"
                           fill
-                          sizes="(max-width: 640px) 32px, 40px"
+                          sizes="56px"
                           priority
                           quality={90}
                         />
                       </div>
-                      <div className="text-center flex-1">
-                        <span className="font-semibold text-xs sm:text-sm truncate">
-                          {restaurant.name.length > 12
-                            ? restaurant.name.slice(0, 12) + "..."
-                            : restaurant.name}
-                        </span>
+                      <div className="text-center w-full">
+                        <h3 className="font-bold text-sm truncate mb-1">
+                          {restaurant.name}
+                        </h3>
+                        <p className="text-xs opacity-75 truncate">
+                          {restaurant.category}
+                        </p>
                       </div>
                     </TabsTrigger>
                   ))}
@@ -197,91 +248,157 @@ const RestaurantList = () => {
                 <TabsContent
                   key={restaurant.$id}
                   value={restaurant.$id}
-                  className="mt-6"
+                  className="mt-8"
                 >
                   {/* Restaurant Header */}
-                  <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-8">
-                    <div className="">
-                      <div className="flex-1 flex items-center justify-between">
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                          {restaurant.name}
-                        </h2>
-                        <div className="flex items-center justify-between">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setViewMode("grid")}
-                            className={cn(
-                              "p-1",
-                              viewMode === "grid" &&
-                                "bg-gray-100 dark:bg-gray-700"
+                  <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-3xl p-6 sm:p-8 shadow-xl border border-gray-200/50 dark:border-gray-700/50 mb-8">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="relative w-16 h-16 sm:w-20 sm:h-20">
+                          <Image
+                            src={fileUrl(
+                              validateEnv().restaurantBucketId,
+                              restaurant.logo
                             )}
-                            aria-label="Switch to grid view"
-                          >
-                            <Grid className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setViewMode("list")}
-                            className={cn(
-                              "p-1",
-                              viewMode === "list" &&
-                                "bg-gray-100 dark:bg-gray-700"
-                            )}
-                            aria-label="Switch to list view"
-                          >
-                            <List className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-                          </Button>
+                            alt={restaurant.name}
+                            className="rounded-full object-cover ring-4 ring-white/50 shadow-lg"
+                            fill
+                            sizes="(max-width: 640px) 64px, 80px"
+                            priority
+                            quality={90}
+                          />
                         </div>
+                        <div>
+                          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                            {restaurant.name}
+                          </h2>
+                          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-4 h-4" />
+                              {restaurant.deliveryTime}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Utensils className="w-4 h-4" />
+                              {restaurant.category}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <ChefHat className="w-4 h-4" />
+                              {restaurant.distance}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* View Mode Toggle */}
+                      <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-2xl p-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setViewMode("grid")}
+                          className={cn(
+                            "rounded-xl transition-all duration-200",
+                            viewMode === "grid"
+                              ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 shadow-sm"
+                              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                          )}
+                          aria-label="Switch to grid view"
+                        >
+                          <Grid className="w-4 h-4 mr-2" />
+                          Grid
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setViewMode("list")}
+                          className={cn(
+                            "rounded-xl transition-all duration-200",
+                            viewMode === "list"
+                              ? "bg-white dark:bg-gray-600 text-gray-900 dark:text-gray-100 shadow-sm"
+                              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                          )}
+                          aria-label="Switch to list view"
+                        >
+                          <List className="w-4 h-4 mr-2" />
+                          List
+                        </Button>
                       </div>
                     </div>
                   </div>
 
                   {/* Food Category Tabs */}
                   <Tabs defaultValue="all" className="w-full">
-                    <TabsList className="flex justify-center gap-2 p-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
-                      <TabsTrigger
-                        value="all"
-                        className="flex items-center gap-2 px-6 py-2 text-sm font-medium rounded-lg transition-all duration-300 data-[state=active]:bg-blue-500 data-[state=active]:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
-                      >
-                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                        All
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="veg"
-                        className="flex items-center gap-2 px-6 py-2 text-sm font-medium rounded-lg transition-all duration-300 data-[state=active]:bg-green-500 data-[state=active]:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
-                      >
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        Vegetarian
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="non-veg"
-                        className="flex items-center gap-2 px-6 py-2 text-sm font-medium rounded-lg transition-all duration-300 data-[state=active]:bg-red-500 data-[state=active]:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
-                      >
-                        <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                        Non-Vegetarian
-                      </TabsTrigger>
-                    </TabsList>
+                    {/* Desktop: Centered tabs */}
+                    <div className="hidden sm:block mb-8">
+                      <TabsList className="flex justify-center gap-3 p-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-lg">
+                        <TabsTrigger
+                          value="all"
+                          className="flex items-center gap-3 px-6 py-3 text-sm font-semibold rounded-xl transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                        >
+                          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                          All Items
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="veg"
+                          className="flex items-center gap-3 px-6 py-3 text-sm font-semibold rounded-xl transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-green-600 data-[state=active]:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                        >
+                          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                          Vegetarian
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="non-veg"
+                          className="flex items-center gap-3 px-6 py-3 text-sm font-semibold rounded-xl transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-red-600 data-[state=active]:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                        >
+                          <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                          Non-Vegetarian
+                        </TabsTrigger>
+                      </TabsList>
+                    </div>
+
+                    {/* Mobile: Compact tabs */}
+                    <div className="sm:hidden mb-6">
+                      <TabsList className="flex gap-2 p-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/50 shadow-lg">
+                        <TabsTrigger
+                          value="all"
+                          className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                        >
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          All
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="veg"
+                          className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-green-600 data-[state=active]:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                        >
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          Veg
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="non-veg"
+                          className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-red-600 data-[state=active]:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                        >
+                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                          Non-Veg
+                        </TabsTrigger>
+                      </TabsList>
+                    </div>
 
                     {/* All Items */}
                     <TabsContent value="all">
                       <div
                         className={cn(
                           viewMode === "grid"
-                            ? "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4"
-                            : "flex flex-col gap-4"
+                            ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6"
+                            : "flex flex-col gap-6"
                         )}
                       >
                         {items.length === 0 ? (
                           <div
                             className={cn(
-                              "bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl p-8 text-center shadow-sm border border-gray-100 dark:border-gray-700",
+                              "bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-3xl p-8 text-center shadow-xl border border-gray-200/50 dark:border-gray-700/50",
                               viewMode === "grid" && "col-span-full"
                             )}
                           >
-                            <ChefHat className="w-12 h-12 text-gray-500 dark:text-gray-400 mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            <ChefHat className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-6" />
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-3">
                               No Menu Items
                             </h3>
                             <p className="text-gray-600 dark:text-gray-400">
@@ -293,17 +410,17 @@ const RestaurantList = () => {
                             <div
                               key={item.$id}
                               className={cn(
-                                "bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all duration-300 group",
+                                "bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-3xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 hover:shadow-2xl transition-all duration-300 group overflow-hidden",
                                 viewMode === "list" &&
-                                  "flex flex-col sm:flex-row items-start gap-4"
+                                  "flex flex-col sm:flex-row items-start gap-6"
                               )}
                             >
                               <div
                                 className={cn(
                                   "relative overflow-hidden",
                                   viewMode === "grid"
-                                    ? "h-40 w-full"
-                                    : "h-60 w-full sm:w-1/3"
+                                    ? "h-48 w-full"
+                                    : "h-64 w-full sm:w-80"
                                 )}
                               >
                                 <Image
@@ -313,66 +430,72 @@ const RestaurantList = () => {
                                   )}
                                   alt={item.name}
                                   className={cn(
-                                    "object-cover w-full h-full group-hover:scale-105 transition-transform duration-300",
+                                    "object-cover w-full h-full group-hover:scale-110 transition-transform duration-500",
                                     viewMode === "grid"
-                                      ? "rounded-t-xl"
-                                      : "rounded-xl"
+                                      ? "rounded-t-3xl"
+                                      : "rounded-3xl"
                                   )}
                                   fill
                                   sizes={
                                     viewMode === "grid"
                                       ? "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                                      : "(max-width: 640px) 100vw, 33vw"
+                                      : "(max-width: 640px) 100vw, 320px"
                                   }
-                                  quality={80}
+                                  quality={90}
                                 />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                               </div>
                               <div
                                 className={cn(
-                                  "p-4",
-                                  viewMode === "list" && "sm:w-2/3"
+                                  "p-6",
+                                  viewMode === "list" && "sm:flex-1"
                                 )}
                               >
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">
-                                  {item.name}
-                                </h3>
-                                <p
-                                  className={cn(
-                                    "text-sm text-gray-600 dark:text-gray-400 mb-3",
-                                    viewMode === "grid"
-                                      ? "line-clamp-2"
-                                      : "line-clamp-3"
-                                  )}
-                                >
-                                  {item.description}
-                                </p>
-                                <div className="flex items-center justify-between mb-3">
-                                  <span
+                                <div className="flex items-start justify-between mb-4">
+                                  <div className="flex-1">
+                                    <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 line-clamp-2">
+                                      {item.name}
+                                    </h3>
+                                    <p className="text-gray-600 dark:text-gray-400 line-clamp-3 mb-4">
+                                      {item.description}
+                                    </p>
+                                  </div>
+                                  <Badge
+                                    variant="secondary"
                                     className={cn(
-                                      "text-lg font-bold",
+                                      "ml-2 text-xs font-semibold",
                                       item.category === "veg"
-                                        ? "text-green-600"
-                                        : "text-red-600"
+                                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                                        : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
                                     )}
                                   >
-                                    ₦{item.price}
-                                  </span>
-                                  {item.originalPrice && (
-                                    <span className="text-sm text-gray-400 dark:text-gray-500 line-through">
-                                      ₦{item.originalPrice}
+                                    {item.category === "veg" ? "Veg" : "Non-Veg"}
+                                  </Badge>
+                                </div>
+                                
+                                <div className="flex items-center justify-between mb-6">
+                                  <div className="flex items-center gap-4">
+                                    <span className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                                      ₦{item.price}
                                     </span>
-                                  )}
+                                    {item.originalPrice && (
+                                      <span className="text-lg text-gray-400 dark:text-gray-500 line-through">
+                                        ₦{item.originalPrice}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                    <Clock className="w-4 h-4" />
+                                    {item.cookTime}
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
-                                  <Clock className="w-4 h-4" />
-                                  {item.cookTime}
-                                </div>
+                                
                                 <Button
                                   className={cn(
-                                    "w-full font-medium rounded-lg py-2 transition-all duration-300",
+                                    "w-full font-semibold rounded-2xl py-3 transition-all duration-300 shadow-lg hover:shadow-xl",
                                     item.category === "veg"
-                                      ? "bg-green-500 hover:bg-green-600 text-white"
-                                      : "bg-red-500 hover:bg-red-600 text-white"
+                                      ? "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white"
+                                      : "bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white"
                                   )}
                                   aria-label={`Add ${item.name} to cart`}
                                   onClick={() => {
@@ -390,7 +513,7 @@ const RestaurantList = () => {
                                     setIsOpen(true);
                                   }}
                                 >
-                                  <ShoppingCart className="w-4 h-4 mr-2" />
+                                  <ShoppingCart className="w-5 h-5 mr-2" />
                                   Add to Cart
                                 </Button>
                               </div>
@@ -405,20 +528,20 @@ const RestaurantList = () => {
                       <div
                         className={cn(
                           viewMode === "grid"
-                            ? "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4"
-                            : "flex flex-col gap-4"
+                            ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6"
+                            : "flex flex-col gap-6"
                         )}
                       >
                         {items.filter((item) => item.category === "veg")
                           .length === 0 ? (
                           <div
                             className={cn(
-                              "bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl p-8 text-center shadow-sm border border-gray-100 dark:border-gray-700",
+                              "bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-3xl p-8 text-center shadow-xl border border-gray-200/50 dark:border-gray-700/50",
                               viewMode === "grid" && "col-span-full"
                             )}
                           >
-                            <ChefHat className="w-12 h-12 text-green-500 mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            <ChefHat className="w-16 h-16 text-green-500 mx-auto mb-6" />
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-3">
                               No Vegetarian Items
                             </h3>
                             <p className="text-gray-600 dark:text-gray-400">
@@ -432,17 +555,17 @@ const RestaurantList = () => {
                               <div
                                 key={item.$id}
                                 className={cn(
-                                  "bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all duration-300 group",
+                                  "bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-3xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 hover:shadow-2xl transition-all duration-300 group overflow-hidden",
                                   viewMode === "list" &&
-                                    "flex flex-col sm:flex-row items-start gap-4"
+                                    "flex flex-col sm:flex-row items-start gap-6"
                                 )}
                               >
                                 <div
                                   className={cn(
                                     "relative overflow-hidden",
                                     viewMode === "grid"
-                                      ? "h-40 w-full"
-                                      : "h-60 w-full sm:w-1/3"
+                                      ? "h-48 w-full"
+                                      : "h-64 w-full sm:w-80"
                                   )}
                                 >
                                   <Image
@@ -452,55 +575,63 @@ const RestaurantList = () => {
                                     )}
                                     alt={item.name}
                                     className={cn(
-                                      "object-cover w-full h-full group-hover:scale-105 transition-transform duration-300",
+                                      "object-cover w-full h-full group-hover:scale-110 transition-transform duration-500",
                                       viewMode === "grid"
-                                        ? "rounded-t-xl"
-                                        : "rounded-xl"
+                                        ? "rounded-t-3xl"
+                                        : "rounded-3xl"
                                     )}
                                     fill
                                     sizes={
                                       viewMode === "grid"
                                         ? "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                                        : "(max-width: 640px) 100vw, 33vw"
+                                        : "(max-width: 640px) 100vw, 320px"
                                     }
-                                    quality={80}
+                                    quality={90}
                                   />
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                                 </div>
                                 <div
                                   className={cn(
-                                    "p-4",
-                                    viewMode === "list" && "sm:w-2/3"
+                                    "p-6",
+                                    viewMode === "list" && "sm:flex-1"
                                   )}
                                 >
-                                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">
-                                    {item.name}
-                                  </h3>
-                                  <p
-                                    className={cn(
-                                      "text-sm text-gray-600 dark:text-gray-400 mb-3",
-                                      viewMode === "grid"
-                                        ? "line-clamp-2"
-                                        : "line-clamp-3"
-                                    )}
-                                  >
-                                    {item.description}
-                                  </p>
-                                  <div className="flex items-center justify-between mb-3">
-                                    <span className="text-lg font-bold text-green-600">
-                                      ₦{item.price}
-                                    </span>
-                                    {item.originalPrice && (
-                                      <span className="text-sm text-gray-400 dark:text-gray-500 line-through">
-                                        ₦{item.originalPrice}
+                                  <div className="flex items-start justify-between mb-4">
+                                    <div className="flex-1">
+                                      <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 line-clamp-2">
+                                        {item.name}
+                                      </h3>
+                                      <p className="text-gray-600 dark:text-gray-400 line-clamp-3 mb-4">
+                                        {item.description}
+                                      </p>
+                                    </div>
+                                    <Badge
+                                      variant="secondary"
+                                      className="ml-2 text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                                    >
+                                      Veg
+                                    </Badge>
+                                  </div>
+                                  
+                                  <div className="flex items-center justify-between mb-6">
+                                    <div className="flex items-center gap-4">
+                                      <span className="text-2xl font-bold text-green-600 dark:text-green-400">
+                                        ₦{item.price}
                                       </span>
-                                    )}
+                                      {item.originalPrice && (
+                                        <span className="text-lg text-gray-400 dark:text-gray-500 line-through">
+                                          ₦{item.originalPrice}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                      <Clock className="w-4 h-4" />
+                                      {item.cookTime}
+                                    </div>
                                   </div>
-                                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
-                                    <Clock className="w-4 h-4" />
-                                    {item.cookTime}
-                                  </div>
+                                  
                                   <Button
-                                    className="w-full bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg py-2 transition-all duration-300"
+                                    className="w-full font-semibold rounded-2xl py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white transition-all duration-300 shadow-lg hover:shadow-xl"
                                     aria-label={`Add ${item.name} to cart`}
                                     onClick={() => {
                                       setItem({
@@ -517,7 +648,7 @@ const RestaurantList = () => {
                                       setIsOpen(true);
                                     }}
                                   >
-                                    <ShoppingCart className="w-4 h-4 mr-2" />
+                                    <ShoppingCart className="w-5 h-5 mr-2" />
                                     Add to Cart
                                   </Button>
                                 </div>
@@ -532,20 +663,20 @@ const RestaurantList = () => {
                       <div
                         className={cn(
                           viewMode === "grid"
-                            ? "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4"
-                            : "flex flex-col gap-4"
+                            ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6"
+                            : "flex flex-col gap-6"
                         )}
                       >
                         {items.filter((item) => item.category === "non-veg")
                           .length === 0 ? (
                           <div
                             className={cn(
-                              "bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl p-8 text-center shadow-sm border border-gray-100 dark:border-gray-700",
+                              "bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-3xl p-8 text-center shadow-xl border border-gray-200/50 dark:border-gray-700/50",
                               viewMode === "grid" && "col-span-full"
                             )}
                           >
-                            <ChefHat className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                            <ChefHat className="w-16 h-16 text-red-500 mx-auto mb-6" />
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-3">
                               No Non-Vegetarian Items
                             </h3>
                             <p className="text-gray-600 dark:text-gray-400">
@@ -559,17 +690,17 @@ const RestaurantList = () => {
                               <div
                                 key={item.$id}
                                 className={cn(
-                                  "bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all duration-300 group",
+                                  "bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-3xl shadow-xl border border-gray-200/50 dark:border-gray-700/50 hover:shadow-2xl transition-all duration-300 group overflow-hidden",
                                   viewMode === "list" &&
-                                    "flex flex-col sm:flex-row items-start gap-4"
+                                    "flex flex-col sm:flex-row items-start gap-6"
                                 )}
                               >
                                 <div
                                   className={cn(
                                     "relative overflow-hidden",
                                     viewMode === "grid"
-                                      ? "h-40 w-full"
-                                      : "h-60 w-full sm:w-1/3"
+                                      ? "h-48 w-full"
+                                      : "h-64 w-full sm:w-80"
                                   )}
                                 >
                                   <Image
@@ -579,55 +710,63 @@ const RestaurantList = () => {
                                     )}
                                     alt={item.name}
                                     className={cn(
-                                      "object-cover w-full h-full group-hover:scale-105 transition-transform duration-300",
+                                      "object-cover w-full h-full group-hover:scale-110 transition-transform duration-500",
                                       viewMode === "grid"
-                                        ? "rounded-t-xl"
-                                        : "rounded-xl"
+                                        ? "rounded-t-3xl"
+                                        : "rounded-3xl"
                                     )}
                                     fill
                                     sizes={
                                       viewMode === "grid"
                                         ? "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                                        : "(max-width: 640px) 100vw, 33vw"
+                                        : "(max-width: 640px) 100vw, 320px"
                                     }
-                                    quality={80}
+                                    quality={90}
                                   />
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                                 </div>
                                 <div
                                   className={cn(
-                                    "p-4",
-                                    viewMode === "list" && "sm:w-2/3"
+                                    "p-6",
+                                    viewMode === "list" && "sm:flex-1"
                                   )}
                                 >
-                                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 line-clamp-1">
-                                    {item.name}
-                                  </h3>
-                                  <p
-                                    className={cn(
-                                      "text-sm text-gray-600 dark:text-gray-400 mb-3",
-                                      viewMode === "grid"
-                                        ? "line-clamp-2"
-                                        : "line-clamp-3"
-                                    )}
-                                  >
-                                    {item.description}
-                                  </p>
-                                  <div className="flex items-center justify-between mb-3">
-                                    <span className="text-lg font-bold text-red-600">
-                                      ₦{item.price}
-                                    </span>
-                                    {item.originalPrice && (
-                                      <span className="text-sm text-gray-400 dark:text-gray-500 line-through">
-                                        ₦{item.originalPrice}
+                                  <div className="flex items-start justify-between mb-4">
+                                    <div className="flex-1">
+                                      <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 line-clamp-2">
+                                        {item.name}
+                                      </h3>
+                                      <p className="text-gray-600 dark:text-gray-400 line-clamp-3 mb-4">
+                                        {item.description}
+                                      </p>
+                                    </div>
+                                    <Badge
+                                      variant="secondary"
+                                      className="ml-2 text-xs font-semibold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+                                    >
+                                      Non-Veg
+                                    </Badge>
+                                  </div>
+                                  
+                                  <div className="flex items-center justify-between mb-6">
+                                    <div className="flex items-center gap-4">
+                                      <span className="text-2xl font-bold text-red-600 dark:text-red-400">
+                                        ₦{item.price}
                                       </span>
-                                    )}
+                                      {item.originalPrice && (
+                                        <span className="text-lg text-gray-400 dark:text-gray-500 line-through">
+                                          ₦{item.originalPrice}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                      <Clock className="w-4 h-4" />
+                                      {item.cookTime}
+                                    </div>
                                   </div>
-                                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
-                                    <Clock className="w-4 h-4" />
-                                    {item.cookTime}
-                                  </div>
+                                  
                                   <Button
-                                    className="w-full bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg py-2 transition-all duration-300"
+                                    className="w-full font-semibold rounded-2xl py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white transition-all duration-300 shadow-lg hover:shadow-xl"
                                     aria-label={`Add ${item.name} to cart`}
                                     onClick={() => {
                                       setItem({
@@ -644,7 +783,7 @@ const RestaurantList = () => {
                                       setIsOpen(true);
                                     }}
                                   >
-                                    <ShoppingCart className="w-4 h-4 mr-2" />
+                                    <ShoppingCart className="w-5 h-5 mr-2" />
                                     Add to Cart
                                   </Button>
                                 </div>
@@ -658,62 +797,6 @@ const RestaurantList = () => {
               );
             })}
           </Tabs>
-        </div>
-      </div>
-    );
-  }
-
-  // No restaurants found
-  if (loading === "succeeded" && restaurants.length === 0) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-24 h-24 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Utensils className="w-12 h-12 text-orange-500" />
-          </div>
-          <Alert
-            variant="default"
-            className="max-w-md bg-white/90 backdrop-blur-sm border-gray-100 shadow-sm"
-          >
-            <AlertTitle className="text-xl font-semibold text-gray-900">
-              No Restaurants Found
-            </AlertTitle>
-            <AlertDescription className="text-gray-600 mt-2">
-              No restaurants are available at the moment. Try again later or
-              check a different location.
-            </AlertDescription>
-          </Alert>
-        </div>
-      </div>
-    );
-  }
-
-  // Error state for restaurants
-  if (loading === "failed") {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Utensils className="w-12 h-12 text-red-500" />
-          </div>
-          <Alert
-            variant="destructive"
-            className="max-w-md bg-white/90 backdrop-blur-sm border-red-100 shadow-sm"
-          >
-            <AlertTitle className="text-xl font-semibold text-red-800">
-              Error Loading Restaurants
-            </AlertTitle>
-            <AlertDescription className="text-red-600 mt-2">
-              {error || "Failed to load restaurants. Please try again."}
-            </AlertDescription>
-            <Button
-              className="w-full mt-4 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg py-2 transition-all duration-300"
-              onClick={() => dispatch(listAsyncRestaurants())}
-              aria-label="Retry loading restaurants"
-            >
-              Try Again
-            </Button>
-          </Alert>
         </div>
       </div>
     );

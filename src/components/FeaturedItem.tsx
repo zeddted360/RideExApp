@@ -121,36 +121,36 @@ const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
             <button
               onClick={handlePrevious}
               disabled={currentPage === 0}
-              className={`absolute left-0 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-md transition-colors duration-200 z-10 ${
+              className={`absolute left-0 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-2 rounded-full shadow-md transition-colors duration-200 z-10 ${
                 currentPage === 0
                   ? "opacity-50 cursor-not-allowed"
-                  : "hover:bg-white"
+                  : "hover:bg-white dark:hover:bg-gray-700"
               }`}
             >
-              <ChevronLeft className="w-5 h-5 text-gray-600" />
+              <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
             </button>
 
             {/* Next Button */}
             <button
               onClick={handleNext}
               disabled={startIndex + itemsPerPage >= featuredItems.length}
-              className={`absolute right-0 top-1/2 -translate-y-1/2 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-md transition-colors duration-200 z-10 ${
+              className={`absolute right-0 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-2 rounded-full shadow-md transition-colors duration-200 z-10 ${
                 startIndex + itemsPerPage >= featuredItems.length
                   ? "opacity-50 cursor-not-allowed"
-                  : "hover:bg-white"
+                  : "hover:bg-white dark:hover:bg-gray-700"
               }`}
             >
-              <ChevronRight className="w-5 h-5 text-gray-600" />
+              <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-300" />
             </button>
 
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               {displayedItems.map((item: IFeaturedItemFetched) => (
                 <div
                   key={item.$id}
-                  className="group bg-gradient-to-br from-orange-50 to-red-50 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
+                  className="group bg-gradient-to-br from-orange-50 to-red-50 dark:from-gray-800 dark:to-gray-700 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
                 >
                   <div className="relative">
-                    <div className="w-full h-32 overflow-hidden">
+                    <div className="w-full h-28 sm:h-32 overflow-hidden">
                       <Image
                         src={fileUrl(
                           validateEnv().featuredBucketId,
@@ -160,18 +160,18 @@ const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
                         width={200}
                         height={150}
                         className="object-cover w-full h-full"
-                        sizes="(max-width: 768px) 50vw, 25vw"
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
                       />
                     </div>
                     <button
                       onClick={() => toggleFavorite(item.$id)}
-                      className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm p-1.5 rounded-full hover:bg-white transition-colors duration-200"
+                      className="absolute top-2 right-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-1.5 rounded-full hover:bg-white dark:hover:bg-gray-700 transition-colors duration-200"
                     >
                       <Heart
                         className={`w-3.5 h-3.5 ${
                           favorites.has(item.$id)
                             ? "fill-red-500 text-red-500"
-                            : "text-gray-600"
+                            : "text-gray-600 dark:text-gray-300"
                         }`}
                       />
                     </button>
@@ -183,19 +183,19 @@ const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
                     </div>
                   </div>
 
-                  <div className="p-3">
-                    <h3 className="font-bold text-gray-900 text-sm mb-1 line-clamp-1">
+                  <div className="p-2 sm:p-3">
+                    <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm mb-1 line-clamp-1">
                       {item.name}
                     </h3>
-                    <p className="text-xs text-gray-400 font-medium tracking-wide mb-1 line-clamp-1">
+                    <p className="text-xs text-gray-400 dark:text-gray-500 font-medium tracking-wide mb-1 line-clamp-1">
                       {restaurantNames.get(item.restaurant) ||
                         `Restaurant ${item.restaurant.slice(-4)}`}
                     </p>
-                    <p className="text-xs text-gray-500 mb-2 line-clamp-2">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 line-clamp-2">
                       {item.description}
                     </p>
                     <div className="flex items-center justify-between">
-                      <span className="text-base font-bold text-orange-600">
+                      <span className="text-sm sm:text-base font-bold text-orange-600 dark:text-orange-400">
                         ₦{item.price}
                       </span>
                       <button
@@ -214,10 +214,11 @@ const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
                           setIsOpen(true);
                         }}
                         aria-label={`Add ${item.name} to cart`}
-                        className="flex items-center bg-gradient-to-r from-orange-500 to-orange-600 text-white px-3 py-1.5 rounded-full font-semibold text-xs hover:from-orange-600 hover:to-orange-700 transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-opacity-50"
+                        className="flex items-center bg-gradient-to-r from-orange-500 to-orange-600 text-white px-2 sm:px-3 py-1 sm:py-1.5 rounded-full font-semibold text-xs hover:from-orange-600 hover:to-orange-700 transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-opacity-50"
                       >
-                        <ShoppingBag className="w-3.5 h-3.5 mr-1" />
-                        Add to Cart
+                        <ShoppingBag className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1" />
+                        <span className="hidden sm:inline">Add to Cart</span>
+                        <span className="sm:hidden">Add</span>
                       </button>
                     </div>
                   </div>

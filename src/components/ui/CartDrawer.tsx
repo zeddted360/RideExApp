@@ -18,7 +18,15 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X, Plus, Minus, ShoppingCart, Loader2, Trash2 } from "lucide-react";
+import {
+  X,
+  Plus,
+  Minus,
+  ShoppingCart,
+  Loader2,
+  Trash2,
+  Eye,
+} from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -173,17 +181,26 @@ const CartDrawer = () => {
     [orders]
   );
 
+  // Check if there are items in cart
+  const hasCartItems = orders && orders.length > 0;
+
   return (
     <div className="p-4">
-      <Button
-        onClick={() => setActiveCart(true)}
-        className="bg-orange-500 text-white px-6 py-3 rounded-lg flex items-center gap-2 hover:bg-orange-600 transition-colors"
-        disabled={loading}
-        aria-label={`View cart with ${orders?.length || 0} items`}
-      >
-        <ShoppingCart size={20} />
-        View Cart ({orders?.length || 0})
-      </Button>
+      {/* Floating View Cart Button - Show on all devices when there are items */}
+      {/* Temporarily show button for testing */}
+      <div className="fixed bottom-6 right-6 z-40">
+        <Button
+          onClick={() => setActiveCart(true)}
+          className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-full px-4 py-3 lg:px-6 shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2"
+          aria-label="View cart items"
+        >
+          <Eye className="w-4 h-4 lg:w-5 lg:h-5" />
+          <span className="font-medium hidden sm:inline">View Cart Items</span>
+          <span className="bg-white/20 rounded-full px-2 py-1 text-xs font-bold">
+            {orders?.length || 0}
+          </span>
+        </Button>
+      </div>
 
       <Drawer open={activeCart} onOpenChange={setActiveCart}>
         <DrawerContent className="bg-gray-50 dark:bg-gray-900 rounded-t-3xl max-w-md mx-auto h-[80vh] flex flex-col">
@@ -206,7 +223,7 @@ const CartDrawer = () => {
             </DrawerClose>
           </DrawerHeader>
 
-          <div className="px-4 py-3 bg-white border-b">
+          <div className="px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
             <span className="bg-blue-500 text-white px-4 py-2 rounded-full text-center font-medium inline-block">
               Delivery
             </span>
@@ -216,7 +233,9 @@ const CartDrawer = () => {
             {loading && !orders?.length && (
               <div className="text-center">
                 <Loader2 className="animate-spin h-8 w-8 text-orange-500 mx-auto" />
-                <p className="text-gray-600 mt-2">Loading cart...</p>
+                <p className="text-gray-600 dark:text-gray-400 mt-2">
+                  Loading cart...
+                </p>
               </div>
             )}
             {error && (
@@ -231,12 +250,13 @@ const CartDrawer = () => {
               <div
                 key={item.$id}
                 className={cn(
-                  "bg-white rounded-lg p-4 shadow-sm transition-all duration-200",
+                  "bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm transition-all duration-200 border border-gray-200 dark:border-gray-700",
                   loading && "opacity-50"
                 )}
               >
-                <div className="flex items-start gap-3">
-                  <div className="w-16 h-16 bg-orange-100 rounded-lg flex items-center justify-center overflow-hidden">
+                <div className="flex items-start gap-4">
+                  {/* Larger Image Container */}
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 bg-orange-100 dark:bg-orange-900/20 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
                     <Image
                       src={fileUrl(
                         item.source === "featured"
@@ -248,18 +268,20 @@ const CartDrawer = () => {
                       )}
                       alt={item.name || "Item"}
                       className="w-full h-full object-cover"
-                      width={64}
-                      height={64}
-                      sizes="64px"
+                      width={96}
+                      height={96}
+                      sizes="(max-width: 640px) 80px, 96px"
                       quality={85}
                       loading="lazy"
                     />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-medium text-gray-800 mb-1">
+
+                  {/* Item Details */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-gray-800 dark:text-gray-100 mb-1 text-sm sm:text-base">
                       {item.name || "Unknown Item"}
                     </h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-2">
                       <span className="font-medium">Price:</span> ₦
                       {(typeof item.price === "string"
                         ? Number(item.price.replace(/[₦,]/g, ""))
@@ -267,35 +289,40 @@ const CartDrawer = () => {
                       ).toLocaleString()}{" "}
                       x {item.quantity}
                     </p>
-                    <p className="text-lg font-bold text-gray-900 mt-1">
+                    <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">
                       Total: ₦{item.totalPrice.toLocaleString()}
                     </p>
                     {item.specialInstructions && (
-                      <p className="text-sm text-gray-600 mt-1">
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
                         <span className="font-medium">Instruction:</span>{" "}
                         {item.specialInstructions}
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+
+                  {/* Quantity Controls */}
+                  <div className="flex flex-col items-center gap-2">
                     <Button
                       variant="outline"
                       size="icon"
                       onClick={() => handleUpdateQuantity(item, -1)}
-                      className="w-8 h-8 bg-gray-100 rounded-full hover:bg-gray-200"
+                      className="w-8 h-8 bg-gray-100 dark:bg-gray-700 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 border-gray-300 dark:border-gray-600"
                       disabled={loading || item.quantity <= 0}
                       aria-label={`Decrease quantity of ${item.name}`}
                     >
-                      <Minus size={16} className="text-gray-600" />
+                      <Minus
+                        size={16}
+                        className="text-gray-600 dark:text-gray-300"
+                      />
                     </Button>
-                    <span className="w-8 text-center font-medium">
+                    <span className="w-8 text-center font-medium text-gray-900 dark:text-gray-100 text-sm">
                       {item.quantity || 0}
                     </span>
                     <Button
                       variant="outline"
                       size="icon"
                       onClick={() => handleUpdateQuantity(item, 1)}
-                      className="w-8 h-8 bg-orange-500 rounded-full text-white hover:bg-orange-600"
+                      className="w-8 h-8 bg-orange-500 rounded-full text-white hover:bg-orange-600 border-orange-500"
                       disabled={loading}
                       aria-label={`Increase quantity of ${item.name}`}
                     >
@@ -305,7 +332,7 @@ const CartDrawer = () => {
                       variant="outline"
                       size="icon"
                       onClick={() => handleDeleteOrder(item)}
-                      className="w-8 h-8 bg-red-500 rounded-full text-white hover:bg-red-600"
+                      className="w-8 h-8 bg-red-500 rounded-full text-white hover:bg-red-600 border-red-500"
                       disabled={loading}
                       aria-label={`Delete ${item.name} from cart`}
                     >
@@ -317,12 +344,12 @@ const CartDrawer = () => {
             ))}
           </div>
 
-          <DrawerFooter className="p-4 bg-white border-t">
+          <DrawerFooter className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
             <div className="flex justify-between items-center mb-4">
-              <span className="text-lg font-medium text-gray-700">
+              <span className="text-lg font-medium text-gray-700 dark:text-gray-300">
                 Subtotal
               </span>
-              <span className="text-xl font-bold text-green-600">
+              <span className="text-xl font-bold text-green-600 dark:text-green-400">
                 ₦{subtotal.toLocaleString()}
               </span>
             </div>
