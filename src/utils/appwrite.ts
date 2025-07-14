@@ -17,6 +17,9 @@ interface EnvConfig {
   popularItemsCollectionId: string;
   userCollectionId: string;
   googleMapsApiKey: string; // Added for Google Maps
+  bookedOrdersCollectionId: string;
+  mapBoxAccessToken: string;
+  notificationCollectionId: string;
 }
 
 // Validate environment variables
@@ -38,6 +41,11 @@ export function validateEnv(): EnvConfig {
     popularItemsCollectionId: process.env.NEXT_PUBLIC_APPWRITE_POPULAR_ID,
     userCollectionId: process.env.NEXT_PUBLIC_APPWRITE_USER_COLLECTION_ID,
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_API_KEY, // Added for Google Maps
+    bookedOrdersCollectionId:
+      process.env.NEXT_PUBLIC_APPWRITE_BOOKED_ORDERS_COLLECTION_ID,
+    mapBoxAccessToken: process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN,
+    notificationCollectionId:
+      process.env.NEXT_PUBLIC_NOTIFICATION_COLLECTION_ID,
   };
 
   // Check for undefined environment variables
@@ -67,6 +75,9 @@ export function validateEnv(): EnvConfig {
     popularBucketId: requiredEnvVars.popularBucketId!,
     userCollectionId: requiredEnvVars.userCollectionId!,
     googleMapsApiKey: requiredEnvVars.googleMapsApiKey!, // Added for Google Maps
+    bookedOrdersCollectionId: requiredEnvVars.bookedOrdersCollectionId!,
+    mapBoxAccessToken: requiredEnvVars.mapBoxAccessToken!,
+    notificationCollectionId: requiredEnvVars.notificationCollectionId!,
   };
 }
 

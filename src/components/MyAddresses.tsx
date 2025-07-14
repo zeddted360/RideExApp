@@ -1,312 +1,210 @@
 "use client";
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { 
-  MapPin, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Home, 
-  Building, 
-  Star,
-  CheckCircle,
-  Loader2
-} from 'lucide-react';
-
-interface Address {
-  id: string;
-  name: string;
-  type: 'home' | 'work' | 'other';
-  address: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  phone: string;
-  isDefault: boolean;
-}
+import React, { useState, useEffect, useRef } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { MapPin, Plus, Trash2 } from "lucide-react";
+import { account, databases, validateEnv } from "@/utils/appwrite";
+import { Loader } from "@googlemaps/js-api-loader";
 
 const MyAddresses = () => {
-  const [addresses, setAddresses] = useState<Address[]>([
-    {
-      id: '1',
-      name: 'Home Address',
-      type: 'home',
-      address: '123 Main Street, Victoria Island',
-      city: 'Lagos',
-      state: 'Lagos',
-      postalCode: '101241',
-      phone: '+2348012345678',
-      isDefault: true
-    },
-    {
-      id: '2',
-      name: 'Office Address',
-      type: 'work',
-      address: '456 Business Avenue, Ikeja',
-      city: 'Lagos',
-      state: 'Lagos',
-      postalCode: '100001',
-      phone: '+2348098765432',
-      isDefault: false
-    }
-  ]);
-
+  const [addresses, setAddresses] = useState<string[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [editingAddress, setEditingAddress] = useState<Address | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    type: 'home' as 'home' | 'work' | 'other',
-    address: '',
-    city: '',
-    state: '',
-    postalCode: '',
-    phone: ''
-  });
-  const [isLocating, setIsLocating] = useState(false);
-  const [locationError, setLocationError] = useState<string | null>(null);
+  const [newAddress, setNewAddress] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [manualMode, setManualMode] = useState(false);
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const autocompleteInput = useRef<HTMLInputElement | null>(null);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
-  const getAddressIcon = (type: Address['type']) => {
-    switch (type) {
-      case 'home':
-        return <Home className="w-4 h-4 text-blue-500" />;
-      case 'work':
-        return <Building className="w-4 h-4 text-green-500" />;
-      default:
-        return <MapPin className="w-4 h-4 text-gray-500" />;
-    }
-  };
-
-  const getTypeColor = (type: Address['type']) => {
-    switch (type) {
-      case 'home':
-        return 'bg-blue-100 text-blue-800';
-      case 'work':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "active":
-        return "bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200";
-      case "inactive":
-        return "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200";
-      default:
-        return "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200";
-    }
-  };
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      type: 'home',
-      address: '',
-      city: '',
-      state: '',
-      postalCode: '',
-      phone: ''
-    });
-    setEditingAddress(null);
-    setShowAddForm(false);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (editingAddress) {
-      // Update existing address
-      setAddresses(prev => prev.map(addr => 
-        addr.id === editingAddress.id 
-          ? { ...addr, ...formData }
-          : addr
-      ));
-    } else {
-      // Add new address
-      const newAddress: Address = {
-        id: Date.now().toString(),
-        ...formData,
-        isDefault: addresses.length === 0 // First address is default
-      };
-      setAddresses(prev => [...prev, newAddress]);
-    }
-    
-    resetForm();
-  };
-
-  const handleEdit = (address: Address) => {
-    setEditingAddress(address);
-    setFormData({
-      name: address.name,
-      type: address.type,
-      address: address.address,
-      city: address.city,
-      state: address.state,
-      postalCode: address.postalCode,
-      phone: address.phone
-    });
-    setShowAddForm(true);
-  };
-
-  const handleDelete = (id: string) => {
-    setAddresses(prev => prev.filter(addr => addr.id !== id));
-  };
-
-  const handleSetDefault = (id: string) => {
-    setAddresses(prev => prev.map(addr => ({
-      ...addr,
-      isDefault: addr.id === id
-    })));
-  };
-
-  const handleUseMyLocation = async () => {
-    setIsLocating(true);
-    setLocationError(null);
-    if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
-      setLocationError('Google Maps API key is missing.');
-      setIsLocating(false);
-      return;
-    }
-    if (!navigator.geolocation) {
-      setLocationError('Geolocation is not supported by your browser.');
-      setIsLocating(false);
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(async (position) => {
-      const { latitude, longitude } = position.coords;
+  useEffect(() => {
+    (async () => {
       try {
-        const res = await fetch(
-          `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
+        const userData = await account.get();
+        const { databaseId, userCollectionId } = validateEnv();
+        const userDoc = await databases.getDocument(
+          databaseId,
+          userCollectionId,
+          userData.$id
         );
-        const data = await res.json();
-        if (data.status === 'OK' && data.results.length > 0) {
-          const result = data.results[0];
-          const addressComponents = result.address_components;
-          const getComponent = (type: string) =>
-            addressComponents.find((c: any) => c.types.includes(type))?.long_name || '';
-          setFormData((prev) => ({
-            ...prev,
-            address: result.formatted_address || '',
-            city: getComponent('locality') || getComponent('administrative_area_level_2') || '',
-            state: getComponent('administrative_area_level_1') || '',
-            postalCode: getComponent('postal_code') || '',
-          }));
+        if (Array.isArray(userDoc.address)) {
+          setAddresses(userDoc.address);
         } else {
-          setLocationError('Could not retrieve address from location.');
+          setAddresses([]);
         }
-      } catch (err) {
-        setLocationError('Failed to fetch address from Google Maps.');
-      } finally {
-        setIsLocating(false);
+      } catch {
+        setAddresses([]);
       }
-    }, (err) => {
-      setLocationError('Failed to get your location. Please allow location access.');
-      setIsLocating(false);
+    })();
+  }, []);
+
+  // Load Google Maps script for Places Autocomplete
+  useEffect(() => {
+    const { googleMapsApiKey } = validateEnv();
+    if (!googleMapsApiKey) return;
+    const loader = new Loader({
+      apiKey: googleMapsApiKey,
+      version: "weekly",
+      libraries: ["places"],
     });
+    loader.load().then(() => setMapLoaded(true));
+  }, []);
+
+  // Initialize autocomplete when mapLoaded and add form is open and not manual
+  useEffect(() => {
+    if (mapLoaded && showAddForm && !manualMode && autocompleteInput.current) {
+      autocompleteRef.current = new window.google.maps.places.Autocomplete(
+        autocompleteInput.current,
+        {
+          types: ["geocode"],
+          componentRestrictions: { country: "ng" },
+        }
+      );
+      autocompleteRef.current.addListener("place_changed", () => {
+        const place = autocompleteRef.current?.getPlace();
+        if (place?.formatted_address) {
+          setNewAddress(place.formatted_address);
+        } else if (place?.name) {
+          setNewAddress(place.name);
+        }
+      });
+    }
+  }, [mapLoaded, showAddForm, manualMode]);
+
+  // Add new address
+  const handleAddAddress = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAddress.trim()) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const userData = await account.get();
+      const { databaseId, userCollectionId } = validateEnv();
+      const updatedAddresses = [...addresses, newAddress.trim()];
+      await databases.updateDocument(
+        databaseId,
+        userCollectionId,
+        userData.$id,
+        {
+          address: updatedAddresses,
+        }
+      );
+      setAddresses(updatedAddresses);
+      setNewAddress("");
+      setShowAddForm(false);
+    } catch (err) {
+      setError("Failed to add address.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Delete address
+  const handleDeleteAddress = async (idx: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const userData = await account.get();
+      const { databaseId, userCollectionId } = validateEnv();
+      const updatedAddresses = addresses.filter((_, i) => i !== idx);
+      await databases.updateDocument(
+        databaseId,
+        userCollectionId,
+        userData.$id,
+        {
+          address: updatedAddresses,
+        }
+      );
+      setAddresses(updatedAddresses);
+    } catch (err) {
+      setError("Failed to delete address.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">My Addresses</h1>
-        <p className="text-gray-600">Manage your delivery addresses</p>
+    <div className="container mx-auto px-4 py-10 max-w-3xl">
+      <div className="mb-10">
+        <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white mb-2 tracking-tight">
+          My Addresses
+        </h1>
+        <p className="text-gray-500 dark:text-gray-300">
+          Manage your delivery addresses
+        </p>
       </div>
 
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">
-          Saved Addresses ({addresses.length})
+      <div className="flex justify-between items-center mb-8">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          Saved Addresses{" "}
+          <span className="text-base font-normal text-gray-500 dark:text-gray-400">
+            ({addresses.length})
+          </span>
         </h2>
-        <Button onClick={() => setShowAddForm(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Add New Address
+        <Button
+          onClick={() => setShowAddForm(true)}
+          className="flex items-center gap-2 px-5 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold shadow-md transition-all duration-200"
+        >
+          <Plus className="w-5 h-5" /> Add New Address
         </Button>
       </div>
 
+      {error && (
+        <p className="text-red-600 mb-4 text-center font-semibold">{error}</p>
+      )}
+
       {addresses.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <MapPin className="w-16 h-16 text-gray-400 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Addresses Yet</h3>
-            <p className="text-gray-600 text-center mb-6">
+        <Card className="rounded-2xl shadow-xl border-0 bg-white/90 dark:bg-gray-900/80">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <MapPin className="w-20 h-20 text-orange-400 mb-6" />
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              No Addresses Yet
+            </h3>
+            <p className="text-gray-500 dark:text-gray-300 text-center mb-8">
               Add your first delivery address to get started
             </p>
-            <Button onClick={() => setShowAddForm(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Address
+            <Button
+              onClick={() => setShowAddForm(true)}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold shadow-md transition-all duration-200"
+            >
+              <Plus className="w-5 h-5" /> Add Address
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {addresses.map((address) => (
-            <Card key={address.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {addresses.map((address, idx) => (
+            <Card
+              key={idx}
+              className="rounded-2xl shadow-lg border-0 bg-white/95 dark:bg-gray-900/90 hover:shadow-2xl transition-shadow"
+            >
+              <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {getAddressIcon(address.type)}
+                  <div className="flex items-center gap-4">
+                    <MapPin className="w-6 h-6 text-orange-500" />
                     <div>
-                      <CardTitle className="text-lg">{address.name}</CardTitle>
-                      <Badge className={getTypeColor(address.type)}>
-                        {address.type.charAt(0).toUpperCase() + address.type.slice(1)}
-                      </Badge>
+                      <CardTitle className="text-lg font-bold text-gray-900 dark:text-white">
+                        Address {idx + 1}
+                      </CardTitle>
                     </div>
                   </div>
-                  {address.isDefault && (
-                    <Badge className="bg-green-100 text-green-800">
-                      <CheckCircle className="w-3 h-3 mr-1" />
-                      Default
-                    </Badge>
-                  )}
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleDeleteAddress(idx)}
+                    disabled={loading}
+                    className="rounded-lg font-semibold px-3 py-1.5 hover:bg-red-600 transition-all"
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" /> Delete
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm text-gray-600">{address.address}</p>
-                    <p className="text-sm text-gray-600">
-                      {address.city}, {address.state} {address.postalCode}
-                    </p>
-                    <p className="text-sm text-gray-600">{address.phone}</p>
-                  </div>
-                  
-                  <div className="flex gap-2 pt-4 border-t">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleEdit(address)}
-                    >
-                      <Edit className="w-4 h-4 mr-1" />
-                      Edit
-                    </Button>
-                    {!address.isDefault && (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => handleSetDefault(address.id)}
-                      >
-                        <Star className="w-4 h-4 mr-1" />
-                        Set Default
-                      </Button>
-                    )}
-                    <Button 
-                      variant="destructive" 
-                      size="sm"
-                      onClick={() => handleDelete(address.id)}
-                    >
-                      <Trash2 className="w-4 h-4 mr-1" />
-                      Delete
-                    </Button>
-                  </div>
+                <div className="space-y-2 px-1 pb-2">
+                  <p className="text-base text-gray-700 dark:text-gray-200 break-words">
+                    {address}
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -314,109 +212,73 @@ const MyAddresses = () => {
         </div>
       )}
 
-      {/* Add/Edit Address Form */}
+      {/* Add Address Form */}
       {showAddForm && (
-        <Card className="mt-8">
+        <Card className="mt-10 rounded-2xl shadow-2xl border-0 bg-white/95 dark:bg-gray-900/90">
           <CardHeader>
-            <CardTitle>
-              {editingAddress ? 'Edit Address' : 'Add New Address'}
+            <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">
+              Add New Address
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="name">Address Name</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => handleInputChange('name', e.target.value)}
-                    placeholder="e.g., Home, Office"
+            <form onSubmit={handleAddAddress} className="space-y-6">
+              {!manualMode ? (
+                <>
+                  <input
+                    ref={autocompleteInput}
+                    type="text"
+                    value={newAddress}
+                    onChange={(e) => setNewAddress(e.target.value)}
+                    placeholder="Search for your address"
                     required
+                    className="rounded-xl px-4 py-3 text-base border border-gray-300 focus:ring-2 focus:ring-orange-400 focus:outline-none bg-gray-50 dark:bg-gray-800 w-full"
                   />
-                </div>
-                <div>
-                  <Label htmlFor="type">Address Type</Label>
-                  <select
-                    id="type"
-                    value={formData.type}
-                    onChange={(e) => handleInputChange('type', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                    required
+                  <Button
+                    type="button"
+                    variant="link"
+                    onClick={() => setManualMode(true)}
+                    className="w-full text-orange-600 dark:text-orange-400 font-semibold"
                   >
-                    <option value="home">Home</option>
-                    <option value="work">Work</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 mb-2">
-                <Button type="button" variant="outline" onClick={handleUseMyLocation} disabled={isLocating}>
-                  {isLocating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <MapPin className="w-4 h-4 mr-2" />}Use My Location
+                    Can't find your address? Enter manually
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Input
+                    value={newAddress}
+                    onChange={(e) => setNewAddress(e.target.value)}
+                    placeholder="Enter new address manually"
+                    required
+                    className="rounded-xl px-4 py-3 text-base border border-gray-300 focus:ring-2 focus:ring-orange-400 focus:outline-none bg-gray-50 dark:bg-gray-800"
+                  />
+                  <Button
+                    type="button"
+                    variant="link"
+                    onClick={() => setManualMode(false)}
+                    className="w-full text-orange-600 dark:text-orange-400 font-semibold"
+                  >
+                    Back to address search
+                  </Button>
+                </>
+              )}
+              <div className="flex gap-3 pt-2">
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 rounded-xl py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold text-lg shadow-md transition-all duration-200"
+                >
+                  {loading ? "Adding..." : "Add Address"}
                 </Button>
-                {locationError && <span className="text-sm text-red-500">{locationError}</span>}
-              </div>
-              <div>
-                <Label htmlFor="address">Street Address</Label>
-                <Textarea
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => handleInputChange('address', e.target.value)}
-                  placeholder="Enter your street address"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="city">City</Label>
-                  <Input
-                    id="city"
-                    value={formData.city}
-                    onChange={(e) => handleInputChange('city', e.target.value)}
-                    placeholder="City"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="state">State</Label>
-                  <Input
-                    id="state"
-                    value={formData.state}
-                    onChange={(e) => handleInputChange('state', e.target.value)}
-                    placeholder="State"
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="postalCode">Postal Code</Label>
-                  <Input
-                    id="postalCode"
-                    value={formData.postalCode}
-                    onChange={(e) => handleInputChange('postalCode', e.target.value)}
-                    placeholder="Postal Code"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                  placeholder="+2348012345678"
-                  required
-                />
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <Button type="submit">
-                  {editingAddress ? 'Update Address' : 'Add Address'}
-                </Button>
-                <Button type="button" variant="outline" onClick={resetForm}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowAddForm(false);
+                    setManualMode(false);
+                    setNewAddress("");
+                  }}
+                  className="flex-1 rounded-xl py-3 font-semibold text-lg"
+                >
                   Cancel
                 </Button>
               </div>

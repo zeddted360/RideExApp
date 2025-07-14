@@ -137,3 +137,52 @@ export interface PopularItemFormData {
   discount: string;
   restaurantId: string;
 }
+
+export type OrderStatus =
+  | "pending"
+  | "confirmed"
+  | "preparing"
+  | "ready"
+  | "out_for_delivery"
+  | "delivered"
+  | "completed"
+  | "cancelled"
+  | "failed";
+
+// Notification types
+export interface INotification {
+  type:
+    | "admin_new_order"
+    | "user_order_confirmation"
+    | "order_status_update"
+    | "delivery_update";
+  recipient: string;
+  userId?: string;
+  orderId: string;
+  address: string;
+  customerAddress?: string;
+  phone?: string;
+  deliveryTime?: string;
+  totalAmount?: number;
+  items?: string[];
+  deliveryDistance?: string;
+  deliveryDuration?: string;
+  deliveryFee?: number;
+  selectedBranchId?: number;
+  status: "unread" | "read";
+  createdAt: string;
+  label?: "Home" | "Work" | "Other"; // Added label for address type
+}
+
+export interface INotificationFetched extends INotification, Models.Document {}
+
+// State interface
+export interface INotificationState {
+  notifications: INotificationFetched[];
+  adminNotifications: INotificationFetched[];
+  userNotifications: INotificationFetched[];
+  loading: boolean;
+  error: string | null;
+  unreadCount: number;
+}
+
