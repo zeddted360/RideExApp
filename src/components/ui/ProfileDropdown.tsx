@@ -516,6 +516,19 @@ const ProfileDropdown = ({ children }: ProfileDropdownProps) => {
                 </div>
               </div>
             </DropdownMenuItem>
+
+            <DropdownMenuItem
+              onClick={() => router.push("/admin/orders")}
+              className="flex items-center gap-3 p-3 cursor-pointer"
+            >
+              <Shield className="w-4 h-4 text-gray-500" />
+              <div className="flex-1">
+                <div className="font-medium">Admin Dashboard</div>
+                <div className="text-sm text-gray-500">
+                  Manage orders and system
+                </div>
+              </div>
+            </DropdownMenuItem>
           </div>
 
           <DropdownMenuSeparator />

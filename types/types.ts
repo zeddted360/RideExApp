@@ -186,3 +186,21 @@ export interface INotificationState {
   unreadCount: number;
 }
 
+export interface IBookedOrderFetched extends Models.Document {
+  orderId: string;
+  customerId: string;
+  address: string;
+  label?: "Home" | "Work" | "Other";
+  paymentMethod: string;
+  deliveryTime: string;
+  createdAt: string;
+  total: number;
+  status: OrderStatus;
+  phone: string;
+  deliveryFee: number;
+  deliveryDistance?: string;
+  deliveryDuration?: string;
+  selectedBranchId: number;
+  apartmentFlat?: string;
+  paid?: boolean; // Added paid attribute
+}

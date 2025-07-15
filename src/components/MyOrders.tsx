@@ -7,90 +7,79 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Package, Clock, CheckCircle, XCircle, Truck, MapPin, Loader2 } from 'lucide-react';
 import { AppDispatch, RootState } from '@/state/store';
-import { fetchOrdersByUserIdAsync, deleteOrderAsync } from '@/state/orderSlice';
-import { useAuth } from '@/context/authContext';
-import toast from 'react-hot-toast';
-import { ICartItemFetched } from '../../types/types';
+import {
+  fetchBookedOrdersByUserId,
+  cancelBookedOrder,
+} from "@/state/bookedOrdersSlice";
+import { branches } from "../../data/branches";
+import { IBookedOrderFetched, OrderStatus } from "../../types/types";
+import Link from "next/link";
+import toast from "react-hot-toast";
+import { useAuth } from "@/context/authContext";
+import { client, validateEnv } from '@/utils/appwrite';
+
+const ORDER_STATUS_TABS: { key: OrderStatus | "all"; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "pending", label: "Pending" },
+  { key: "confirmed", label: "Confirmed" },
+  { key: "preparing", label: "Preparing" },
+  { key: "out_for_delivery", label: "Out for Delivery" },
+  { key: "delivered", label: "Delivered" },
+  { key: "completed", label: "Completed" },
+  { key: "cancelled", label: "Cancelled" },
+  { key: "failed", label: "Failed" },
+];
 
 const MyOrders = () => {
+  const { userId, isAuthenticated } = useAuth();
   const dispatch = useDispatch<AppDispatch>();
-  const { user, isAuthenticated } = useAuth();
-  const { orders, loading, error } = useSelector((state: RootState) => state.orders);
-  const [activeTab, setActiveTab] = useState('all');
+  const { orders, loading, error } = useSelector(
+    (state: RootState) => state.bookedOrders
+  );
+  const [activeTab, setActiveTab] = useState<OrderStatus | "all">("all");
 
-  // Fetch orders when component mounts
   useEffect(() => {
-    if (isAuthenticated && user?.userId) {
-      dispatch(fetchOrdersByUserIdAsync(user.userId));
+    if (isAuthenticated && userId) {
+      dispatch(fetchBookedOrdersByUserId(userId));
+      // Real-time listener for booked orders
+      const { bookedOrdersCollectionId, databaseId } = validateEnv();
+      const channel = `databases.${databaseId}.collections.${bookedOrdersCollectionId}.documents`;
+      const unsubscribe = client.subscribe(channel, (response: any) => {
+        // Only refetch if the event is relevant to this user
+        if (
+          response.payload?.customerId === userId &&
+          (
+            response.events.some((e: string) => e.endsWith('.create')) ||
+            response.events.some((e: string) => e.endsWith('.update')) ||
+            response.events.some((e: string) => e.endsWith('.delete'))
+          )
+        ) {
+          dispatch(fetchBookedOrdersByUserId(userId));
+        }
+      });
+      return () => {
+        unsubscribe();
+      };
     }
-  }, [dispatch, isAuthenticated, user?.userId]);
+  }, [dispatch, isAuthenticated, userId]);
 
-  // Filter orders based on status
-  const getFilteredOrders = (status: string) => {
-    if (!orders) return [];
-    
-    if (status === 'all') return orders;
-    return orders.filter(order => order.status === status);
+  const getFilteredOrders = (status: OrderStatus | "all") => {
+    if (status === "all") return orders;
+    return orders.filter((order) => order.status === status);
   };
 
-  const getStatusIcon = (status: ICartItemFetched['status']) => {
-    switch (status) {
-      case 'pending':
-        return <Clock className="w-4 h-4 text-yellow-500" />;
-      case 'processing':
-        return <Package className="w-4 h-4 text-orange-500" />;
-      case 'success':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
-      default:
-        return <Clock className="w-4 h-4 text-gray-500" />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "pending":
-        return "bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200";
-      case "confirmed":
-        return "bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200";
-      case "preparing":
-        return "bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-200";
-      case "ready":
-        return "bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-200";
-      case "delivered":
-        return "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200";
-      case "cancelled":
-        return "bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-200";
-      default:
-        return "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200";
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const formatStatus = (status: ICartItemFetched['status']) => {
-    return status.charAt(0).toUpperCase() + status.slice(1);
-  };
-
-  const handleDeleteOrder = async (orderId: string) => {
+  const handleCancelOrder = async (orderId: string) => {
     try {
-      await dispatch(deleteOrderAsync(orderId)).unwrap();
-      toast.success('Order deleted successfully');
+      await dispatch(cancelBookedOrder(orderId)).unwrap();
+      toast.success("Order cancelled successfully");
     } catch (error) {
-      toast.error('Failed to delete order');
+      toast.error("Failed to cancel order");
     }
   };
 
-  const handleReorder = (order: ICartItemFetched) => {
+  const handleReorder = (order: IBookedOrderFetched) => {
     // TODO: Implement reorder functionality
-    toast.success('Reorder functionality coming soon!');
+    toast.success("Reorder functionality coming soon!");
   };
 
   if (!isAuthenticated) {
@@ -99,7 +88,9 @@ const MyOrders = () => {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Package className="w-16 h-16 text-gray-400 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Authentication Required</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              Authentication Required
+            </h3>
             <p className="text-gray-600 text-center mb-6">
               Please log in to view your orders
             </p>
@@ -126,9 +117,13 @@ const MyOrders = () => {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <XCircle className="w-16 h-16 text-red-400 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Orders</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              Error Loading Orders
+            </h3>
             <p className="text-gray-600 text-center mb-6">{error}</p>
-            <Button onClick={() => dispatch(fetchOrdersByUserIdAsync(user!.userId))}>
+            <Button
+              onClick={() => dispatch(fetchBookedOrdersByUserId(userId!))}
+            >
               Try Again
             </Button>
           </CardContent>
@@ -137,10 +132,7 @@ const MyOrders = () => {
     );
   }
 
-  const allOrders = orders || [];
-  const pendingOrders = getFilteredOrders('pending');
-  const processingOrders = getFilteredOrders('processing');
-  const completedOrders = getFilteredOrders('success');
+  const allOrders = orders;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -148,205 +140,173 @@ const MyOrders = () => {
         <h1 className="text-3xl font-bold text-gray-900 mb-2">My Orders</h1>
         <p className="text-gray-600">Track your food delivery orders</p>
       </div>
-
       {allOrders.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Package className="w-16 h-16 text-gray-400 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Orders Yet</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              No Orders Yet
+            </h3>
             <p className="text-gray-600 text-center mb-6">
-              You haven't placed any orders yet. Start exploring our delicious menu!
+              You haven't placed any orders yet. Start exploring our delicious
+              menu!
             </p>
-            <Button onClick={() => window.history.back()}>
-              Browse Menu
+            <Button asChild>
+              <Link href="/menu">Browse Menu</Link>
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="all">
-              All ({allOrders.length})
-            </TabsTrigger>
-            <TabsTrigger value="pending">
-              Pending ({pendingOrders.length})
-            </TabsTrigger>
-            <TabsTrigger value="processing">
-              Processing ({processingOrders.length})
-            </TabsTrigger>
-            <TabsTrigger value="success">
-              Completed ({completedOrders.length})
-            </TabsTrigger>
+        <Tabs
+          value={activeTab}
+          onValueChange={(val) => setActiveTab(val as OrderStatus | "all")}
+          className="w-full"
+        >
+          <TabsList className="grid w-full grid-cols-9">
+            {ORDER_STATUS_TABS.map((tab) => (
+              <TabsTrigger key={tab.key} value={tab.key}>
+                {tab.label} (
+                {tab.key === "all"
+                  ? allOrders.length
+                  : getFilteredOrders(tab.key).length}
+                )
+              </TabsTrigger>
+            ))}
           </TabsList>
-
-          <TabsContent value="all" className="mt-6">
-            <OrdersList orders={allOrders} onDelete={handleDeleteOrder} onReorder={handleReorder} />
-          </TabsContent>
-
-          <TabsContent value="pending" className="mt-6">
-            <OrdersList orders={pendingOrders} onDelete={handleDeleteOrder} onReorder={handleReorder} />
-          </TabsContent>
-
-          <TabsContent value="processing" className="mt-6">
-            <OrdersList orders={processingOrders} onDelete={handleDeleteOrder} onReorder={handleReorder} />
-          </TabsContent>
-
-          <TabsContent value="success" className="mt-6">
-            <OrdersList orders={completedOrders} onDelete={handleDeleteOrder} onReorder={handleReorder} />
-          </TabsContent>
+          {ORDER_STATUS_TABS.map((tab) => (
+            <TabsContent key={tab.key} value={tab.key} className="mt-6">
+              <OrdersList
+                orders={getFilteredOrders(tab.key)}
+                onCancel={handleCancelOrder}
+                onReorder={handleReorder}
+              />
+            </TabsContent>
+          ))}
         </Tabs>
       )}
     </div>
   );
 };
 
-// Separate component for the orders list
 interface OrdersListProps {
-  orders: ICartItemFetched[];
-  onDelete: (orderId: string) => void;
-  onReorder: (order: ICartItemFetched) => void;
+  orders: IBookedOrderFetched[];
+  onCancel: (orderId: string) => void;
+  onReorder: (order: IBookedOrderFetched) => void;
 }
 
-const OrdersList = ({ orders, onDelete, onReorder }: OrdersListProps) => {
-  const getStatusIcon = (status: ICartItemFetched['status']) => {
-    switch (status) {
-      case 'pending':
-        return <Clock className="w-4 h-4 text-yellow-500" />;
-      case 'processing':
-        return <Package className="w-4 h-4 text-orange-500" />;
-      case 'success':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
-      default:
-        return <Clock className="w-4 h-4 text-gray-500" />;
-    }
-  };
-
-  const getStatusColor = (status: ICartItemFetched['status']) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'processing':
-        return 'bg-orange-100 text-orange-800';
-      case 'success':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const formatStatus = (status: ICartItemFetched['status']) => {
-    return status.charAt(0).toUpperCase() + status.slice(1);
-  };
-
+const OrdersList = ({ orders, onCancel, onReorder }: OrdersListProps) => {
   if (orders.length === 0) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <Package className="w-16 h-16 text-gray-400 mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">No Orders</h3>
-          <p className="text-gray-600 text-center">
-            No orders found in this category
-          </p>
-        </CardContent>
-      </Card>
+      <div className="text-center text-gray-500 py-8">
+        No orders in this category.
+      </div>
     );
   }
-
   return (
-    <div className="space-y-6">
-      {orders.map((order) => (
-        <Card key={order.$id} className="hover:shadow-lg transition-shadow">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {getStatusIcon(order.status)}
-                <div>
-                  <CardTitle className="text-lg">Order #{order.$id.slice(-8)}</CardTitle>
-                  <p className="text-sm text-gray-600">{order.name}</p>
-                </div>
-              </div>
-              <Badge className={getStatusColor(order.status)}>
-                {formatStatus(order.status)}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+    <div className="grid gap-6">
+      {orders.map((order) => {
+        const branch = branches.find((b) => b.id === order.selectedBranchId);
+        const canCancel = ["pending", "confirmed", "preparing"].includes(
+          order.status
+        );
+        const canPay =
+          ["pending", "confirmed"].includes(order.status) &&
+          order.paymentMethod !== "cash";
+        const canReorder = ["completed", "cancelled", "failed"].includes(
+          order.status
+        );
+        return (
+          <Card key={order.$id} className="shadow-md">
+            <CardHeader className="flex flex-row items-center justify-between border-b pb-4">
               <div>
-                <h4 className="font-medium text-gray-900 mb-2">Order Details</h4>
-                <div className="space-y-1">
-                  <div className="text-sm text-gray-600">
-                    <span className="font-medium">Item:</span> {order.name}
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    <span className="font-medium">Quantity:</span> {order.quantity}
-                  </div>
-                  {order.specialInstructions && (
-                    <div className="text-sm text-gray-600">
-                      <span className="font-medium">Special Instructions:</span> {order.specialInstructions}
-                    </div>
+                <CardTitle className="text-lg font-bold text-blue-600">
+                  Order #{order.orderId}
+                </CardTitle>
+                <div className="text-xs text-gray-500 mt-1">
+                  {new Date(order.createdAt).toLocaleString()}
+                </div>
+              </div>
+              <Badge
+                className={
+                  order.status === "pending"
+                    ? "bg-yellow-100 text-yellow-800"
+                    : order.status === "confirmed"
+                    ? "bg-blue-100 text-blue-800"
+                    : order.status === "preparing"
+                    ? "bg-orange-100 text-orange-800"
+                    : order.status === "out_for_delivery"
+                    ? "bg-purple-100 text-purple-800"
+                    : order.status === "delivered"
+                    ? "bg-green-100 text-green-800"
+                    : order.status === "completed"
+                    ? "bg-green-200 text-green-900"
+                    : order.status === "cancelled"
+                    ? "bg-red-100 text-red-800"
+                    : order.status === "failed"
+                    ? "bg-gray-300 text-gray-700"
+                    : "bg-gray-100 text-gray-800"
+                }
+              >
+                {order.status.replace(/_/g, " ").toUpperCase()}
+              </Badge>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2 py-4">
+              <div className="flex flex-wrap gap-4 items-center text-sm">
+                <span>
+                  <MapPin className="inline w-4 h-4 mr-1 text-orange-500" />{" "}
+                  {branch ? branch.name : "-"}
+                </span>
+                <span className="text-gray-500">
+                  {branch ? branch.address : ""}
+                </span>
+                <span className="font-semibold">
+                  ₦{order.total?.toLocaleString()}
+                </span>
+                <span className="capitalize flex items-center gap-2">
+                  Payment: {order.paymentMethod.replace(/_/g, " ")}
+                  {order.paid ? (
+                    <Badge className="bg-green-100 text-green-800 border-green-200">
+                      Paid
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-red-100 text-red-800 border-red-200">
+                      Unpaid
+                    </Badge>
                   )}
-                </div>
+                </span>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Total Amount</p>
-                  <p className="text-lg font-semibold text-gray-900">
-                    ₦{order.totalPrice.toLocaleString()}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Order Date</p>
-                  <p className="text-sm text-gray-900">
-                    {formatDate(order.$createdAt)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Category</p>
-                  <p className="text-sm text-gray-900 capitalize">
-                    {order.category}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-2 pt-4 border-t">
-                <Button variant="outline" size="sm">
-                  View Details
+              <div className="flex gap-2 mt-2 flex-wrap">
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`/myorders/${order.orderId}`}>View Details</Link>
                 </Button>
-                {order.status === 'success' && (
-                  <Button 
-                    variant="outline" 
+                {canPay && (
+                  <Button asChild variant="default" size="sm">
+                    <Link href={`/pay/${order.orderId}`}>Pay Now</Link>
+                  </Button>
+                )}
+                {canCancel && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => onCancel(order.$id)}
+                  >
+                    Cancel Order
+                  </Button>
+                )}
+                {canReorder && (
+                  <Button
+                    variant="secondary"
                     size="sm"
                     onClick={() => onReorder(order)}
                   >
                     Reorder
                   </Button>
                 )}
-                {order.status === 'pending' && (
-                  <Button 
-                    variant="destructive" 
-                    size="sm"
-                    onClick={() => onDelete(order.$id)}
-                  >
-                    Cancel Order
-                  </Button>
-                )}
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 };

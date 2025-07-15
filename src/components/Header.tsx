@@ -535,6 +535,12 @@ const Header = () => {
             >
               Address
             </Link>
+            <Link
+              href="/admin/orders"
+              className="text-sm font-bold text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 border border-orange-200 dark:border-orange-700 rounded px-3 py-1 ml-2 transition-colors"
+            >
+              Admin Dashboard
+            </Link>
           </nav>
 
           {/* Search Bar - Desktop */}

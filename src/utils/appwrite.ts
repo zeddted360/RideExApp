@@ -108,4 +108,4 @@ const fileUrl = (bucketId: string, fileId: string) =>
     validateEnv().projectId
   }&mode=admin`;
 
-export { databases, storage, account, fileUrl };
+export { databases, storage, account, fileUrl, client };

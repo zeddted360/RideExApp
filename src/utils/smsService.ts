@@ -55,7 +55,7 @@ export const sendOrderConfirmationSMS = async (
   estimatedDelivery: string,
   state?: RootState
 ): Promise<boolean> => {
-  const message = `Your order #${orderId} has been confirmed! Estimated delivery: ${estimatedDelivery}. Thank you for choosing FoodieHub!`;
+  const message = `Your order #${orderId} has been confirmed! Estimated delivery: ${estimatedDelivery}. Thank you for choosing RideEx!`;
   return sendSMSNotification(message, state);
 };
 
@@ -67,7 +67,7 @@ export const sendDeliveryUpdateSMS = async (
   status: string,
   state?: RootState
 ): Promise<boolean> => {
-  const message = `Order #${orderId} update: ${status}. Track your order on FoodieHub app!`;
+  const message = `Order #${orderId} update: ${status}. Track your order on RideEx app!`;
   return sendSMSNotification(message, state);
 };
 
@@ -78,9 +78,44 @@ export const sendPromotionalSMS = async (
   promotion: string,
   state?: RootState
 ): Promise<boolean> => {
-  const message = `🎉 ${promotion} - Limited time offer! Order now on FoodieHub. Reply STOP to unsubscribe.`;
+  const message = `🎉 ${promotion} - Limited time offer! Order now on RideEx. Reply STOP to unsubscribe.`;
   return sendSMSNotification(message, state);
 };
+
+/**
+ * Send order placed SMS to user and admin using the /api/send-sms endpoint
+ */
+export async function sendOrderPlacedSMS({
+  userPhone,
+  orderId,
+  userName,
+  origin,
+}: {
+  userPhone: string;
+  orderId: string;
+  userName: string;
+  origin: string;
+}) {
+  const userSms = fetch("/api/send-sms", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      phoneNumber: userPhone,
+      message: `Your order has been placed! View/manage: ${origin}/myorders/${orderId}`,
+    }),
+  });
+  const adminSms = fetch("/api/send-sms", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      phoneNumber: userPhone, // Not used, but required by API
+      admin: true,
+      adminMessage: `New order from ${userName}. Order ID: ${orderId}. View: ${origin}/admin/orders/${orderId}`,
+      message: "-", // Not used for admin
+    }),
+  });
+  await Promise.all([userSms, adminSms]);
+}
 
 /*
  * Example: How to use in a React component

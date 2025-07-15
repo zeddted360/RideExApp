@@ -91,11 +91,7 @@ export async function calculateDeliveryFee(
     const cleanOrigin = cleanAddress(selectedBranch.address);
     const cleanDestination = cleanAddress(deliveryAddress);
     
-    console.log('Calculating delivery fee:', {
-      origin: cleanOrigin,
-      destination: cleanDestination
-    });
-
+    
     // Use our API route to proxy Google Maps Distance Matrix API
     const response = await fetch(
       `/api/distance-matrix?origins=${encodeURIComponent(cleanOrigin)}&destinations=${encodeURIComponent(cleanDestination)}`
