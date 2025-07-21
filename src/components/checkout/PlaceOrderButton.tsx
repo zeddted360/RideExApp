@@ -1,13 +1,14 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { AnimatePresence, motion } from "framer-motion";
+import { ICartItem } from "../../../types/types";
 
 interface PlaceOrderButtonProps {
   subtotal: number;
   deliveryFee: number;
   address: string;
   phoneNumber: string;
-  orders: any[];
+  orders: ICartItem[];
   isOrderLoading: boolean;
   handlePlaceOrder: () => void;
   showConfirmation: boolean;

@@ -2,6 +2,7 @@ import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { account, validateEnv } from "@/utils/appwrite";
 import toast from "react-hot-toast";
 import { AuthState, IUser } from "../../types/types";
+import { databases } from "@/utils/appwrite";
 
 const initialState: AuthState = {
   user: null,
@@ -11,7 +12,7 @@ const initialState: AuthState = {
 
 // Helper function to safely access localStorage
 const getLocalStorage = (key: string) => {
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     try {
       return localStorage.getItem(key);
     } catch (error) {
@@ -23,7 +24,7 @@ const getLocalStorage = (key: string) => {
 };
 
 const setLocalStorage = (key: string, value: string) => {
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     try {
       localStorage.setItem(key, value);
     } catch (error) {
@@ -33,7 +34,7 @@ const setLocalStorage = (key: string, value: string) => {
 };
 
 const removeLocalStorage = (key: string) => {
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     try {
       localStorage.removeItem(key);
     } catch (error) {
@@ -42,7 +43,7 @@ const removeLocalStorage = (key: string) => {
   }
 };
 
-// Async thunk to log in user
+// Async thunk to log normal users
 export const loginAsync = createAsyncThunk<
   IUser,
   { email: string; password: string; rememberMe: boolean },
@@ -53,13 +54,22 @@ export const loginAsync = createAsyncThunk<
     try {
       // Set session persistence based on rememberMe
       await account.createEmailPasswordSession(email, password);
+
       const user = await account.get();
+      const { databaseId, userCollectionId } = validateEnv();
+
+      const userInUserCollection = await databases.getDocument(
+        databaseId,
+        userCollectionId,
+        user.$id
+      );
 
       // Get phone number from localStorage if available
       let phoneNumber: string | undefined;
       let phoneVerified: boolean | undefined;
 
       const phoneData = getLocalStorage("userPhoneData");
+
       if (phoneData) {
         const parsed = JSON.parse(phoneData);
         phoneNumber = parsed.phoneNumber;
@@ -70,16 +80,16 @@ export const loginAsync = createAsyncThunk<
         userId: user.$id,
         username: user.name,
         email: user.email,
-        role: user.email === "nwiboazubuike@gmail.com" ? "admin" : "user",
-        phoneNumber,
+        role: userInUserCollection.isAdmin ? "admin" : "user",
+        phoneNumber: user.phone || phoneNumber,
         phoneVerified,
-      };
+      } as IUser;
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
           : "Login failed. Please try again.";
-      toast.error(message);
+      // toast.error(message);
       return rejectWithValue(message);
     }
   }
@@ -98,13 +108,11 @@ export const loginAsGuestAsync = createAsyncThunk<
     if (guestData) {
       const guestUser = JSON.parse(guestData);
       toast.success("Logged in as guest! You can browse and order food.");
-      return guestUser;
+      return guestUser as IUser;
     } else {
       // Fallback for direct guest login (without phone)
       const guestUser: IUser = {
-        userId: `guest_${Date.now()}_${Math.random()
-          .toString(36)
-          .substr(2, 9)}`,
+        userId: `guest_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
         username: "Guest User",
         email: `guest_${Date.now()}@guest.com`,
         role: "user",
@@ -113,7 +121,9 @@ export const loginAsGuestAsync = createAsyncThunk<
       };
 
       setLocalStorage("guestUserData", JSON.stringify(guestUser));
-      toast.success("Logged in as guest! You can browse and order food.");
+      toast.success(
+        "Logged in as guest! You can browse and order food but you have to login to book an order."
+      );
       return guestUser;
     }
   } catch (error) {
@@ -141,7 +151,7 @@ export const logoutAsync = createAsyncThunk<
       await account.deleteSession("current");
     } catch (error) {
       // Session might not exist for guest users, which is fine
-      console.log("No Appwrite session to delete (guest user)");
+      console.log("No session to delete (guest user)");
     }
   } catch (error) {
     const message =
@@ -170,6 +180,21 @@ export const getCurrentUserAsync = createAsyncThunk<
     // If no guest user, try to get authenticated user from Appwrite
     const user = await account.get();
 
+    // Fetch user document from users collection to get isAdmin
+    const { databaseId, userCollectionId } = validateEnv();
+    let isAdmin = false;
+    try {
+      const userDoc = await databases.getDocument(
+        databaseId,
+        userCollectionId,
+        user.$id
+      );
+      isAdmin = userDoc.isAdmin ?? false;
+    } catch (err) {
+      // If user doc not found or isAdmin missing, default to false
+      isAdmin = false;
+    }
+
     // Get phone number from localStorage if available
     let phoneNumber: string | undefined;
     let phoneVerified: boolean | undefined;
@@ -185,8 +210,9 @@ export const getCurrentUserAsync = createAsyncThunk<
       userId: user.$id,
       username: user.name,
       email: user.email,
-      role: user.email === "nwiboazubuike@gmail.com" ? "admin" : "user",
-      phoneNumber,
+      role: isAdmin ? "admin" : "user",
+      isAdmin,
+      phoneNumber: user.phone || phoneNumber,
       phoneVerified,
     };
   } catch (error) {

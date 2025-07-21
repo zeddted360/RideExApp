@@ -60,7 +60,6 @@ const ProfileDropdown = ({ children }: ProfileDropdownProps) => {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   
-  const [isLoading, setIsLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
@@ -69,7 +68,7 @@ const ProfileDropdown = ({ children }: ProfileDropdownProps) => {
   const [resendCountdown, setResendCountdown] = useState(0);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingField, setEditingField] = useState<string | null>(null);
-  
+
   const [formData, setFormData] = useState<UpdateFormData>({
     name: "",
     email: "",
@@ -80,15 +79,19 @@ const ProfileDropdown = ({ children }: ProfileDropdownProps) => {
   });
 
   // Safety check to ensure we don't render objects
-  const safeUser = user ? {
-    name: typeof user?.name === 'string' ? user.name : user?.username || '',
-    email: typeof user?.email === 'string' ? user.email : '',
-    phoneNumber: typeof user?.phoneNumber === 'string' ? user.phoneNumber : '',
-    phoneVerified: typeof user?.phoneVerified === 'boolean' ? user.phoneVerified : false,
-    userId: user?.userId || user?.$id || '',
-    existingUserData: (user as any)?.existingUserData || null,
-    isGuest: (user as any)?.isGuest || false,
-  } : null;
+  const safeUser = user
+    ? {
+        name: typeof user?.username === "string" ? user.username : "",
+        email: typeof user?.email === "string" ? user.email : "",
+        phoneNumber:
+          typeof user?.phoneNumber === "string" ? user.phoneNumber : "",
+        phoneVerified:
+          typeof user?.phoneVerified === "boolean" ? user.phoneVerified : false,
+        userId: user?.userId || user?.userId || "",
+        existingUserData: (user as any)?.existingUserData || null,
+        isGuest: (user as any)?.isGuest || false,
+      }
+    : null;
 
   // Check if user is a guest
   const isGuestUser = safeUser?.email?.includes('@guest.com') || safeUser?.userId?.startsWith('guest_');
@@ -102,7 +105,7 @@ const ProfileDropdown = ({ children }: ProfileDropdownProps) => {
       const userPhoneData = getUserPhone();
       const userPhone = userPhoneData?.phoneNumber || user.phoneNumber || "";
       setFormData({
-        name: user.name || user.username || "",
+        name: user.username || "",
         email: user.email || "",
         phone: userPhone,
         currentPassword: "",
@@ -136,9 +139,9 @@ const ProfileDropdown = ({ children }: ProfileDropdownProps) => {
     if (user) {
       const userPhoneData = getUserPhone();
       const userPhone = userPhoneData?.phoneNumber || user.phoneNumber || "";
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        name: user.name || user.username || "",
+        name: user.username || "",
         email: user.email || "",
         phone: userPhone,
       }));
@@ -517,18 +520,20 @@ const ProfileDropdown = ({ children }: ProfileDropdownProps) => {
               </div>
             </DropdownMenuItem>
 
-            <DropdownMenuItem
-              onClick={() => router.push("/admin/orders")}
-              className="flex items-center gap-3 p-3 cursor-pointer"
-            >
-              <Shield className="w-4 h-4 text-gray-500" />
-              <div className="flex-1">
-                <div className="font-medium">Admin Dashboard</div>
-                <div className="text-sm text-gray-500">
-                  Manage orders and system
+            {user?.isAdmin && (
+              <DropdownMenuItem
+                onClick={() => router.push("/admin/orders")}
+                className="flex items-center gap-3 p-3 cursor-pointer"
+              >
+                <Shield className="w-4 h-4 text-gray-500" />
+                <div className="flex-1">
+                  <div className="font-medium">Admin Dashboard</div>
+                  <div className="text-sm text-gray-500">
+                    Manage orders and system
+                  </div>
                 </div>
-              </div>
-            </DropdownMenuItem>
+              </DropdownMenuItem>
+            )}
           </div>
 
           <DropdownMenuSeparator />

@@ -17,6 +17,27 @@ const initialState: BookedOrdersState = {
   loading: false,
   error: null,
 };
+// fetch all orders 
+export const fetchBookedOrders = createAsyncThunk<
+  IBookedOrderFetched[],
+  void,
+  { rejectValue: string }
+>("bookedOrders/fetchAll", async (_, { rejectWithValue }) => {
+  try {
+    const { databaseId, bookedOrdersCollectionId } = validateEnv();
+    const response = await databases.listDocuments(
+      databaseId,
+      bookedOrdersCollectionId,
+      [Query.orderDesc("createdAt")]
+    );
+    return response.documents as IBookedOrderFetched[];
+  } catch (error) {
+    return rejectWithValue(
+      error instanceof Error ? error.message : "Failed to fetch booked orders"
+    );
+  }
+});
+
 
 // Fetch all booked orders for a user
 export const fetchBookedOrdersByUserId = createAsyncThunk<
@@ -104,6 +125,21 @@ export const bookedOrdersSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      .addCase(fetchBookedOrders.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchBookedOrders.fulfilled, (state, action) => {
+        state.loading = false;
+        state.orders = action.payload;
+        state.error = null;
+      })
+      .addCase(fetchBookedOrders.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || "Failed to fetch booked orders";
+      })
+
+      //
       .addCase(fetchBookedOrdersByUserId.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -136,7 +172,9 @@ export const bookedOrdersSlice = createSlice({
       })
       .addCase(cancelBookedOrder.fulfilled, (state, action) => {
         state.loading = false;
-        state.orders = state.orders.filter(order => order.$id !== action.payload);
+        state.orders = state.orders.filter(
+          (order) => order.$id !== action.payload
+        );
         if (state.currentOrder && state.currentOrder.$id === action.payload) {
           state.currentOrder = null;
         }
@@ -153,11 +191,14 @@ export const bookedOrdersSlice = createSlice({
       .addCase(updateBookedOrderAsync.fulfilled, (state, action) => {
         state.loading = false;
         // Update the order in the orders array
-        state.orders = state.orders.map(order => 
+        state.orders = state.orders.map((order) =>
           order.$id === action.payload.$id ? action.payload : order
         );
         // Update current order if it's the one being updated
-        if (state.currentOrder && state.currentOrder.$id === action.payload.$id) {
+        if (
+          state.currentOrder &&
+          state.currentOrder.$id === action.payload.$id
+        ) {
           state.currentOrder = action.payload;
         }
         state.error = null;

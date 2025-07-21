@@ -65,7 +65,6 @@ export const createAsyncMenuItem = createAsyncThunk<
 });
 
 // function to list menus
-
 export const listAsyncMenusItem = createAsyncThunk<
   IMenuItemFetched[],
   void,

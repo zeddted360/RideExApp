@@ -5,10 +5,12 @@ import Menu from "@/components/Menu";
 import PromotionalBanner from "@/components/PromotionalBanner";
 import PopularItem from "@/components/PopularItem";
 import { useState } from "react";
+import { useAuth } from "@/context/authContext";
 
 export default function HomeClient() {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [isMobile, setIsMobile] = useState(false);
+
 
   const toggleFavorite = (id: string) => {
     setFavorites((prev) => {

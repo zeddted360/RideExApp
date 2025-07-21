@@ -20,6 +20,9 @@ interface EnvConfig {
   bookedOrdersCollectionId: string;
   mapBoxAccessToken: string;
   notificationCollectionId: string;
+  payStackPublickKey: string;
+  guestUserCollectionId: string;
+  newsLetterCollectionId: string;
 }
 
 // Validate environment variables
@@ -46,6 +49,10 @@ export function validateEnv(): EnvConfig {
     mapBoxAccessToken: process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN,
     notificationCollectionId:
       process.env.NEXT_PUBLIC_NOTIFICATION_COLLECTION_ID,
+    payStackPublicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
+    guestUserCollectionId:
+      process.env.NEXT_PUBLIC_APPWRITE_GUEST_USER_COLLECTION_ID,
+    newsLetterCollectionId: process.env.NEXT_PUBLIC_APPWRITE_NEWSLETTER_COLLECTION_ID,
   };
 
   // Check for undefined environment variables
@@ -78,6 +85,10 @@ export function validateEnv(): EnvConfig {
     bookedOrdersCollectionId: requiredEnvVars.bookedOrdersCollectionId!,
     mapBoxAccessToken: requiredEnvVars.mapBoxAccessToken!,
     notificationCollectionId: requiredEnvVars.notificationCollectionId!,
+    payStackPublickKey: requiredEnvVars.payStackPublicKey!,
+    guestUserCollectionId: requiredEnvVars.guestUserCollectionId!,
+    newsLetterCollectionId:requiredEnvVars.newsLetterCollectionId!,
+    
   };
 }
 

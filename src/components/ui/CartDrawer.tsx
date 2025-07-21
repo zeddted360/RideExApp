@@ -45,6 +45,7 @@ import {
 } from "@/state/orderSlice";
 import { ICartItemFetched } from "../../../types/types";
 import { fileUrl, validateEnv } from "@/utils/appwrite";
+import { useAuth } from "@/context/authContext";
 
 const CartDrawer = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -52,15 +53,15 @@ const CartDrawer = () => {
     (state: RootState) => state.orders
   );
   const { activeCart, setActiveCart } = useShowCart();
-  const userId = "zedd"; // Replace with actual logged-in user ID
+  const { user } = useAuth();
   const [showEmptyCartDialog, setShowEmptyCartDialog] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const router = useRouter();
 
   // Fetch orders on mount or when userId changes
   useEffect(() => {
-    if (userId && !orders && !loading) {
-      dispatch(fetchOrdersByUserIdAsync(userId))
+    if (user?.userId && !orders && !loading) {
+      dispatch(fetchOrdersByUserIdAsync(user.userId))
         .unwrap()
         .catch((err) => {
           toast.error(err || "Failed to fetch orders", {
@@ -69,7 +70,7 @@ const CartDrawer = () => {
           });
         });
     }
-  }, [dispatch, userId, orders, loading]);
+  }, [dispatch, user, orders, loading]);
 
   // Show dialog when cart is empty after fetching
   useEffect(() => {
@@ -164,7 +165,7 @@ const CartDrawer = () => {
       });
       setActiveCart(false);
       // Refetch orders to ensure state is in sync
-      await dispatch(fetchOrdersByUserIdAsync(userId)).unwrap();
+      await dispatch(fetchOrdersByUserIdAsync(user?.userId as string)).unwrap();
     } catch (err) {
       toast.error("Checkout failed", {
         duration: 4000,
@@ -173,7 +174,7 @@ const CartDrawer = () => {
     } finally {
       setIsCheckingOut(false);
     }
-  }, [dispatch, orders, setActiveCart, userId]);
+  }, [dispatch, orders, setActiveCart, user]);
 
   // Memoized subtotal calculation using totalPrice
   const subtotal = useMemo(
@@ -181,26 +182,31 @@ const CartDrawer = () => {
     [orders]
   );
 
-  // Check if there are items in cart
-  const hasCartItems = orders && orders.length > 0;
+  // Check if there are active orders in cart
+  const hasActiveOrder =
+    Array.isArray(orders) &&
+    orders.some((order) => ["pending", "processing"].includes(order.status));
 
   return (
     <div className="p-4">
-      {/* Floating View Cart Button - Show on all devices when there are items */}
-      {/* Temporarily show button for testing */}
-      <div className="fixed bottom-6 right-6 z-40">
-        <Button
-          onClick={() => setActiveCart(true)}
-          className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-full px-4 py-3 lg:px-6 shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2"
-          aria-label="View cart items"
-        >
-          <Eye className="w-4 h-4 lg:w-5 lg:h-5" />
-          <span className="font-medium hidden sm:inline">View Cart Items</span>
-          <span className="bg-white/20 rounded-full px-2 py-1 text-xs font-bold">
-            {orders?.length || 0}
-          </span>
-        </Button>
-      </div>
+      {/* Floating View Cart Button - Show on all devices when there are active orders */}
+      {hasActiveOrder && (
+        <div className="fixed bottom-6 right-6 z-40">
+          <Button
+            onClick={() => setActiveCart(true)}
+            className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-full px-4 py-3 lg:px-6 shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2"
+            aria-label="View cart items"
+          >
+            <Eye className="w-4 h-4 lg:w-5 lg:h-5" />
+            <span className="font-medium hidden sm:inline">
+              View Cart Items
+            </span>
+            <span className="bg-white/20 rounded-full px-2 py-1 text-xs font-bold">
+              {orders?.length || 0}
+            </span>
+          </Button>
+        </div>
+      )}
 
       <Drawer open={activeCart} onOpenChange={setActiveCart}>
         <DrawerContent className="bg-gray-50 dark:bg-gray-900 rounded-t-3xl max-w-md mx-auto h-[80vh] flex flex-col">
@@ -271,7 +277,7 @@ const CartDrawer = () => {
                       width={96}
                       height={96}
                       sizes="(max-width: 640px) 80px, 96px"
-                      quality={85}
+                      quality={100}
                       loading="lazy"
                     />
                   </div>

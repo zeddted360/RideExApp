@@ -8,7 +8,10 @@ export interface IUser {
   role: "admin" | "user";
   phoneNumber?: string;
   phoneVerified?: boolean;
+  isAdmin?: boolean;
 }
+
+export interface IUserFectched extends Models.Document {}
 
 export interface AuthState {
   user: IUser | null;
@@ -203,4 +206,18 @@ export interface IBookedOrderFetched extends Models.Document {
   selectedBranchId: number;
   apartmentFlat?: string;
   paid?: boolean; // Added paid attribute
+}
+
+export interface ISearchResult {
+  id: string;
+  name: string;
+  type: "restaurant" | "menu" | "popular" | "featured";
+  image?: string;
+  price?: string;
+  description?: string;
+  restaurantName?: string;
+  category?: string;
+  rating?: number;
+  deliveryTime?: string;
+  distance?: string;
 }

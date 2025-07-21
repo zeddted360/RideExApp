@@ -15,6 +15,8 @@ import { useShowCart } from "@/context/showCart";
 import { fileUrl, validateEnv } from "@/utils/appwrite";
 import toast from "react-hot-toast";
 import { listAsyncPopularItems } from "@/state/popularSlice";
+import { useAuth } from "@/context/authContext";
+import { useRouter } from "next/navigation";
 
 interface IPopularItemProps {
   toggleFavorite: (id: string) => void;
@@ -29,6 +31,8 @@ const PopularItem = ({ toggleFavorite, favorites }: IPopularItemProps) => {
     (state: RootState) => state.popularItem
   );
   const { setIsOpen, setItem } = useShowCart();
+  const { user } = useAuth();
+  const router = useRouter();
 
   // Fetch popular items on mount
   useEffect(() => {
@@ -176,18 +180,22 @@ const PopularItem = ({ toggleFavorite, favorites }: IPopularItemProps) => {
                       </span>
                       <button
                         onClick={() => {
-                          setItem({
-                            userId: "zedd",
-                            itemId: item.$id,
-                            name: item.name,
-                            image: item.image,
-                            price: item.price,
-                            restaurantId: item.restaurantId,
-                            quantity: 1,
-                            category: item.category,
-                            source: "popular",
-                          });
-                          setIsOpen(true);
+                          if (user) {
+                            setItem({
+                              userId: user?.userId as string,
+                              itemId: item.$id,
+                              name: item.name,
+                              image: item.image,
+                              price: item.price,
+                              restaurantId: item.restaurantId,
+                              quantity: 1,
+                              category: item.category,
+                              source: "popular",
+                            });
+                            setIsOpen(true);
+                          } else {
+                            router.push("/login");
+                          }
                         }}
                         aria-label={`Add ${item.name} to cart`}
                         className="flex items-center bg-gradient-to-r from-orange-500 to-orange-600 text-white px-2 sm:px-3 py-1 sm:py-1.5 rounded-full font-semibold text-xs hover:from-orange-600 hover:to-orange-700 transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-opacity-50"

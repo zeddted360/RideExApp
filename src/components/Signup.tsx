@@ -8,29 +8,82 @@ import { RootState, AppDispatch } from "@/state/store";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { account, databases, validateEnv } from "@/utils/appwrite";
-import { storeUserPhone } from "@/utils/phoneStorage";
+import { getUserPhone, storeUserPhone } from "@/utils/phoneStorage";
+// LocalStorage keys for signup persistence
+const SIGNUP_STEP_KEY = "signupStep";
+const SIGNUP_PHONE_KEY = "signupPhone";
+const SIGNUP_CODE_KEY = "signupCode";
 import Link from "next/link";
 import { SignupFormData, signupSchema } from "@/utils/authSchema";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import PhoneCollection from "./signup/PhoneCollection";
+import PhoneVerification from "./signup/PhoneVerification";
+import SignupForm from "./signup/SignupForm";
+import { useAuth } from "@/context/authContext";
 
 const Signup = () => {
-  const [step, setStep] = useState<"phone" | "verify" | "form">("phone");
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const { isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (isAuthenticated) router.push("/");
+  }, [isAuthenticated]);
+
+  const [step, setStep] = useState<"phone" | "verify" | "form">(() => {
+    if (typeof window !== "undefined") {
+      const phoneData = getUserPhone();
+      if (phoneData && phoneData.verified) return "form";
+      return (
+        (localStorage.getItem(SIGNUP_STEP_KEY) as
+          | "phone"
+          | "verify"
+          | "form") || "phone"
+      );
+    }
+    return "phone";
+  });
+  const [phoneNumber, setPhoneNumber] = useState(() => {
+    if (typeof window !== "undefined") {
+      const phoneData = getUserPhone();
+      if (phoneData && phoneData.verified) return phoneData.phoneNumber;
+      return localStorage.getItem(SIGNUP_PHONE_KEY) || "";
+    }
+    return "";
+  });
   const [phoneError, setPhoneError] = useState("");
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem(SIGNUP_CODE_KEY) || "";
+    }
+    return "";
+  });
   const [codeError, setCodeError] = useState("");
-  const [sessionUserId, setSessionUserId] = useState<string | null>(null);
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
   const [resendCountdown, setResendCountdown] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const { loading, error } = useSelector((state: RootState) => state.auth);
+
+  // Persist step, phoneNumber, and code to localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const phoneData = getUserPhone();
+      if (phoneData && phoneData.verified) {
+        setPhoneNumber(phoneData.phoneNumber);
+        setStep("form");
+        localStorage.setItem(SIGNUP_STEP_KEY, "form");
+        localStorage.setItem(SIGNUP_PHONE_KEY, phoneData.phoneNumber);
+        localStorage.removeItem(SIGNUP_CODE_KEY);
+        return;
+      }
+      localStorage.setItem(SIGNUP_STEP_KEY, step);
+      localStorage.setItem(SIGNUP_PHONE_KEY, phoneNumber);
+      localStorage.setItem(SIGNUP_CODE_KEY, code);
+    }
+  }, [step, phoneNumber, code]);
 
   // Handle countdown for resend button
   useEffect(() => {
@@ -72,6 +125,9 @@ const Signup = () => {
 
     // Update the phone number with the formatted version
     setPhoneNumber(formattedPhone);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(SIGNUP_PHONE_KEY, formattedPhone);
+    }
 
     // Send verification code
     try {
@@ -91,6 +147,9 @@ const Signup = () => {
       if (result.success) {
         toast.success(result.message);
         setStep("verify");
+        if (typeof window !== "undefined") {
+          localStorage.setItem(SIGNUP_STEP_KEY, "verify");
+        }
         setResendCountdown(60); // 60 seconds countdown
       } else {
         setPhoneError(result.message);
@@ -113,6 +172,9 @@ const Signup = () => {
     e.preventDefault();
     setCodeError("");
     setIsVerifyingCode(true);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(SIGNUP_CODE_KEY, code);
+    }
 
     if (!code || code.length !== 6) {
       setCodeError("Please enter a valid 6-digit code");
@@ -139,6 +201,9 @@ const Signup = () => {
       if (result.success) {
         toast.success(result.message);
         setStep("form");
+        if (typeof window !== "undefined") {
+          localStorage.setItem(SIGNUP_STEP_KEY, "form");
+        }
       } else {
         setCodeError(result.message);
         toast.error(result.message);
@@ -175,6 +240,9 @@ const Signup = () => {
       if (result.success) {
         toast.success("Verification code resent successfully!");
         setResendCountdown(60);
+        if (typeof window !== "undefined") {
+          localStorage.setItem(SIGNUP_STEP_KEY, "verify");
+        }
       } else {
         toast.error(result.message);
       }
@@ -210,7 +278,14 @@ const Signup = () => {
         `${data.firstName} ${data.lastName}`
       );
 
-      // 2. Login the user to get the session
+      // 2. Create user profile in users collection
+      const { databaseId, userCollectionId } = validateEnv();
+      await databases.createDocument(databaseId, userCollectionId, user.$id, {
+        userId: user.$id,
+        fullName: `${data.firstName} ${data.lastName}`,
+        phone: phoneNumber,
+      });
+      // 3. Login the user to get the session
       const loginResult = await dispatch(
         loginAsync({
           email: data.email,
@@ -218,31 +293,21 @@ const Signup = () => {
           rememberMe: true,
         })
       );
-
       if (loginAsync.fulfilled.match(loginResult)) {
-        // 3. Update the phone number in Appwrite Auth
+        // 4. Update the phone number in Appwrite Auth
         try {
           await account.updatePhone(phoneNumber, data.password);
-        } catch (err) {
-          toast.error("Failed to update phone in Auth user, but continuing...");
-        }
-
-        // 4. Create user profile in users collection
-        try {
-          const { databaseId, userCollectionId } = validateEnv();
-          await databases.createDocument(
-            databaseId,
-            userCollectionId,
-            user.$id, // Use Auth userId as document ID
-            {
-              userId: user.$id,
-              fullName: `${data.firstName} ${data.lastName}`,
-              address: "", // You can collect this in a later step
-              phone: phoneNumber,
-            }
-          );
-        } catch (profileErr) {
-          toast.error("Failed to create user profile, but account is created.");
+        } catch (err: any) {
+          if (err?.code === 409) {
+            toast.error(
+              "This phone number is already in use. Please use a different number."
+            );
+          } else {
+            toast.error(
+              "Failed to update phone in Auth user, but continuing..."
+            );
+          }
+          console.error("Failed to update phone in Auth user:", err);
         }
 
         // 5. Store phone in localStorage (optional, for legacy reasons)
@@ -254,9 +319,20 @@ const Signup = () => {
         }
 
         toast.success("Account created successfully with phone number!");
+        // Clear signup persistence after successful signup
+        if (typeof window !== "undefined") {
+          localStorage.removeItem(SIGNUP_STEP_KEY);
+          localStorage.removeItem(SIGNUP_PHONE_KEY);
+          localStorage.removeItem(SIGNUP_CODE_KEY);
+        }
         router.push("/");
       }
     } catch (error) {
+      console.error(
+        `Signup failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
       toast.error(
         `Signup failed: ${
           error instanceof Error ? error.message : "Unknown error"
@@ -268,8 +344,8 @@ const Signup = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-red-50">
-      <Card className="w-full max-w-md shadow-xl border-0">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-red-50 dark:from-gray-950 dark:to-gray-900">
+      <Card className="w-full max-w-md shadow-xl border-0 bg-white dark:bg-gray-900">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-bold text-gray-900 dark:text-gray-100">
             Create Account
@@ -278,172 +354,44 @@ const Signup = () => {
             Join us and start ordering delicious food!
           </p>
         </CardHeader>
-
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label
-              htmlFor="name"
-              className="text-sm font-medium text-gray-700 dark:text-gray-300"
-            >
-              Full Name
-            </Label>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label
-                  htmlFor="firstName"
-                  className="text-sm font-medium text-gray-700"
-                >
-                  First Name
-                </Label>
-                <Input
-                  id="firstName"
-                  type="text"
-                  placeholder="Enter first name"
-                  {...signupForm.register("firstName")}
-                  className="h-12"
-                />
-                {signupForm.formState.errors.firstName && (
-                  <p className="text-sm text-red-500">
-                    {signupForm.formState.errors.firstName.message}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label
-                  htmlFor="lastName"
-                  className="text-sm font-medium text-gray-700"
-                >
-                  Last Name
-                </Label>
-                <Input
-                  id="lastName"
-                  type="text"
-                  placeholder="Enter last name"
-                  {...signupForm.register("lastName")}
-                  className="h-12"
-                />
-                {signupForm.formState.errors.lastName && (
-                  <p className="text-sm text-red-500">
-                    {signupForm.formState.errors.lastName.message}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label
-              htmlFor="phone"
-              className="text-sm font-medium text-gray-700 dark:text-gray-300"
-            >
-              Phone Number
-            </Label>
-            <Input
-              id="phoneNumber"
-              type="tel"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              placeholder="+2348012345678 or 08012345678"
-              className="h-12"
-              required
+          {step === "phone" && (
+            <PhoneCollection
+              phoneNumber={phoneNumber}
+              setPhoneNumber={setPhoneNumber}
+              phoneError={phoneError}
+              setPhoneError={setPhoneError}
+              isSendingCode={isSendingCode}
+              handlePhoneSubmit={handlePhoneSubmit}
             />
-            {phoneError && <p className="text-sm text-red-500">{phoneError}</p>}
-          </div>
-          <div className="space-y-2">
-            <Label
-              htmlFor="email"
-              className="text-sm font-medium text-gray-700"
-            >
-              Email Address
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="Enter your email"
-              {...signupForm.register("email")}
-              className="h-12"
-            />
-            {signupForm.formState.errors.email && (
-              <p className="text-sm text-red-500">
-                {signupForm.formState.errors.email.message}
-              </p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label
-              htmlFor="password"
-              className="text-sm font-medium text-gray-700"
-            >
-              Password
-            </Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="Create a password"
-              {...signupForm.register("password")}
-              className="h-12"
-            />
-            {signupForm.formState.errors.password && (
-              <p className="text-sm text-red-500">
-                {signupForm.formState.errors.password.message}
-              </p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label
-              htmlFor="confirmPassword"
-              className="text-sm font-medium text-gray-700"
-            >
-              Confirm Password
-            </Label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              placeholder="Confirm your password"
-              {...signupForm.register("confirmPassword")}
-              className="h-12"
-            />
-            {signupForm.formState.errors.confirmPassword && (
-              <p className="text-sm text-red-500">
-                {signupForm.formState.errors.confirmPassword.message}
-              </p>
-            )}
-          </div>
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-3">
-              <p className="text-sm text-red-600">{error}</p>
-            </div>
           )}
-          <Button
-            type="submit"
-            disabled={loading === "pending" || isSigningUp}
-            className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold transition-all duration-200"
-          >
-            {loading === "pending" || isSigningUp ? (
-              <>
-                {loading === "pending" ? (
-                  "Creating Account..."
-                ) : (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating Account...
-                  </>
-                )}
-              </>
-            ) : (
-              "Create Account"
-            )}
-          </Button>
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Already have an account?{" "}
-              <Link
-                href="/login"
-                className="text-orange-600 hover:text-orange-700 font-medium"
-              >
-                Sign in
-              </Link>
-            </p>
-          </div>
+          {step === "verify" && (
+            <PhoneVerification
+              code={code}
+              setCode={setCode}
+              codeError={codeError}
+              setCodeError={setCodeError}
+              isVerifyingCode={isVerifyingCode}
+              handleCodeSubmit={handleCodeSubmit}
+              handleResendCode={handleResendCode}
+              isSendingCode={isSendingCode}
+              resendCountdown={resendCountdown}
+            />
+          )}
+          {step === "form" && (
+            <SignupForm
+              signupForm={signupForm}
+              handleSignupSubmit={handleSignupSubmit}
+              phoneNumber={phoneNumber}
+              showPassword={showPassword}
+              setShowPassword={setShowPassword}
+              showConfirmPassword={showConfirmPassword}
+              setShowConfirmPassword={setShowConfirmPassword}
+              error={error || ""}
+              loading={loading}
+              isSigningUp={isSigningUp}
+            />
+          )}
         </CardContent>
       </Card>
     </div>

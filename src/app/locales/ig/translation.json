@@ -2,8 +2,10 @@
   "header": {
     "home": "Ụlọ",
     "menu": "Nri",
+    "offers": "Onyinye",
     "orders": "Iwu",
-    "contact": "Kpọtụrụ",
+    "contact": "Adresị",
+    "add-item": "Tinye Ihe",
     "searchPlaceholder": "Chọọ nri dị ụtọ...",
     "notifications": "Ọkwa",
     "cartItems": "Ihe Cart",

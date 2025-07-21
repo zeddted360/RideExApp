@@ -2,7 +2,12 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useDispatch, useSelector } from "react-redux";
-import { loginAsync, loginAsGuestAsync, clearError } from "@/state/authSlice";
+import {
+  loginAsync,
+  loginAsGuestAsync,
+  clearError,
+  getCurrentUserAsync,
+} from "@/state/authSlice";
 import { RootState, AppDispatch } from "@/state/store";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -14,8 +19,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { User, UserCircle, Phone, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { User, UserCircle, Phone, Loader2, Eye, EyeOff } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -23,16 +28,25 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { ID, Query } from "appwrite";
+import { Query } from "appwrite";
+import { useAuth } from "@/context/authContext";
+import { IUser, IUserFectched } from "../../types/types";
 
 const Login = () => {
-  const dispatch = useDispatch<AppDispatch>();
+  const { isAuthenticated } = useAuth();
   const router = useRouter();
+  const dispatch = useDispatch<AppDispatch>();
+
+  useEffect(() => {
+    if (isAuthenticated) router.push("/");
+  }, [isAuthenticated]);
+
   const { loading, error } = useSelector((state: RootState) => state.auth);
   const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [isCheckingPhone, setIsCheckingPhone] = useState(false);
-  const [existingUser, setExistingUser] = useState<any>(null);
+  const [existingUser, setExistingUser] = useState<IUserFectched | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -53,6 +67,8 @@ const Login = () => {
   const onSubmit = async (data: LoginFormData) => {
     dispatch(clearError());
     const result = await dispatch(loginAsync(data));
+    dispatch(getCurrentUserAsync());
+
     if (loginAsync.fulfilled.match(result)) {
       toast.success("Login successful!");
       router.push("/");
@@ -63,7 +79,7 @@ const Login = () => {
     setShowPhoneModal(true);
   };
 
-  const checkPhoneInAppwrite = async (phone: string) => {
+  const checkPhoneInAppwriteForGuestUser = async (phone: string) => {
     try {
       const { databaseId, userCollectionId } = validateEnv();
 
@@ -81,7 +97,7 @@ const Login = () => {
       const response = await databases.listDocuments(
         databaseId,
         userCollectionId,
-        [Query.equal("phoneNumber", formattedPhone)]
+        [Query.equal("phone", formattedPhone)]
       );
 
       if (response.documents.length > 0) {
@@ -119,7 +135,9 @@ const Login = () => {
     setIsCheckingPhone(true);
     try {
       // Check if phone exists in Appwrite
-      const existingUserData = await checkPhoneInAppwrite(formattedPhone);
+      const existingUserData = await checkPhoneInAppwriteForGuestUser(
+        formattedPhone
+      );
 
       if (existingUserData) {
         // User exists - show their name but still create guest session
@@ -132,12 +150,9 @@ const Login = () => {
         setExistingUser(null);
         toast.success("Welcome! You're browsing as a guest.");
       }
-
       // Create guest user with phone number
       const guestUser = {
-        userId: `guest_${Date.now()}_${Math.random()
-          .toString(36)
-          .substr(2, 9)}`,
+        userId: `guest_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
         username:
           existingUserData?.name || existingUserData?.username || "Guest User",
         email: `guest_${Date.now()}@guest.com`,
@@ -166,8 +181,8 @@ const Login = () => {
       // Dispatch guest login
       const result = await dispatch(loginAsGuestAsync());
       if (loginAsGuestAsync.fulfilled.match(result)) {
+        setPhoneNumber(result.payload.phoneNumber as string);
         setShowPhoneModal(false);
-        setPhoneNumber("");
         router.push("/");
       }
     } catch (error) {
@@ -200,13 +215,13 @@ const Login = () => {
 
   return (
     <>
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-red-50">
-        <Card className="w-full max-w-md shadow-xl border-0">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-red-50 dark:from-gray-950 dark:to-gray-900">
+        <Card className="w-full max-w-md shadow-xl border-0 bg-white dark:bg-gray-900">
           <CardHeader className="text-center pb-6">
-            <CardTitle className="text-3xl font-bold text-gray-900">
+            <CardTitle className="text-3xl font-bold text-gray-900 dark:text-gray-100">
               Welcome Back
             </CardTitle>
-            <p className="text-gray-600 mt-2">
+            <p className="text-gray-600 dark:text-gray-300 mt-2">
               Sign in to your account to continue
             </p>
           </CardHeader>
@@ -215,7 +230,7 @@ const Login = () => {
               <div className="space-y-2">
                 <Label
                   htmlFor="email"
-                  className="text-sm font-medium text-gray-700"
+                  className="text-sm font-medium text-gray-700 dark:text-gray-200"
                 >
                   Email Address
                 </Label>
@@ -224,29 +239,48 @@ const Login = () => {
                   type="email"
                   placeholder="Enter your email"
                   {...register("email")}
-                  className="h-12"
+                  className="h-12 bg-white dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400"
                 />
                 {errors.email && (
-                  <p className="text-sm text-red-500">{errors.email.message}</p>
+                  <p className="text-sm text-red-500 dark:text-red-400">
+                    {errors.email.message}
+                  </p>
                 )}
               </div>
 
               <div className="space-y-2">
                 <Label
                   htmlFor="password"
-                  className="text-sm font-medium text-gray-700"
+                  className="text-sm font-medium text-gray-700 dark:text-gray-200"
                 >
                   Password
                 </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  {...register("password")}
-                  className="h-12"
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter your password"
+                    {...register("password")}
+                    className="h-12 bg-white dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400 pr-12"
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-300 hover:text-orange-500 dark:hover:text-orange-400 focus:outline-none"
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
+                  >
+                    {showPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
+                </div>
                 {errors.password && (
-                  <p className="text-sm text-red-500">
+                  <p className="text-sm text-red-500 dark:text-red-400">
                     {errors.password.message}
                   </p>
                 )}
@@ -263,7 +297,7 @@ const Login = () => {
                   />
                   <Label
                     htmlFor="rememberMe"
-                    className="text-sm text-gray-600 cursor-pointer"
+                    className="text-sm text-gray-600 dark:text-gray-300 cursor-pointer"
                   >
                     Remember me
                   </Label>
@@ -271,15 +305,17 @@ const Login = () => {
                 <button
                   type="button"
                   onClick={handleForgotPassword}
-                  className="text-sm text-orange-600 hover:text-orange-700 font-medium"
+                  className="text-sm text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 font-medium"
                 >
                   Forgot Password?
                 </button>
               </div>
 
               {error && (
-                <div className="bg-red-50 border border-red-200 rounded-md p-3">
-                  <p className="text-sm text-red-600">{error}</p>
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-400 rounded-md p-3">
+                  <p className="text-sm text-red-600 dark:text-red-400">
+                    {error}
+                  </p>
                 </div>
               )}
 
@@ -291,9 +327,9 @@ const Login = () => {
                 {loading === "pending" ? "Signing in..." : "Sign In"}
               </Button>
 
-              <div className="relative">
-                <span className="w-full border-t border-gray-300 dark:border-gray-600" />
-                <span className="px-2 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400">
+              <div className="relative flex items-center justify-center my-4">
+                <span className="absolute w-full border-t border-gray-300 dark:border-gray-700" />
+                <span className="px-2 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 z-10">
                   or
                 </span>
               </div>
@@ -303,7 +339,7 @@ const Login = () => {
                 onClick={handleGuestLogin}
                 disabled={loading === "pending"}
                 variant="outline"
-                className="w-full h-12 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 font-semibold transition-all duration-200 rounded-xl flex items-center justify-center gap-3"
+                className="w-full h-12 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 font-semibold transition-all duration-200 rounded-xl flex items-center justify-center gap-3 bg-white dark:bg-gray-800"
               >
                 <UserCircle className="w-4 h-4 mr-2" />
                 Continue as Guest
@@ -311,11 +347,11 @@ const Login = () => {
             </form>
 
             <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 dark:text-gray-300">
                 Don't have an account?{" "}
                 <Link
                   href="/signup"
-                  className="text-orange-600 hover:text-orange-700 font-medium"
+                  className="text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 font-medium"
                 >
                   Sign up
                 </Link>

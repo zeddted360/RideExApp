@@ -38,7 +38,7 @@ const RestaurantCard = ({
     className="group bg-white dark:bg-gray-800 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden flex-shrink-0 w-[160px] sm:w-[180px] md:w-[200px] lg:w-auto hover:scale-105 cursor-pointer"
   >
     <div className="relative">
-      <div className="w-full h-28 sm:h-32 md:h-36 overflow-hidden rounded-t-xl">
+      <div className="w-full aspect-[4/3] overflow-hidden rounded-t-xl">
         <Image
           src={fileUrl(validateEnv().restaurantBucketId, restaurant.logo)}
           alt={restaurant.name}
@@ -46,8 +46,9 @@ const RestaurantCard = ({
           height={150}
           quality={100}
           priority
-          className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-110"
+          className="object-cover transition-transform duration-300 group-hover:scale-110"
           sizes="(max-width: 640px) 160px, (max-width: 768px) 180px, (max-width: 1024px) 200px, 25vw"
+          style={{ width: "100%", height: "auto" }}
         />
       </div>
       <div className="absolute bottom-2 left-2 bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 transition-opacity duration-200 group-hover:opacity-90">

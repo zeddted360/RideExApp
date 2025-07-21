@@ -89,13 +89,6 @@ const AddressSection: React.FC<AddressSectionProps> = (props) => {
     lat: 6.5244, // Default to Lagos, Nigeria
     lng: 3.3792,
   });
-  // console.log("the map center is :", mapCenter);
-  // console.log("the auto complete input is ", autocompleteInput);
-  // console.log("the auto complete input is :", autocompleteInput);
-  // console.log("the map ref is ", mapRef);
-  // console.log("the temp address is in addrr comp :", tempAddress)
-  // console.log("the  address is in addrr comp :", address);
-
   // Load Google Maps script
   useEffect(() => {
     const { googleMapsApiKey } = validateEnv();

@@ -8,13 +8,16 @@ import { ShoppingCart, Heart, Star, Clock, Info, Award } from "lucide-react";
 import Image from "next/image";
 import { promoOffers } from "../../data/promoOffers";
 import { useShowCart } from "@/context/showCart";
+import { useAuth } from "@/context/authContext";
+import { useRouter } from "next/navigation";
 
 export default function PromotionalBanner() {
   const [favorites, setFavorites] = useState(new Set());
   const dispatch = useDispatch<AppDispatch>();
   const { popularItems } = useSelector((state: RootState) => state.popularItem);
   const { setIsOpen, setItem } = useShowCart();
-
+  const { user } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     dispatch(listAsyncPopularItems());
@@ -207,18 +210,22 @@ export default function PromotionalBanner() {
                     <button
                       aria-label={`Add ${item.name} to cart`}
                       onClick={() => {
-                        setItem({
-                          userId: "zedd", // Replace with actual user id if available
-                          itemId: item.$id,
-                          name: item.name,
-                          image: item.image,
-                          price: item.price,
-                          restaurantId: item.restaurantId,
-                          quantity: 1,
-                          category: item.category,
-                          source: "popular",
-                        });
-                        setIsOpen(true);
+                        if (user) {
+                          setItem({
+                            userId: user.userId as string,
+                            itemId: item.$id,
+                            name: item.name,
+                            image: item.image,
+                            price: item.price,
+                            restaurantId: item.restaurantId,
+                            quantity: 1,
+                            category: item.category,
+                            source: "popular",
+                          });
+                          setIsOpen(true);
+                        } else {
+                          router.push("/login");
+                        }
                       }}
                       className="flex items-center bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-2.5 rounded-full font-semibold hover:from-orange-600 hover:to-red-600 transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-opacity-50"
                     >

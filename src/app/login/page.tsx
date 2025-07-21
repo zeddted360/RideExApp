@@ -21,4 +21,4 @@ export const metadata = {
 
 export default function LoginPage() {
   return <Login />;
-}
+};

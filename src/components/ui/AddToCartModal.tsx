@@ -9,7 +9,6 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Minus, Plus, Info, ShoppingCart } from "lucide-react";
 import Image from "next/image";
 import toast from "react-hot-toast";
@@ -28,11 +27,16 @@ import { fileUrl, validateEnv } from "@/utils/appwrite";
 
 const AddToCartModal = () => {
   const { isOpen, setIsOpen, item } = useShowCart();
+
   const dispatch = useDispatch<AppDispatch>();
   const { error, orders } = useSelector((state: RootState) => state.orders);
   const [quantity, setQuantity] = useState(item.quantity || 1);
   const [specialInstructions, setSpecialInstructions] = useState("");
   const maxInstructionsLength = 200;
+
+  // Get user and guestUser from Redux
+  const user = useSelector((state: RootState) => state.auth.user);
+  const userId = user?.userId;
 
   // Reset state when modal closes
   useEffect(() => {
@@ -53,10 +57,6 @@ const AddToCartModal = () => {
 
   const itemPrice = parsePrice(item.price);
   const totalPrice = itemPrice * quantity;
-
-  const increaseQuantity = () => setQuantity((prev) => prev + 1);
-  const decreaseQuantity = () =>
-    setQuantity((prev) => (prev > 1 ? prev - 1 : 1));
 
   const handleAddToCart = async () => {
     // Check if the item already exists in the cart
@@ -117,7 +117,7 @@ const AddToCartModal = () => {
       const tempId = `temp-${Date.now()}-${Math.random()}`;
       const newItem: ICartItemFetched = {
         $id: tempId,
-        userId: item.userId,
+        userId: userId,
         itemId: item.itemId,
         image: item.image,
         name: item.name,

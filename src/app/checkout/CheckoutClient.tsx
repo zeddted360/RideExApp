@@ -22,6 +22,7 @@ import PlaceOrderButton from "@/components/checkout/PlaceOrderButton";
 import { generateTimeSlots, formatDeliveryTime } from "@/utils/checkoutUtils";
 import { sendOrderPlacedSMS } from "@/utils/smsService";
 import { branches } from "../../../data/branches";
+import { useAuth } from "@/context/authContext";
 
 export default function CheckoutClient() {
   const [selectedBranch, setSelectedBranch] = useState(1);
@@ -34,7 +35,6 @@ export default function CheckoutClient() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [deliveryFee, setDeliveryFee] = useState(1000);
   const [deliveryDistance, setDeliveryDistance] = useState("");
@@ -47,18 +47,29 @@ export default function CheckoutClient() {
   const [userAddresses, setUserAddresses] = useState<string[]>([]);
   const [addressMode, setAddressMode] = useState<"select" | "add">("select");
   const [googlePlaceSelected, setGooglePlaceSelected] = useState(false);
-  const [selectedPlace, setSelectedPlace] = useState<google.maps.places.PlaceResult | null>(null);
+  const [selectedPlace, setSelectedPlace] =
+    useState<google.maps.places.PlaceResult | null>(null);
   const [lastPickedAddress, setLastPickedAddress] = useState("");
 
   const dialogAutocompleteInput = useRef<HTMLInputElement | null>(null);
-  const dialogAutocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
-  const autocompleteListenerRef = useRef<google.maps.MapsEventListener | null>(null);
+  const dialogAutocompleteRef = useRef<google.maps.places.Autocomplete | null>(
+    null
+  );
+  const autocompleteListenerRef = useRef<google.maps.MapsEventListener | null>(
+    null
+  );
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
 
   const orders = useSelector((state: RootState) => state.orders.orders) || [];
-  const subtotal = orders.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
-  const timeSlots = useMemo(() => (deliveryDay === "today" ? generateTimeSlots() : []), [deliveryDay]);
+  const subtotal = orders.reduce(
+    (sum, item) => sum + (item.totalPrice || 0),
+    0
+  );
+  const timeSlots = useMemo(
+    () => (deliveryDay === "today" ? generateTimeSlots() : []),
+    [deliveryDay]
+  );
   const { googleMapsApiKey } = validateEnv();
 
   // Memoized branch data
@@ -66,7 +77,6 @@ export default function CheckoutClient() {
     () => branches.find((b) => b.id === selectedBranch),
     [selectedBranch]
   );
-
   // Custom debounce hook for delivery fee calculation
   const useDebounce = (value: string, delay: number) => {
     const [debouncedValue, setDebouncedValue] = useState(value);
@@ -76,15 +86,12 @@ export default function CheckoutClient() {
     }, [value, delay]);
     return debouncedValue;
   };
-
   const debouncedAddress = useDebounce(address, 500);
-
   // Centralized error handling with auto-clear
   const handleError = (message: string) => {
     setError(message);
     setTimeout(() => setError(null), 5000);
   };
-
   // Google Maps initialization
   const initMap = useCallback(() => {
     if (!dialogAutocompleteInput.current || !window.google?.maps) return;
@@ -97,27 +104,32 @@ export default function CheckoutClient() {
       }
     );
 
-    autocompleteListenerRef.current = dialogAutocompleteRef.current.addListener("place_changed", () => {
-      const place = dialogAutocompleteRef.current?.getPlace();
-      if (!place?.geometry?.location) return;
-      if (place.formatted_address) {
-        setTempAddress(place.formatted_address);
-        setGooglePlaceSelected(true);
-        setSelectedPlace(place);
-        setLastPickedAddress(place.formatted_address);
-      } else if (place.name) {
-        setTempAddress(place.name);
-        setGooglePlaceSelected(true);
-        setSelectedPlace(place);
-        setLastPickedAddress(place.name);
+    autocompleteListenerRef.current = dialogAutocompleteRef.current.addListener(
+      "place_changed",
+      () => {
+        const place = dialogAutocompleteRef.current?.getPlace();
+        if (!place?.geometry?.location) return;
+        if (place.formatted_address) {
+          setTempAddress(place.formatted_address);
+          setGooglePlaceSelected(true);
+          setSelectedPlace(place);
+          setLastPickedAddress(place.formatted_address);
+        } else if (place.name) {
+          setTempAddress(place.name);
+          setGooglePlaceSelected(true);
+          setSelectedPlace(place);
+          setLastPickedAddress(place.name);
+        }
       }
-    });
+    );
   }, []);
 
   // Load Google Maps
   useEffect(() => {
     if (!googleMapsApiKey) {
-      handleError("Google Maps API key is missing. Please enter address manually.");
+      handleError(
+        "Google Maps API key is missing. Please enter address manually."
+      );
       setManualMode(true);
       return;
     }
@@ -135,7 +147,9 @@ export default function CheckoutClient() {
         if (dialogAutocompleteInput.current) initMap();
       })
       .catch(() => {
-        handleError("Failed to load Google Maps. Please enter address manually.");
+        handleError(
+          "Failed to load Google Maps. Please enter address manually."
+        );
         setManualMode(true);
       });
 
@@ -160,7 +174,11 @@ export default function CheckoutClient() {
 
       setIsCalculatingFee(true);
       try {
-        const result = await calculateDeliveryFee(debouncedAddress, selectedBranch, selectedBranchData);
+        const result = await calculateDeliveryFee(
+          debouncedAddress,
+          selectedBranch,
+          selectedBranchData
+        );
         setDeliveryFee(result.fee);
         setDeliveryDistance(result.distance);
         setDeliveryDuration(result.duration);
@@ -177,21 +195,15 @@ export default function CheckoutClient() {
     calculateFee();
   }, [debouncedAddress, selectedBranch, selectedBranchData]);
 
-  // Fetch user data
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const userData = await account.get();
-        setIsAuthenticated(true);
-        setPhoneNumber(userData.phone || "");
-      } catch {
-        setIsAuthenticated(false);
-        handleError("Please log in to proceed with checkout.");
-      }
-    };
-    fetchUser();
-  }, []);
+  const { user } = useAuth();
+  const userId = user?.userId;
+  const userEmail = user?.email;
 
+  useEffect(() => {
+    if (user) {
+      if (user.phoneNumber) setPhoneNumber(user.phoneNumber);
+    }
+  }, [user]);
   // Fetch user addresses
   useEffect(() => {
     if (showAddressForm) {
@@ -199,7 +211,11 @@ export default function CheckoutClient() {
         try {
           const userData = await account.get();
           const { databaseId, userCollectionId } = validateEnv();
-          const userDoc = await databases.getDocument(databaseId, userCollectionId, userData.$id);
+          const userDoc = await databases.getDocument(
+            databaseId,
+            userCollectionId,
+            userData.$id
+          );
           if (Array.isArray(userDoc.address)) {
             setUserAddresses(userDoc.address);
             setAddressMode(userDoc.address.length > 0 ? "select" : "add");
@@ -225,12 +241,23 @@ export default function CheckoutClient() {
   // Save new address
   const handleSaveNewAddress = async (newAddress: string) => {
     try {
+      if (user) {
+        if (user.email.startsWith("guest")) {
+          setAddress(newAddress);
+          return;
+        }
+      }
       const userData = await account.get();
       const { databaseId, userCollectionId } = validateEnv();
       const updatedAddresses = [...userAddresses, newAddress];
-      await databases.updateDocument(databaseId, userCollectionId, userData.$id, {
-        address: updatedAddresses,
-      });
+      await databases.updateDocument(
+        databaseId,
+        userCollectionId,
+        userData.$id,
+        {
+          address: updatedAddresses,
+        }
+      );
       setUserAddresses(updatedAddresses);
       setAddress(newAddress);
       setAddressMode("select");
@@ -265,7 +292,8 @@ export default function CheckoutClient() {
   const sendNotification = async (orderData: any, recipient: string) => {
     try {
       const notification: INotification = {
-        type: recipient === "admin" ? "admin_new_order" : "user_order_confirmation",
+        type:
+          recipient === "admin" ? "admin_new_order" : "user_order_confirmation",
         recipient,
         userId: orderData.customerId,
         orderId: orderData.orderId,
@@ -303,50 +331,42 @@ export default function CheckoutClient() {
 
     const phoneRegex = /^\+[1-9]\d{1,14}$/;
     if (!phoneRegex.test(phoneNumber)) {
-      handleError("Please enter a valid phone number in E.164 format (e.g., +234XXXXXXXXX).");
+      handleError(
+        "Please enter a valid phone number in E.164 format (e.g., +234XXXXXXXXX)."
+      );
       return;
     }
 
     setShowAddressForm(false);
   };
 
-  // Handle confirm location
-  const handleConfirmLocation = () => {
-    let fullAddress = tempAddress;
-    if (apartmentFlat.trim()) {
-      fullAddress = `${apartmentFlat}, ${tempAddress}`;
-    }
-    setAddress(fullAddress);
-    setShowAddressForm(false);
-    setManualMode(false);
-  };
 
   // Handle place order
   const handlePlaceOrder = useCallback(() => {
     setShowConfirmation(true);
   }, []);
-
   // Handle confirm order
   const handleConfirmOrder = useCallback(async () => {
     if (!address || !phoneNumber || orders.length === 0) {
-      handleError("Please add a delivery address, phone number, and items to your cart.");
+      handleError(
+        "Please add a delivery address, phone number, and items to your cart."
+      );
       return;
     }
 
-    if (!isAuthenticated) {
+    if (!userId) {
       handleError("Please log in to place an order.");
       return;
     }
 
     setIsOrderLoading(true);
     try {
-      const userData = await account.get();
       const orderId = ID.unique();
       const deliveryTime = calculateDeliveryTime();
 
       const order = {
         orderId,
-        itemIds: orders.map((item: any) => item.$id),
+        itemIds: orders.map((item: any) => item.itemId),
         paymentMethod,
         address,
         apartmentFlat,
@@ -356,7 +376,7 @@ export default function CheckoutClient() {
         total: subtotal + deliveryFee,
         status: "pending" as OrderStatus,
         phone: phoneNumber,
-        customerId: userData.$id,
+        customerId: userId,
         deliveryFee,
         deliveryDistance,
         deliveryDuration,
@@ -364,25 +384,36 @@ export default function CheckoutClient() {
       };
 
       const { databaseId, bookedOrdersCollectionId } = validateEnv();
-      await databases.createDocument(databaseId, bookedOrdersCollectionId, orderId, order);
+      await databases.createDocument(
+        databaseId,
+        bookedOrdersCollectionId,
+        orderId,
+        order
+      );
 
       await Promise.all([
         sendNotification(order, "admin"),
-        sendNotification(order, userData.$id),
+        sendNotification(order, userId),
         sendOrderPlacedSMS({
           userPhone: phoneNumber,
           orderId,
-          userName: userData.name || userData.email || userData.$id,
+          userName: user.email || userId,
           origin: window.location.origin,
         }).catch(() => handleError("Failed to send SMS confirmation.")),
       ]);
 
-      await Promise.all(orders.map((item: any) => dispatch(deleteOrderAsync(item.$id))));
+      await Promise.all(
+        orders.map((item: any) => dispatch(deleteOrderAsync(item.$id)))
+      );
       dispatch(resetOrders());
 
       router.push("/order-confirmation");
     } catch (err) {
-      handleError(`Failed to place order: ${err instanceof Error ? err.message : "Unknown error"}`);
+      handleError(
+        `Failed to place order: ${
+          err instanceof Error ? err.message : "Unknown error"
+        }`
+      );
     } finally {
       setIsOrderLoading(false);
       setShowConfirmation(false);
@@ -399,7 +430,8 @@ export default function CheckoutClient() {
     deliveryDistance,
     deliveryDuration,
     selectedBranch,
-    isAuthenticated,
+    userId,
+    userEmail,
     apartmentFlat,
     label,
     dispatch,
@@ -409,7 +441,9 @@ export default function CheckoutClient() {
   ]);
 
   // Handle autocomplete input change
-  const handleAutocompleteInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAutocompleteInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const value = e.target.value;
     setTempAddress(value);
     if (value === lastPickedAddress && lastPickedAddress) {

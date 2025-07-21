@@ -1,5 +1,5 @@
-import AddFoodItemForm from '@/components/AddItemForm'
-import React from 'react'
+import AddFoodItemForm from "@/components/AddItemForm";
+import { cookies } from "next/headers";
 
 export const metadata = {
   title: "Add Item",
@@ -17,12 +17,17 @@ export const metadata = {
   },
 };
 
-const AddItemPage = () => {
+const AddItemPage = async () => {
+  const cookie = (await cookies()).getAll();
+
+  console.log("the cookies are :", cookie);
   return (
-    <div>
-        <AddFoodItemForm/>
+    <div className="py-8 px-4 flex justify-center items-start">
+      <div className="w-full max-w-2xl">
+        <AddFoodItemForm />
+      </div>
     </div>
-  )
-}
+  );
+};
 
 export default AddItemPage;

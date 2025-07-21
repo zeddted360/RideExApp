@@ -12,11 +12,10 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import ProfileDropdown from "@/components/ui/ProfileDropdown";
-import { useShowCart } from "@/context/showCart";
 import { useTheme } from "next-themes";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "@/state/store";
-import { addOrder } from "@/state/orderSlice";
+import { deleteOrderAsync, resetOrders } from "@/state/orderSlice";
 import { createOrderAsync } from "@/state/orderSlice";
 import toast from "react-hot-toast";
 import {
@@ -27,7 +26,6 @@ import {
   Moon,
   Monitor,
   Globe,
-  ChevronDown,
   Utensils,
   Star,
   MapPin,
@@ -35,34 +33,27 @@ import {
   X,
   UserCircle,
   Plus,
+  Settings,
+  Shield,
+  LogOut,
 } from "lucide-react";
 import Image from "next/image";
 import { fileUrl, validateEnv } from "@/utils/appwrite";
-
-interface SearchResult {
-  id: string;
-  name: string;
-  type: "restaurant" | "menu" | "popular" | "featured";
-  image?: string;
-  price?: string;
-  description?: string;
-  restaurantName?: string;
-  category?: string;
-  rating?: number;
-  deliveryTime?: string;
-  distance?: string;
-}
+import { useAuth } from "@/context/authContext";
+import { logoutAsync } from "@/state/authSlice";
+import { ISearchResult } from "../../types/types";
+import MobileSearchBar from "./ui/MobileSearchBar";
+import { useLanguage } from "@/context/languageContext";
+import { useTranslation } from "react-i18next";
 
 const Header = () => {
   const router = useRouter();
   const pathname = usePathname();
   const dispatch = useDispatch<AppDispatch>();
   const { theme, setTheme } = useTheme();
-  const { activeCart, setActiveCart } = useShowCart();
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchResults, setSearchResults] = useState<ISearchResult[]>([]);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -79,9 +70,12 @@ const Header = () => {
     (state: RootState) => state.featuredItem
   );
   const { orders } = useSelector((state: RootState) => state.orders);
-
+  const { user, isAuthenticated, role } = useAuth();
+  const userId = user?.userId;
   // Use destructured arrays directly
   const cartItems = orders || [];
+  const { currentLanguage, changeLanguage, isLanguageLoading } = useLanguage();
+  const { t } = useTranslation();
 
   useEffect(() => {
     setIsClient(true);
@@ -101,15 +95,7 @@ const Header = () => {
     }
 
     const query = searchQuery.toLowerCase().trim();
-    const results: SearchResult[] = [];
-
-    console.log("Search query:", query);
-    console.log("Available data:", {
-      restaurants: restaurants.length,
-      menuItems: menuItems.length,
-      popularItems: popularItems.length,
-      featuredItems: featuredItems.length,
-    });
+    const results: ISearchResult[] = [];
 
     // Search restaurants
     restaurants.forEach((restaurant: any) => {
@@ -190,8 +176,6 @@ const Header = () => {
       }
     });
 
-    console.log("Search results:", results);
-
     // Sort results by relevance (exact matches first, then partial matches)
     const sortedResults = results.sort((a, b) => {
       const aExact = a.name.toLowerCase() === query;
@@ -268,7 +252,7 @@ const Header = () => {
     }
   };
 
-  const handleResultClick = (result: SearchResult) => {
+  const handleResultClick = (result: ISearchResult) => {
     setIsSearchOpen(false);
     setSearchQuery("");
     setSelectedIndex(-1);
@@ -285,13 +269,16 @@ const Header = () => {
     }
   };
 
-  const handleAddToCart = async (result: SearchResult) => {
+  const handleAddToCart = async (result: ISearchResult) => {
     if (result.type === "restaurant") return;
-
+    if (!userId) {
+      router.push("/login");
+      return;
+    }
     setIsAddingToCart(result.id);
     try {
       const orderData = {
-        userId: "zedd",
+        userId: userId as string,
         itemId: result.id,
         name: result.name,
         image: result.image || "",
@@ -303,7 +290,6 @@ const Header = () => {
         totalPrice: parseFloat(result.price || "0"),
         status: "pending" as const,
       };
-
       await dispatch(createOrderAsync(orderData)).unwrap();
       toast.success(`${result.name} added to cart!`, {
         duration: 3000,
@@ -349,7 +335,7 @@ const Header = () => {
     }
   };
 
-  const getImageUrl = (result: SearchResult) => {
+  const getImageUrl = (result: ISearchResult) => {
     if (!result.image) return "/fallback-food.webp";
 
     try {
@@ -493,7 +479,7 @@ const Header = () => {
                   : "text-gray-700 dark:text-gray-200 hover:text-orange-600 dark:hover:text-orange-400"
               }`}
             >
-              Home
+              {t("header.home")}
             </Link>
             <Link
               href="/menu"
@@ -503,7 +489,7 @@ const Header = () => {
                   : "text-gray-600 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400"
               }`}
             >
-              Menu
+              {t("header.menu")}
             </Link>
             <Link
               href="/offers"
@@ -513,7 +499,7 @@ const Header = () => {
                   : "text-gray-600 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400"
               }`}
             >
-              Offers
+              {t("header.offers")}
             </Link>
             <Link
               href="/myorders"
@@ -523,7 +509,7 @@ const Header = () => {
                   : "text-gray-600 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400"
               }`}
             >
-              My Orders
+              {t("header.orders")}
             </Link>
             <Link
               href="/address"
@@ -533,14 +519,42 @@ const Header = () => {
                   : "text-gray-600 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400"
               }`}
             >
-              Address
+              {t("header.contact")}
             </Link>
-            <Link
-              href="/admin/orders"
-              className="text-sm font-bold text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 border border-orange-200 dark:border-orange-700 rounded px-3 py-1 ml-2 transition-colors"
-            >
-              Admin Dashboard
-            </Link>
+            {user?.isAdmin && role === "admin" && (
+              <>
+                <Link href="/add-item" className="ml-2">
+                  <Button className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold px-4 py-2 rounded-lg shadow-md flex items-center gap-2 transition-all border-0">
+                    <Plus className="w-4 h-4" />
+                    Add Item
+                  </Button>
+                </Link>
+                <Link href="/admin/orders" className="ml-2">
+                  <Button className="bg-gradient-to-r from-gray-700 to-orange-500 hover:from-gray-800 hover:to-orange-600 text-white font-bold px-4 py-2 rounded-lg shadow-md flex items-center gap-2 transition-all border-0">
+                    <Shield className="w-4 h-4" />
+                    Admin Dashboard
+                  </Button>
+                </Link>
+              </>
+            )}
+            {/* Show Login/Sign Up for unauthenticated users */}
+            {!isAuthenticated && (
+              <div className="flex items-center gap-2 ml-4">
+                <Link href="/login">
+                  <Button
+                    variant="outline"
+                    className="text-orange-600 border-orange-500 bg-white hover:bg-orange-50 dark:bg-orange-950/80 dark:text-orange-300 dark:border-orange-400 dark:hover:bg-orange-900/60 font-semibold px-4 py-2 rounded-lg transition-all"
+                  >
+                    Login
+                  </Button>
+                </Link>
+                <Link href="/signup">
+                  <Button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-lg transition-all">
+                    Sign Up
+                  </Button>
+                </Link>
+              </div>
+            )}
           </nav>
 
           {/* Search Bar - Desktop */}
@@ -794,13 +808,47 @@ const Header = () => {
             </DropdownMenu>
 
             {/* Language Toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className={`rounded-full bg-white/20 dark:bg-gray-900/20 backdrop-blur-sm shadow-lg transition-all duration-300 hover:scale-105 p-0`}
-            >
-              <Globe className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  disabled={isLanguageLoading}
+                  className={`rounded-full bg-white/20 dark:bg-gray-900/20 backdrop-blur-sm shadow-lg transition-all duration-300 hover:scale-105 p-0 ${
+                    isLanguageLoading ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                >
+                  <Globe className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-48 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/30 dark:border-gray-700/30 shadow-2xl"
+              >
+                <DropdownMenuItem
+                  onClick={() => changeLanguage("en")}
+                  className={`flex items-center gap-3 px-4 py-3 ${
+                    currentLanguage === "en"
+                      ? "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400"
+                      : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <span>🇺🇸</span>
+                  <span>{t("header.language.english")}</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => changeLanguage("ig")}
+                  className={`flex items-center gap-3 px-4 py-3 ${
+                    currentLanguage === "ig"
+                      ? "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400"
+                      : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                  }`}
+                >
+                  <span>🇳🇬</span>
+                  <span>{t("header.language.igbo")}</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Profile */}
             <ProfileDropdown>
@@ -839,12 +887,12 @@ const Header = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
-                className="w-64 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/30 dark:border-gray-700/30 shadow-2xl"
+                className="w-64 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/30 dark:border-gray-700/30 shadow-2xl flex flex-col min-h-[400px]"
               >
                 {/* Navigation Links */}
                 <DropdownMenuItem asChild>
                   <Link href="/" className="flex items-center gap-3 px-4 py-3">
-                    <span>Home</span>
+                    <span>{t("header.home")}</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
@@ -852,7 +900,7 @@ const Header = () => {
                     href="/menu"
                     className="flex items-center gap-3 px-4 py-3"
                   >
-                    <span>Menu</span>
+                    <span>{t("header.menu")}</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
@@ -860,7 +908,7 @@ const Header = () => {
                     href="/offers"
                     className="flex items-center gap-3 px-4 py-3"
                   >
-                    <span>Offers</span>
+                    <span>{t("header.offers")}</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
@@ -868,7 +916,7 @@ const Header = () => {
                     href="/myorders"
                     className="flex items-center gap-3 px-4 py-3"
                   >
-                    <span>My Orders</span>
+                    <span>{t("header.orders")}</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
@@ -876,7 +924,7 @@ const Header = () => {
                     href="/address"
                     className="flex items-center gap-3 px-4 py-3"
                   >
-                    <span>Address</span>
+                    <span>{t("header.contact")}</span>
                   </Link>
                 </DropdownMenuItem>
 
@@ -901,16 +949,138 @@ const Header = () => {
                 </DropdownMenuItem>
 
                 {/* Language Toggle */}
-                <DropdownMenuItem className="flex items-center gap-3 px-4 py-3">
-                  <Globe className="w-4 h-4" />
-                  <span>Language</span>
-                </DropdownMenuItem>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <DropdownMenuItem className="flex items-center gap-3 px-4 py-3">
+                      <Globe className="w-4 h-4" />
+                      <span>{t("header.language.english")}</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-48 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-gray-200/30 dark:border-gray-700/30 shadow-2xl"
+                  >
+                    <DropdownMenuItem
+                      onClick={() => changeLanguage("en")}
+                      className={`flex items-center gap-3 px-4 py-3 ${
+                        currentLanguage === "en"
+                          ? "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400"
+                          : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                      }`}
+                    >
+                      <span>🇺🇸</span>
+                      <span>{t("header.language.english")}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => changeLanguage("ig")}
+                      className={`flex items-center gap-3 px-4 py-3 ${
+                        currentLanguage === "ig"
+                          ? "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400"
+                          : "hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                      }`}
+                    >
+                      <span>🇳🇬</span>
+                      <span>{t("header.language.igbo")}</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
                 {/* Profile */}
-                <DropdownMenuItem className="flex items-center gap-3 px-4 py-3">
-                  <UserCircle className="w-4 h-4" />
-                  <span>Profile</span>
-                </DropdownMenuItem>
+                {isAuthenticated ? (
+                  <>
+                    <DropdownMenuItem
+                      onClick={() => router.push("/myorders")}
+                      className="flex items-center gap-3 px-4 py-3 cursor-pointer"
+                    >
+                      <UserCircle className="w-4 h-4 text-gray-500" />
+                      <span>{t("header.orders")}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => router.push("/address")}
+                      className="flex items-center gap-3 px-4 py-3 cursor-pointer"
+                    >
+                      <Settings className="w-4 h-4 text-gray-500" />
+                      <span>{t("header.contact")}</span>
+                    </DropdownMenuItem>
+                    {user?.isAdmin && (
+                      <>
+                        <DropdownMenuItem
+                          onClick={() => router.push("/add-item")}
+                          className="flex items-center gap-3 px-4 py-3 cursor-pointer text-orange-600 font-bold bg-orange-50 dark:bg-orange-900/20 rounded-lg mt-1"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>Add Item</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => router.push("/admin/orders")}
+                          className="flex items-center gap-3 px-4 py-3 cursor-pointer"
+                        >
+                          <Shield className="w-4 h-4 text-gray-500" />
+                          <span>Admin Dashboard</span>
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      //  log out user
+                      onClick={async () => {
+                        await dispatch(logoutAsync()).unwrap();
+                        dispatch(resetOrders());
+                        if (user?.userId && user.userId.startsWith("guest")) {
+                          if (orders) {
+                            const guestOrders = orders.filter(
+                              (order) => order.userId === user.userId
+                            );
+                            console.log(
+                              "guest order in filter is :",
+                              guestOrders
+                            );
+                            await Promise.all(
+                              guestOrders.map((order) =>
+                                dispatch(deleteOrderAsync(order.$id))
+                              )
+                            );
+                          }
+                        }
+                        toast.success("Logged out successfully!");
+                        router.push("/");
+                      }}
+                      className="flex items-center gap-3 px-4 py-3 cursor-pointer text-red-600 hover:text-red-700"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Logout</span>
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/login"
+                      className="flex items-center gap-3 px-4 py-3"
+                    >
+                      <UserCircle className="w-4 h-4" />
+                      <span>Profile</span>
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+
+                {/* Show Login/Sign Up for unauthenticated users on mobile inside dropdown at the bottom */}
+                {!isAuthenticated && (
+                  <div className="flex flex-col gap-2 mt-8 px-4 pb-4 w-full">
+                    <Link href="/login">
+                      <Button
+                        variant="outline"
+                        className="w-full text-orange-600 border-orange-500 bg-white hover:bg-orange-50 dark:bg-orange-950/80 dark:text-orange-300 dark:border-orange-400 dark:hover:bg-orange-900/60 font-semibold px-3 py-2 rounded-lg transition-all text-sm"
+                      >
+                        Login
+                      </Button>
+                    </Link>
+                    <Link href="/signup">
+                      <Button className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold px-3 py-2 rounded-lg transition-all text-sm">
+                        Sign Up
+                      </Button>
+                    </Link>
+                  </div>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -985,106 +1155,16 @@ const Header = () => {
 
           {/* Mobile Search Results */}
           {isSearchVisible && isSearchOpen && searchResults.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 max-h-96 overflow-y-auto z-30">
-              <div className="p-3">
-                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 px-2">
-                  {searchResults.length} result
-                  {searchResults.length !== 1 ? "s" : ""} found
-                </div>
-                {searchResults.map((result, index) => (
-                  <div
-                    key={`${result.type}-${result.id}`}
-                    className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all duration-200 cursor-pointer ${
-                      index === selectedIndex
-                        ? "bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 border border-orange-200 dark:border-orange-700"
-                        : "hover:bg-gray-50 dark:hover:bg-gray-700/50 border border-transparent"
-                    }`}
-                  >
-                    <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 ring-2 ring-gray-100 dark:ring-gray-700">
-                      <Image
-                        src={getImageUrl(result)}
-                        alt={result.name}
-                        width={48}
-                        height={48}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-semibold text-gray-900 dark:text-gray-100 truncate">
-                          {result.name}
-                        </h4>
-                        <Badge
-                          variant="secondary"
-                          className="text-xs bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300"
-                        >
-                          {getTypeLabel(result.type)}
-                        </Badge>
-                      </div>
-                      {result.description && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                          {result.description}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-4 mt-2">
-                        {result.price && (
-                          <span className="text-sm font-bold text-orange-600 dark:text-orange-400">
-                            ₦{result.price}
-                          </span>
-                        )}
-                        {result.restaurantName && (
-                          <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                            <MapPin className="w-3 h-3" />
-                            {result.restaurantName}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="text-gray-400 dark:text-gray-500">
-                        {getTypeIcon(result.type)}
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleResultClick(result);
-                          }}
-                          className="px-3 py-1.5 text-xs bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-lg transition-all duration-200 flex items-center gap-1 font-medium shadow-sm"
-                        >
-                          <MapPin className="w-3 h-3" />
-                          View
-                        </button>
-                        {result.type !== "restaurant" && (
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleAddToCart(result);
-                            }}
-                            disabled={isAddingToCart === result.id}
-                            className="px-3 py-1.5 text-xs bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-lg transition-all duration-200 flex items-center gap-1 font-medium shadow-sm"
-                          >
-                            {isAddingToCart === result.id ? (
-                              <>
-                                <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" />
-                                Adding...
-                              </>
-                            ) : (
-                              <>
-                                <Plus className="w-3 h-3" />
-                                Add
-                              </>
-                            )}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <MobileSearchBar
+              searchResults={searchResults}
+              selectedIndex={selectedIndex}
+              isAddingToCart={isAddingToCart}
+              getImageUrl={getImageUrl}
+              getTypeLabel={getTypeLabel}
+              getTypeIcon={getTypeIcon}
+              handleResultClick={handleResultClick}
+              handleAddToCart={handleAddToCart}
+            />
           )}
         </div>
       </div>

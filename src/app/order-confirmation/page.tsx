@@ -7,6 +7,23 @@ import { RootState, AppDispatch } from "@/state/store";
 import { fetchBookedOrdersByUserId } from "@/state/bookedOrdersSlice";
 import { branches } from "../../../data/branches";
 import { useRouter } from "next/navigation";
+import { usePayment } from "@/context/paymentContext";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { cancelBookedOrder } from "@/state/bookedOrdersSlice";
+import {
+  sendOrderCancellationSMS,
+  sendOrderCancellationAdminSMS,
+} from "@/utils/smsService";
+import toast from "react-hot-toast";
 
 export default function OrderConfirmation() {
   const dispatch = useDispatch<AppDispatch>();
@@ -15,6 +32,8 @@ export default function OrderConfirmation() {
   const { orders, loading, error } = useSelector(
     (state: RootState) => state.bookedOrders
   );
+  const { payWithPaystack, paying, paymentError } = usePayment();
+  const [cancelDialogOpen, setCancelDialogOpen] = React.useState(false);
 
   // Fetch booked orders for the current user on mount
   useEffect(() => {
@@ -28,6 +47,71 @@ export default function OrderConfirmation() {
   const branch = latestOrder
     ? branches.find((b) => b.id === latestOrder.selectedBranchId)
     : null;
+
+  // Only show cancel if status is pending, confirmed, or preparing
+  const canCancel =
+    latestOrder &&
+    ["pending", "confirmed", "preparing"].includes(latestOrder.status);
+
+  const handlePayNow = () => {
+    if (!latestOrder) return;
+    payWithPaystack({
+      email:
+        latestOrder.customerEmail ||
+        latestOrder.email ||
+        user?.email ||
+        "user@example.com",
+      amount: latestOrder.total,
+      reference: latestOrder.orderId || latestOrder.$id,
+      orderId: latestOrder.$id,
+      onSuccess: () => {
+        // Optionally redirect or show a toast
+        router.push(`/myorders/${latestOrder.orderId}`);
+      },
+      onClose: () => {},
+    });
+  };
+
+  const handleCancelOrder = async () => {
+    if (!latestOrder) return;
+    try {
+      // Cancel the order
+      await dispatch(cancelBookedOrder(latestOrder.$id));
+
+      // Send SMS notifications
+      const userSmsPromise = sendOrderCancellationSMS(
+        latestOrder.orderId,
+        latestOrder.phone
+      );
+
+      const adminSmsPromise = sendOrderCancellationAdminSMS(
+        latestOrder.orderId,
+        latestOrder.customerId, // Using customerId as userName for now
+        latestOrder.phone
+      );
+
+      // Send both SMS notifications
+      const [userSmsSent, adminSmsSent] = await Promise.all([
+        userSmsPromise,
+        adminSmsPromise,
+      ]);
+
+      if (userSmsSent && adminSmsSent) {
+        toast.success("Order cancelled successfully and notifications sent");
+      } else if (userSmsSent) {
+        toast.success("Order cancelled successfully");
+        toast.error("Failed to send admin notification");
+      } else {
+        toast.success("Order cancelled successfully");
+        toast.error("Failed to send SMS notifications");
+      }
+
+      router.push(`/myorders/${latestOrder.orderId}`);
+    } catch (error) {
+      toast.error("Failed to cancel order");
+      console.error("Error cancelling order:", error);
+    }
+  };
 
   if (loading) {
     return (
@@ -92,20 +176,62 @@ export default function OrderConfirmation() {
             Delivery
           </div>
         </div>
-        <div className="flex gap-4 mt-2">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-2">
           <Link
             href={`/myorders/${latestOrder.orderId}`}
-            className="flex-1 border-2 border-orange-500 text-orange-600 font-bold py-3 rounded-xl text-lg transition hover:bg-orange-50 dark:hover:bg-orange-900/30 text-center"
+            className="w-full sm:flex-1 h-14 flex items-center justify-center border-2 border-orange-500 text-orange-600 font-bold rounded-xl text-lg transition hover:bg-orange-50 dark:hover:bg-orange-900/30 text-center"
           >
             Go to Details
           </Link>
-          <Link
-            href={`/pay/${latestOrder.orderId}`}
-            className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl text-lg transition text-center"
+          <Button
+            className="w-full sm:flex-1 h-14 flex items-center justify-center bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl text-lg transition text-center"
+            onClick={handlePayNow}
+            disabled={paying}
           >
-            Pay Now
-          </Link>
+            {paying ? "Processing Payment..." : "Pay Now"}
+          </Button>
+          {canCancel && (
+            <Button
+              onClick={() => setCancelDialogOpen(true)}
+              className="w-full sm:flex-1 h-14 flex items-center justify-center border-2 border-orange-500 text-orange-600 font-bold rounded-xl text-lg transition hover:bg-orange-50 dark:hover:bg-orange-900/30 text-center"
+              variant="outline"
+            >
+              Cancel Order
+            </Button>
+          )}
         </div>
+        {/* Cancel Confirmation Dialog */}
+        <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+          <DialogContent className="dark:bg-gray-900">
+            <DialogHeader>
+              <DialogTitle className="dark:text-gray-100">
+                Cancel Order
+              </DialogTitle>
+            </DialogHeader>
+            <DialogDescription className="dark:text-gray-300">
+              {latestOrder?.status === "preparing" ? (
+                <span className="text-orange-600 dark:text-orange-300 font-medium">
+                  The restaurant may have already started preparing your food.
+                  Cancelling now may not always be possible or may incur a fee.
+                  Are you sure you want to cancel?
+                </span>
+              ) : (
+                "Are you sure you want to cancel this order?"
+              )}
+            </DialogDescription>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button variant="outline">No, Go Back</Button>
+              </DialogClose>
+              <Button variant="destructive" onClick={handleCancelOrder}>
+                Yes, Cancel Order
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        {paymentError && (
+          <div className="mt-4 text-red-500 text-sm">{paymentError}</div>
+        )}
       </div>
     </div>
   );

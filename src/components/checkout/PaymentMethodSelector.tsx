@@ -21,7 +21,10 @@ const USSD_DETAILS = {
   instructions: "Dial the code above on your mobile phone to pay via USSD."
 };
 
-const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({ paymentMethod, setPaymentMethod }) => (
+const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
+  paymentMethod,
+  setPaymentMethod,
+}) => (
   <Card className="bg-transparent border-0 p-0">
     <CardHeader className="pb-2 bg-transparent border-0">
       <CardTitle className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">
@@ -50,15 +53,6 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({ paymentMe
           <span>Bank Transfer</span>
         </label>
       </RadioGroup>
-      {paymentMethod === "bank" && (
-        <div className="mt-4 p-4 rounded-xl bg-orange-50 dark:bg-gray-800 border border-orange-200 dark:border-gray-700 text-gray-800 dark:text-gray-100">
-          <div className="font-semibold mb-1">Bank Transfer Details:</div>
-          <div>Bank: <span className="font-bold">{BANK_DETAILS.bank}</span></div>
-          <div>Account Name: <span className="font-bold">{BANK_DETAILS.accountName}</span></div>
-          <div>Account Number: <span className="font-bold">{BANK_DETAILS.accountNumber}</span></div>
-          <div className="mt-2 text-sm text-gray-600 dark:text-gray-300">Please transfer the total amount and use your order ID as the payment reference.</div>
-        </div>
-      )}
     </CardContent>
   </Card>
 );

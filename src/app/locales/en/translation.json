@@ -2,9 +2,10 @@
   "header": {
     "home": "Home",
     "menu": "Menu",
-    "offers": "offers",
-    "contact": "Contact",
-    "add-item":"add-item",
+    "offers": "Offers",
+    "orders": "My Orders",
+    "contact": "Address",
+    "add-item": "Add Item",
     "searchPlaceholder": "Search for delicious food...",
     "notifications": "Notifications",
     "cartItems": "Cart Items",
