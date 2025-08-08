@@ -1,5 +1,5 @@
 // utils/appwrite.ts
-import { Account, Client, Databases, ID, Storage } from "appwrite";
+import { Account, Client, Databases, ID, Storage,Messaging } from "appwrite";
 
 // Interface to define the structure of environment variables
 interface EnvConfig {
@@ -100,6 +100,7 @@ const client = new Client().setEndpoint(env.endpoint).setProject(env.projectId);
 const databases = new Databases(client);
 const storage = new Storage(client);
 const account = new Account(client);
+const messaging = new Messaging(client);
 
 // Export configuration object using validated environment variables
 export const config = {
@@ -119,4 +120,6 @@ const fileUrl = (bucketId: string, fileId: string) =>
     validateEnv().projectId
   }&mode=admin`;
 
-export { databases, storage, account, fileUrl, client };
+export { databases, storage, account, fileUrl, client,messaging };
+
+// https://messaging.vtpass.com/api/sms/sendsms?sender={sender}&recipient={recipient}&message={message}&responsetype={responsetype}

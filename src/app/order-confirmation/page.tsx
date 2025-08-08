@@ -79,6 +79,7 @@ export default function OrderConfirmation() {
       await dispatch(cancelBookedOrder(latestOrder.$id));
 
       // Send SMS notifications
+      console.log("sending cancelation sms")
       const userSmsPromise = sendOrderCancellationSMS(
         latestOrder.orderId,
         latestOrder.phone
@@ -184,6 +185,7 @@ export default function OrderConfirmation() {
             Go to Details
           </Link>
           <Button
+          style={{display:latestOrder.paid ? "none" : "block"}}
             className="w-full sm:flex-1 h-14 flex items-center justify-center bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl text-lg transition text-center"
             onClick={handlePayNow}
             disabled={paying}

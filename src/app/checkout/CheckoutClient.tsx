@@ -199,6 +199,7 @@ export default function CheckoutClient() {
   const userId = user?.userId;
   const userEmail = user?.email;
 
+
   useEffect(() => {
     if (user) {
       if (user.phoneNumber) setPhoneNumber(user.phoneNumber);
@@ -369,7 +370,6 @@ export default function CheckoutClient() {
         itemIds: orders.map((item: any) => item.itemId),
         paymentMethod,
         address,
-        apartmentFlat,
         label,
         deliveryTime: formatDeliveryTime(deliveryTime),
         createdAt: new Date().toISOString(),
@@ -397,7 +397,7 @@ export default function CheckoutClient() {
         sendOrderPlacedSMS({
           userPhone: phoneNumber,
           orderId,
-          userName: user.email || userId,
+          userName: user.username || user.email || userId,
           origin: window.location.origin,
         }).catch(() => handleError("Failed to send SMS confirmation.")),
       ]);
@@ -440,23 +440,12 @@ export default function CheckoutClient() {
     formatDeliveryTime,
   ]);
 
-  // Handle autocomplete input change
-  const handleAutocompleteInputChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const value = e.target.value;
-    setTempAddress(value);
-    if (value === lastPickedAddress && lastPickedAddress) {
-      setGooglePlaceSelected(true);
-    } else {
-      setGooglePlaceSelected(false);
-      setSelectedPlace(null);
-    }
-  };
-
+ 
   if (!isClient) {
     return <div>Loading...</div>;
+  
   }
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-100 via-white to-orange-50 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900 py-12 px-2 sm:px-6 lg:px-8 flex flex-col items-center">

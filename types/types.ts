@@ -11,7 +11,7 @@ export interface IUser {
   isAdmin?: boolean;
 }
 
-export interface IUserFectched extends Models.Document {}
+export interface IUserFectched extends IUser, Models.Document {}
 
 export interface AuthState {
   user: IUser | null;

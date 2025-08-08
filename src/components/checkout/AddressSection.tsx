@@ -89,6 +89,7 @@ const AddressSection: React.FC<AddressSectionProps> = (props) => {
     lat: 6.5244, // Default to Lagos, Nigeria
     lng: 3.3792,
   });
+
   // Load Google Maps script
   useEffect(() => {
     const { googleMapsApiKey } = validateEnv();

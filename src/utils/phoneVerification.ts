@@ -22,6 +22,7 @@ const generateVerificationCode = (): string => {
 // Send verification SMS
 export const sendVerificationSMS = async (phoneNumber: string): Promise<VerificationResult> => {
   try {
+    console.log("The phone number is ",phoneNumber);
     const verificationCode = generateVerificationCode();
     const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
 
@@ -30,7 +31,7 @@ export const sendVerificationSMS = async (phoneNumber: string): Promise<Verifica
 
     // Send SMS via Twilio
     await client.messages.create({
-      body: `Your FoodieHub verification code is: ${verificationCode}. Valid for 10 minutes.`,
+      body: `Your RideEx verification code is: ${verificationCode}. Valid for 10 minutes.`,
       from: process.env.TWILIO_PHONE_NUMBER!,
       to: phoneNumber,
     });

@@ -14,7 +14,6 @@ import { IFeaturedItemFetched } from "../../types/types";
 import { useShowCart } from "@/context/showCart";
 import { fileUrl, validateEnv } from "@/utils/appwrite";
 import { getRestaurantNamesByIds } from "@/utils/restaurantUtils";
-import toast from "react-hot-toast";
 import { listAsyncFeaturedItems } from "@/state/featuredSlice";
 import { useAuth } from "@/context/authContext";
 import { useRouter } from "next/navigation";
@@ -45,7 +44,7 @@ const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
       dispatch(listAsyncFeaturedItems())
         .unwrap()
         .catch((err) => {
-          toast.error(
+          console.error(
             `Failed to fetch featured items: ${
               err instanceof Error ? err.message : "Unknown error"
             }`

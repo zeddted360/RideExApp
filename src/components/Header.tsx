@@ -36,6 +36,7 @@ import {
   Settings,
   Shield,
   LogOut,
+  History,
 } from "lucide-react";
 import Image from "next/image";
 import { fileUrl, validateEnv } from "@/utils/appwrite";
@@ -921,6 +922,15 @@ const Header = () => {
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link
+                    href="/history"
+                    className="flex items-center gap-3 px-4 py-3"
+                  >
+                    <History className="w-4 h-4" />
+                    <span>History</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link
                     href="/address"
                     className="flex items-center gap-3 px-4 py-3"
                   >
@@ -1031,10 +1041,7 @@ const Header = () => {
                             const guestOrders = orders.filter(
                               (order) => order.userId === user.userId
                             );
-                            console.log(
-                              "guest order in filter is :",
-                              guestOrders
-                            );
+                           
                             await Promise.all(
                               guestOrders.map((order) =>
                                 dispatch(deleteOrderAsync(order.$id))

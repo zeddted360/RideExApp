@@ -31,7 +31,8 @@ import {
   Smartphone,
   Settings,
   LogOut,
-  UserCircle
+  UserCircle,
+  History
 } from "lucide-react";
 import { useAuth } from "@/context/authContext";
 import { account } from "@/utils/appwrite";
@@ -503,6 +504,19 @@ const ProfileDropdown = ({ children }: ProfileDropdownProps) => {
                 <div className="font-medium">My Orders</div>
                 <div className="text-sm text-gray-500">
                   View your order history
+                </div>
+              </div>
+            </DropdownMenuItem>
+
+            <DropdownMenuItem
+              onClick={() => router.push("/history")}
+              className="flex items-center gap-3 p-3 cursor-pointer"
+            >
+              <History className="w-4 h-4 text-gray-500" />
+              <div className="flex-1">
+                <div className="font-medium">History</div>
+                <div className="text-sm text-gray-500">
+                  View notifications and activity
                 </div>
               </div>
             </DropdownMenuItem>

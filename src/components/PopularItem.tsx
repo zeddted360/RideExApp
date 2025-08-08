@@ -13,7 +13,6 @@ import { AppDispatch, RootState } from "@/state/store";
 import { IPopularItemFetched } from "../../types/types";
 import { useShowCart } from "@/context/showCart";
 import { fileUrl, validateEnv } from "@/utils/appwrite";
-import toast from "react-hot-toast";
 import { listAsyncPopularItems } from "@/state/popularSlice";
 import { useAuth } from "@/context/authContext";
 import { useRouter } from "next/navigation";
@@ -40,7 +39,7 @@ const PopularItem = ({ toggleFavorite, favorites }: IPopularItemProps) => {
       dispatch(listAsyncPopularItems())
         .unwrap()
         .catch((err) => {
-          toast.error(
+          console.error(
             `Failed to fetch popular items: ${
               err instanceof Error ? err.message : "Unknown error"
             }`

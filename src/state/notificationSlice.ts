@@ -48,11 +48,11 @@ export const fetchUserNotifications = createAsyncThunk<INotificationFetched[], s
       databaseId,
       notificationCollectionId,
       [
-        Query.equal("recipient", "user"),
-        Query.equal("userId", userId),
+        Query.equal("recipient", userId),
         Query.orderDesc("createdAt"),
       ]
     );
+
     return response.documents as INotificationFetched[];
   }
 );
@@ -77,10 +77,10 @@ export const createNotification = createAsyncThunk<INotificationFetched, Omit<IN
 export const markNotificationAsRead = createAsyncThunk<INotificationFetched, string>(
   'notifications/markAsRead',
   async (notificationId: string) => {
-    const { databaseId } = validateEnv();
+    const { databaseId,notificationCollectionId } = validateEnv();
     const response = await databases.updateDocument(
       databaseId,
-      'notifications',
+      notificationCollectionId,
       notificationId,
       {
         status: 'read'

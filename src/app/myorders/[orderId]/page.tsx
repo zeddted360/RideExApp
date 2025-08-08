@@ -219,7 +219,7 @@ export default function OrderDetailsPage() {
 
   if (currentOrder.status === "cancelled") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-red-100 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900 px-4 py-6">
+      <div className="min-h-screen  flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-red-100 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900 px-4 py-6">
         <div className="max-w-md w-full mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 text-center border border-red-200 dark:border-red-900/40">
           <div className="flex justify-center mb-6">
             <span className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-red-100 dark:bg-red-900">
@@ -256,6 +256,7 @@ export default function OrderDetailsPage() {
 
   // Get itemIds from currentOrder (fallback to empty array if not present)
   const itemIds: string[] = (currentOrder as any).itemIds || [];
+
 
   return (
     <div className="min-h-screen flex flex-col items-center bg-gradient-to-br from-orange-50 via-white to-orange-100 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900 px-2 py-6">
@@ -520,6 +521,7 @@ export default function OrderDetailsPage() {
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-6">
             {currentOrder && currentOrder.paymentMethod !== "cash" && (
               <Button
+              style={{display:currentOrder.paid ? "none" : "block"}}
                 className="w-full sm:flex-1 h-14 flex items-center justify-center bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl text-lg transition text-center"
                 onClick={handlePayNow}
                 disabled={paying}

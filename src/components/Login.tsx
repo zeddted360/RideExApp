@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { User, UserCircle, Phone, Loader2, Eye, EyeOff } from "lucide-react";
+import { User, UserCircle, Phone, Loader2, Eye, EyeOff, AlertCircle, CheckCircle2, Wifi, WifiOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   Dialog,
@@ -47,6 +47,9 @@ const Login = () => {
   const [isCheckingPhone, setIsCheckingPhone] = useState(false);
   const [existingUser, setExistingUser] = useState<IUserFectched | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [networkError, setNetworkError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [fieldErrors, setFieldErrors] = useState<{[key: string]: string}>({});
 
   const {
     register,
@@ -66,13 +69,79 @@ const Login = () => {
 
   const onSubmit = async (data: LoginFormData) => {
     dispatch(clearError());
-    const result = await dispatch(loginAsync(data));
-    dispatch(getCurrentUserAsync());
-
-    if (loginAsync.fulfilled.match(result)) {
-      toast.success("Login successful!");
-      router.push("/");
+    setNetworkError(false);
+    setFieldErrors({});
+    
+    try {
+      const result = await dispatch(loginAsync(data));
+      
+      if (loginAsync.fulfilled.match(result)) {
+        dispatch(getCurrentUserAsync());
+        toast.success("Login successful!");
+        setRetryCount(0);
+        router.push("/");
+      } else if (loginAsync.rejected.match(result)) {
+        const errorMessage = result.payload as string;
+        
+        // Handle specific error types
+        if (errorMessage.toLowerCase().includes('network') || 
+            errorMessage.toLowerCase().includes('fetch') ||
+            errorMessage.toLowerCase().includes('connection')) {
+          setNetworkError(true);
+        } else if (errorMessage.toLowerCase().includes('email')) {
+          setFieldErrors(prev => ({ ...prev, email: 'Invalid email address' }));
+        } else if (errorMessage.toLowerCase().includes('password')) {
+          setFieldErrors(prev => ({ ...prev, password: 'Incorrect password' }));
+        } else if (errorMessage.toLowerCase().includes('user not found') || 
+                   errorMessage.toLowerCase().includes('invalid credentials')) {
+          setFieldErrors(prev => ({ 
+            ...prev, 
+            email: 'Account not found',
+            password: 'Please check your credentials'
+          }));
+        }
+        
+        // Show user-friendly error message
+        const friendlyMessage = getFriendlyErrorMessage(errorMessage);
+        toast.error(friendlyMessage);
+      }
+    } catch (error) {
+      setNetworkError(true);
+      toast.error('Network error. Please check your connection and try again.');
     }
+  };
+
+  const getFriendlyErrorMessage = (error: string): string => {
+    const errorLower = error.toLowerCase();
+    
+    if (errorLower.includes('invalid credentials') || errorLower.includes('user not found')) {
+      return 'Invalid email or password. Please check your credentials.';
+    }
+    if (errorLower.includes('network') || errorLower.includes('fetch')) {
+      return 'Network error. Please check your internet connection.';
+    }
+    if (errorLower.includes('too many requests')) {
+      return 'Too many login attempts. Please wait a moment and try again.';
+    }
+    if (errorLower.includes('email')) {
+      return 'Please enter a valid email address.';
+    }
+    if (errorLower.includes('password')) {
+      return 'Password is required and must be at least 6 characters.';
+    }
+    
+    return 'Login failed. Please try again.';
+  };
+
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+    setNetworkError(false);
+    const formData = {
+      email: watch('email'),
+      password: watch('password'),
+      rememberMe: watch('rememberMe')
+    };
+    onSubmit(formData);
   };
 
   const handleGuestLogin = () => {
@@ -128,7 +197,7 @@ const Login = () => {
 
     const regex = /^\+234\d{10}$/;
     if (!regex.test(formattedPhone)) {
-      toast.error("Please enter a valid Nigerian phone number");
+      toast.error("Please enter a valid Nigerian phone number (e.g., 08012345678)");
       return;
     }
 
@@ -150,6 +219,7 @@ const Login = () => {
         setExistingUser(null);
         toast.success("Welcome! You're browsing as a guest.");
       }
+      
       // Create guest user with phone number
       const guestUser = {
         userId: `guest_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
@@ -175,6 +245,7 @@ const Login = () => {
           localStorage.setItem("guestUserData", JSON.stringify(guestUser));
         } catch (error) {
           console.warn("Failed to store guest user data:", error);
+          toast.error("Failed to save guest data locally");
         }
       }
 
@@ -183,10 +254,23 @@ const Login = () => {
       if (loginAsGuestAsync.fulfilled.match(result)) {
         setPhoneNumber(result.payload.phoneNumber as string);
         setShowPhoneModal(false);
+        toast.success("Guest login successful!");
         router.push("/");
+      } else if (loginAsGuestAsync.rejected.match(result)) {
+        const errorMessage = result.payload as string;
+        toast.error(`Guest login failed: ${errorMessage}`);
       }
     } catch (error) {
-      toast.error("Failed to create guest session");
+      console.error("Guest login error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      
+      if (errorMessage.toLowerCase().includes('network') || 
+          errorMessage.toLowerCase().includes('fetch') ||
+          errorMessage.toLowerCase().includes('connection')) {
+        toast.error("Network error. Please check your connection and try again.");
+      } else {
+        toast.error("Failed to create guest session. Please try again.");
+      }
     } finally {
       setIsCheckingPhone(false);
     }
@@ -227,31 +311,38 @@ const Login = () => {
           </CardHeader>
           <CardContent className="p-6">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              <div className="space-y-2">
-                <Label
-                  htmlFor="email"
-                  className="text-sm font-medium text-gray-700 dark:text-gray-200"
-                >
-                  Email Address
+              <div className="space-y-1">
+                <Label htmlFor="email" className="text-sm font-medium">
+                  Email
                 </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  {...register("email")}
-                  className="h-12 bg-white dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400"
-                />
-                {errors.email && (
-                  <p className="text-sm text-red-500 dark:text-red-400">
-                    {errors.email.message}
+                <div className="relative">
+                  <Input
+                    id="email"
+                    type="email"
+                    {...register("email")}
+                    className={`h-12 pr-10 ${
+                      errors.email || fieldErrors.email
+                        ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                        : ""
+                    }`}
+                    placeholder="Enter your email"
+                  />
+                  {(errors.email || fieldErrors.email) && (
+                    <AlertCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-red-500" />
+                  )}
+                </div>
+                {(errors.email || fieldErrors.email) && (
+                  <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {errors.email?.message || fieldErrors.email}
                   </p>
                 )}
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label
                   htmlFor="password"
-                  className="text-sm font-medium text-gray-700 dark:text-gray-200"
+                  className="text-sm font-medium"
                 >
                   Password
                 </Label>
@@ -259,29 +350,37 @@ const Login = () => {
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
                     {...register("password")}
-                    className="h-12 bg-white dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400 pr-12"
+                    className={`h-12 pr-20 ${
+                      errors.password || fieldErrors.password
+                        ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                        : ""
+                    }`}
+                    placeholder="Enter your password"
                   />
-                  <button
-                    type="button"
-                    tabIndex={-1}
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-300 hover:text-orange-500 dark:hover:text-orange-400 focus:outline-none"
-                    aria-label={
-                      showPassword ? "Hide password" : "Show password"
-                    }
-                  >
-                    {showPassword ? (
-                      <EyeOff className="w-5 h-5" />
-                    ) : (
-                      <Eye className="w-5 h-5" />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                    {(errors.password || fieldErrors.password) && (
+                      <AlertCircle className="w-4 h-4 text-red-500" />
                     )}
-                  </button>
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="text-gray-400 dark:text-gray-300 hover:text-orange-500 dark:hover:text-orange-400 focus:outline-none transition-colors"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
-                {errors.password && (
-                  <p className="text-sm text-red-500 dark:text-red-400">
-                    {errors.password.message}
+                {(errors.password || fieldErrors.password) && (
+                  <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {errors.password?.message || fieldErrors.password}
                   </p>
                 )}
               </div>
@@ -311,20 +410,69 @@ const Login = () => {
                 </button>
               </div>
 
-              {error && (
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-400 rounded-md p-3">
-                  <p className="text-sm text-red-600 dark:text-red-400">
-                    {error}
-                  </p>
+              {/* Network Error with Retry */}
+              {networkError && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-400 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <WifiOff className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h4 className="text-sm font-medium text-red-800 dark:text-red-200">
+                        Connection Problem
+                      </h4>
+                      <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+                        Unable to connect to our servers. Please check your internet connection.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleRetry}
+                        disabled={loading === "pending"}
+                        className="mt-2 text-sm text-red-700 dark:text-red-300 hover:text-red-800 dark:hover:text-red-200 font-medium underline disabled:opacity-50"
+                      >
+                        {loading === "pending" ? "Retrying..." : `Try Again ${retryCount > 0 ? `(${retryCount})` : ""}`}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* General Error Display */}
+              {error && !networkError && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-400 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h4 className="text-sm font-medium text-red-800 dark:text-red-200">
+                        Login Failed
+                      </h4>
+                      <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+                        {getFriendlyErrorMessage(error)}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
 
               <Button
                 type="submit"
-                disabled={loading === "pending"}
-                className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold transition-all duration-200"
+                disabled={loading === "pending" || networkError}
+                className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold transition-all duration-200 flex items-center justify-center gap-2"
               >
-                {loading === "pending" ? "Signing in..." : "Sign In"}
+                {loading === "pending" ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Signing in...
+                  </>
+                ) : networkError ? (
+                  <>
+                    <WifiOff className="w-4 h-4" />
+                    Connection Error
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    Sign In
+                  </>
+                )}
               </Button>
 
               <div className="relative flex items-center justify-center my-4">
