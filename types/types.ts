@@ -31,6 +31,7 @@ export interface IMenuItem {
   category: "veg" | "non-veg";
   rating: number;
   cookTime: string;
+  isApproved?:boolean;
 }
 
 //fetched menu items
@@ -72,6 +73,8 @@ export interface IFeaturedItem {
   restaurant: string;
   description: string;
   category: string;
+  isApproved?:boolean;
+
 }
 
 export interface IFeaturedItemFetched extends IFeaturedItem, Models.Document {}
@@ -122,6 +125,8 @@ export interface IPopularItem {
   cookingTime: string;
   isPopular: boolean;
   discount: string;
+  isApproved?:boolean;
+
 }
 
 // Fetched popular item (from DB)

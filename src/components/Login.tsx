@@ -210,7 +210,7 @@ const Login = () => {
 
       if (existingUserData) {
         // User exists - show their name but still create guest session
-        setExistingUser(existingUserData);
+        setExistingUser(existingUserData as unknown as IUserFectched);
         toast.success(
           `Welcome back, ${existingUserData.name || existingUserData.username}!`
         );

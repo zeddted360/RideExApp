@@ -44,6 +44,8 @@ import {
   listAsyncPopularItems,
 } from "@/state/popularSlice";
 import { IRestaurant } from "../../types/types";
+import  {useRouter} from "next/navigation"
+import { useAuth } from "@/context/authContext";
 
 const AddFoodItemForm = () => {
   const [activeTab, setActiveTab] = useState<
@@ -52,6 +54,14 @@ const AddFoodItemForm = () => {
   const [loading, setLoading] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
   const { restaurants } = useSelector((state: RootState) => state.restaurant);
+const {user,isAuthenticated} = useAuth();
+const router = useRouter();
+
+useEffect(()=>{
+  if(!isAuthenticated || user?.role === "user") {
+    router.push("/")
+  }
+},[]);
 
   // Restaurant Form
   const restaurantForm = useForm<RestaurantFormData>({
@@ -149,6 +159,9 @@ const AddFoodItemForm = () => {
       toast.error("Please add a restaurant first!");
       return;
     }
+    if(user?.role === "user") {
+      return;
+    }
     setLoading(true);
     try {
       await dispatch(createAsyncMenuItem(data)).unwrap();
@@ -166,6 +179,9 @@ const AddFoodItemForm = () => {
       toast.error("Please add a restaurant first!");
       return;
     }
+    if(user?.role === "user") {
+      return;
+    }
     setLoading(true);
     try {
       await dispatch(createAsyncFeaturedItem(data)).unwrap();
@@ -181,6 +197,9 @@ const AddFoodItemForm = () => {
   const handlePopularItemSubmit = async (data: PopularItemFormData) => {
     if (!restaurants.length) {
       toast.error("Please add a restaurant first!");
+      return;
+    }
+    if(user?.role === "user") {
       return;
     }
     setLoading(true);

@@ -122,14 +122,16 @@ const RestaurantList = () => {
 
   // Success state with restaurants
   if (loading === "succeeded" && restaurants.length > 0) {
-    // Filter menu items by selected restaurant and type
+    // Filter menu items by approval status, selected restaurant, and type
+    const approvedMenuItems = menuItems.filter((item) => item.isApproved === true);
     const filteredMenuItems = selectedRestaurant
-      ? menuItems.filter(
+      ? approvedMenuItems.filter(
           (item) =>
             item.restaurantId === selectedRestaurant.$id &&
             (selectedType === "all" ? true : item.category === selectedType)
         )
-      : [];
+      : approvedMenuItems;
+
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 sm:py-12">
         <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -216,7 +218,7 @@ const RestaurantList = () => {
               </div>
             ) : filteredMenuItems.length === 0 ? (
               <div className="text-center text-gray-500 dark:text-gray-400 py-12">
-                No menu items available for this restaurant.
+                No approved menu items available.
               </div>
             ) : viewMode === "grid" ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
