@@ -425,7 +425,12 @@ export async function sendOrderPlacedSMS({
 }) {
   const userMessage = `Your order has been placed! View/manage: ${origin}/myorders/${orderId}`;
   const adminMessage = `New order from ${userName}. Order ID: ${orderId}. View: ${origin}/admin/orders`;
-
+  console.log(
+    VTPASS_SENDER_ID,
+    VTPASS_X_TOKEN,
+    VTPASS_X_SECRET,
+    ADMIN_PHONE_NUMBER
+  );
   try {
     const userSms = fetch(
       `https://messaging.vtpass.com/api/sms/sendsms?sender=${VTPASS_SENDER_ID}&recipient=${userPhone}&message=${encodeURIComponent(

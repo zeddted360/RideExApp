@@ -20,7 +20,6 @@ export const metadata = {
 const AddItemPage = async () => {
   const cookie = (await cookies()).getAll();
 
-  console.log("the cookies are :", cookie);
   return (
     <div className="py-8 px-4 flex justify-center items-start">
       <div className="w-full max-w-2xl">

@@ -23,6 +23,7 @@ interface EnvConfig {
   payStackPublickKey: string;
   guestUserCollectionId: string;
   newsLetterCollectionId: string;
+  vendorsCollectionId: string;
 }
 
 // Validate environment variables
@@ -53,6 +54,8 @@ export function validateEnv(): EnvConfig {
     guestUserCollectionId:
       process.env.NEXT_PUBLIC_APPWRITE_GUEST_USER_COLLECTION_ID,
     newsLetterCollectionId: process.env.NEXT_PUBLIC_APPWRITE_NEWSLETTER_COLLECTION_ID,
+    vendorsCollectionId:process.env.NEXT_PUBLIC_VENDORS_COLLECTION_ID,
+    
   };
 
   // Check for undefined environment variables
@@ -88,7 +91,7 @@ export function validateEnv(): EnvConfig {
     payStackPublickKey: requiredEnvVars.payStackPublicKey!,
     guestUserCollectionId: requiredEnvVars.guestUserCollectionId!,
     newsLetterCollectionId:requiredEnvVars.newsLetterCollectionId!,
-    
+    vendorsCollectionId:requiredEnvVars.vendorsCollectionId!,
   };
 }
 

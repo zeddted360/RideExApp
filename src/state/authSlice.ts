@@ -1,7 +1,7 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { account, validateEnv } from "@/utils/appwrite";
 import toast from "react-hot-toast";
-import { AuthState, IUser } from "../../types/types";
+import { AuthState, IUser, IUserFectched } from "../../types/types";
 import { databases } from "@/utils/appwrite";
 
 const initialState: AuthState = {
@@ -95,6 +95,11 @@ export const loginAsync = createAsyncThunk<
   }
 );
 
+
+// async thunk to log vendors
+
+
+
 // Async thunk to log in as guest
 export const loginAsGuestAsync = createAsyncThunk<
   IUser,
@@ -183,13 +188,15 @@ export const getCurrentUserAsync = createAsyncThunk<
     // Fetch user document from users collection to get isAdmin
     const { databaseId, userCollectionId } = validateEnv();
     let isAdmin = false;
+    let role:"admin" | "user" | "vendor" = "user";
     try {
-      const userDoc = await databases.getDocument(
+      const userDoc:IUserFectched = await databases.getDocument(
         databaseId,
         userCollectionId,
         user.$id
       );
       isAdmin = userDoc.isAdmin ?? false;
+      role = isAdmin ? "admin" : userDoc.isVendor ? "vendor" :"user";
     } catch (err) {
       // If user doc not found or isAdmin missing, default to false
       isAdmin = false;
@@ -210,7 +217,7 @@ export const getCurrentUserAsync = createAsyncThunk<
       userId: user.$id,
       username: user.name,
       email: user.email,
-      role: isAdmin ? "admin" : "user",
+      role,
       isAdmin,
       phoneNumber: user.phone || phoneNumber,
       phoneVerified,

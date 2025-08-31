@@ -340,8 +340,6 @@ export default function CheckoutClient() {
 
     setShowAddressForm(false);
   };
-
-
   // Handle place order
   const handlePlaceOrder = useCallback(() => {
     setShowConfirmation(true);

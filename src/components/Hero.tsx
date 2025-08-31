@@ -1,6 +1,7 @@
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { Clock, MapPin } from "lucide-react";
 import Image from "next/image";
+import {useRouter} from "next/navigation";
 
 export default function Hero({
   setIsMobile,
@@ -10,6 +11,7 @@ export default function Hero({
   isMobile: boolean;
 }) {
   const [isClient, setIsClient] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     setIsClient(true);
@@ -23,7 +25,6 @@ export default function Hero({
     return () => window.removeEventListener("resize", checkMobile);
   }, [setIsMobile]);
 
-  // Don't render mobile-specific content until client-side hydration is complete
   if (!isClient) {
     return (
       <div className="min-h-fit bg-gradient-to-br from-orange-50 to-red-50 dark:from-gray-900 dark:to-gray-800 md:pb-0">
@@ -64,8 +65,8 @@ export default function Hero({
                   </div>
                 </div>
 
-                <button className="bg-white text-orange-500 px-4 sm:px-6 lg:px-8 py-2 sm:py-3 rounded-full font-semibold hover:bg-orange-50 transition-all duration-300 hover:scale-105 shadow-lg">
-                  Order Now
+                <button onClick={()=>router.push("/vendor/register")} className="bg-white cursor-pointer text-orange-500 px-4 sm:px-6 lg:px-8 py-2 sm:py-3 rounded-full font-semibold hover:bg-orange-50 transition-all duration-300 hover:scale-105 shadow-lg">
+                  Join as a Vendor
                 </button>
               </div>
 
@@ -186,10 +187,9 @@ export default function Hero({
                   <span className="text-orange-200">Free Home Delivery</span>
                 </div>
               </div>
-
-              <button className="bg-white text-orange-500 px-4 sm:px-6 lg:px-8 py-2 sm:py-3 rounded-full font-semibold hover:bg-orange-50 transition-all duration-300 hover:scale-105 shadow-lg">
-                Order Now
-              </button>
+              <button onClick={()=>router.push("/vendor/register")} className="bg-white cursor-pointer text-orange-500 px-4 sm:px-6 lg:px-8 py-2 sm:py-3 rounded-full font-semibold hover:bg-orange-50 transition-all duration-300 hover:scale-105 shadow-lg">
+                  Join as a Vendor
+                </button>
             </div>
 
             {/* Hero Image */}

@@ -522,25 +522,35 @@ const Header = () => {
             >
               {t("header.contact")}
             </Link>
-            {user?.isAdmin && role === "admin" && (
+            {(user?.isAdmin || role ==="vendor") && (
               <>
-                <Link href="/add-item" className="ml-2">
-                  <Button className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold px-4 py-2 rounded-lg shadow-md flex items-center gap-2 transition-all border-0">
+                <Link href="/add-item"  className="ml-2">
+                  <Button className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold px-4 py-2 cursor-pointer rounded-lg shadow-md flex items-center gap-2 transition-all border-0">
                     <Plus className="w-4 h-4" />
                     Add Item
                   </Button>
-                </Link>
-                <Link href="/admin/orders" className="ml-2">
+                </Link>{
+                  role === "admin" && <Link   href="/admin/dashboard" className="ml-2">
                   <Button className="bg-gradient-to-r from-gray-700 to-orange-500 hover:from-gray-800 hover:to-orange-600 text-white font-bold px-4 py-2 rounded-lg shadow-md flex items-center gap-2 transition-all border-0">
                     <Shield className="w-4 h-4" />
                     Admin Dashboard
                   </Button>
                 </Link>
+                }
+                
               </>
             )}
             {/* Show Login/Sign Up for unauthenticated users */}
             {!isAuthenticated && (
               <div className="flex items-center gap-2 ml-4">
+                 <Link href="/vendor/login">
+                  <Button
+                    variant="outline"
+                    className="text-orange-600 border-orange-500 bg-white hover:bg-orange-50 dark:bg-orange-950/80 dark:text-orange-300 dark:border-orange-400 dark:hover:bg-orange-900/60 font-semibold px-4 py-2 rounded-lg transition-all"
+                  >
+                    Login as a vendor
+                  </Button>
+                </Link>
                 <Link href="/login">
                   <Button
                     variant="outline"
@@ -1073,7 +1083,13 @@ const Header = () => {
                 {/* Show Login/Sign Up for unauthenticated users on mobile inside dropdown at the bottom */}
                 {!isAuthenticated && (
                   <div className="flex flex-col gap-2 mt-8 px-4 pb-4 w-full">
-                    <Link href="/login">
+                    <Link href="/vendor/login">
+                    <Button
+                        variant="outline"
+                        className="w-full mb-2 text-orange-600 border-orange-500 bg-white hover:bg-orange-50 dark:bg-orange-950/80 dark:text-orange-300 dark:border-orange-400 dark:hover:bg-orange-900/60 font-semibold px-3 py-2 rounded-lg transition-all text-sm"
+                      >
+                        Login as vendor
+                      </Button>
                       <Button
                         variant="outline"
                         className="w-full text-orange-600 border-orange-500 bg-white hover:bg-orange-50 dark:bg-orange-950/80 dark:text-orange-300 dark:border-orange-400 dark:hover:bg-orange-900/60 font-semibold px-3 py-2 rounded-lg transition-all text-sm"

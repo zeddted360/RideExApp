@@ -9,7 +9,7 @@ interface AuthContextType {
   userId: string | null;
   username: string | null;
   email: string | null;
-  role: "admin" | "user" | null;
+  role: "admin" | "user" | "vendor"|  null;
   isAdmin: boolean;
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -32,8 +32,7 @@ const AuthContext = createContext<AuthContextType>({
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { user, loading } = useSelector((state: RootState) => state.auth);
-  const [isMounted, setIsMounted] = useState(false); // Track client-side mounting
-
+  const [isMounted, setIsMounted] = useState(false); 
   // Ensure client-side rendering for async-dependent state
   useEffect(() => {
     setIsMounted(true);

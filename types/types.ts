@@ -5,13 +5,15 @@ export interface IUser {
   userId: string;
   username: string;
   email: string;
-  role: "admin" | "user";
+  role: "admin" | "user" | "vendor";
   phoneNumber?: string;
   phoneVerified?: boolean;
   isAdmin?: boolean;
 }
 
-export interface IUserFectched extends IUser, Models.Document {}
+export interface IUserFectched extends IUser, Models.Document {
+  isVendor:boolean;
+}
 
 export interface AuthState {
   user: IUser | null;
@@ -221,3 +223,21 @@ export interface ISearchResult {
   deliveryTime?: string;
   distance?: string;
 }
+
+// newly added
+export interface IVendor {
+  fullName:string;
+  phoneNumber: string;
+  email: string;
+  catchmentArea: string;
+  location: string;
+  businessName: string
+  category: string;
+  password: string;
+  deliveryDays: string | null | undefined;
+  instantDelivery: boolean | undefined;
+  agreeTerms: boolean;
+  status: 'pending' | "approved" |"rejected";
+}
+
+export interface IVendorFetched extends IVendor, Models.Document {};
