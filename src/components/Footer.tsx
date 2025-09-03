@@ -11,6 +11,15 @@ import {
   Heart,
   Shield,
   Truck,
+  Info, // For About Us
+  HelpCircle, // For FAQ
+  FileText, // For Terms and Conditions
+  Cookie, // For Cookies
+  Lock, // For Privacy Policies
+  UserPlus, // For Become a Vendor
+  Bike, // For Join as a Rider
+  Twitter, // For X (using Twitter icon as a stand-in for X)
+  Youtube, // For YouTube
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -85,7 +94,7 @@ export default function Footer() {
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           {/* Main Footer Content */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
             {/* Brand Section */}
             <div className="lg:col-span-1 space-y-6">
               <div className="flex items-center space-x-3">
@@ -104,15 +113,15 @@ export default function Footer() {
               <div className="space-y-3">
                 <div className="flex items-center space-x-3 text-gray-300">
                   <Phone className="w-4 h-4 text-orange-400" />
-                  <span className="text-sm">+234 801 234 5678</span>
+                  <Link href="tel:+2347072087857" className="text-sm">+234 707 208 7857</Link>
                 </div>
                 <div className="flex items-center space-x-3 text-gray-300">
                   <Mail className="w-4 h-4 text-orange-400" />
-                  <span className="text-sm">support@rideex.com</span>
+                  <Link href="mailto:support@rideexapp.com?subject=Support Request" className="text-sm">Support@rideexapp.com</Link>
                 </div>
                 <div className="flex items-center space-x-3 text-gray-300">
                   <MapPin className="w-4 h-4 text-orange-400" />
-                  <span className="text-sm">Lagos, Nigeria</span>
+                  <span className="text-sm">Owerri, Nigeria</span>
                 </div>
               </div>
             </div>
@@ -124,11 +133,11 @@ export default function Footer() {
               </h3>
               <ul className="space-y-3">
                 {[
-                  { href: "/", label: t("header.home"), icon: "🏠" },
-                  { href: "/menu", label: t("header.menu"), icon: "🍽️" },
-                  { href: "/offers", label: t("header.offers"), icon: "🎉" },
-                  { href: "/myorders", label: t("header.orders"), icon: "📋" },
-                  { href: "/address", label: t("header.contact"), icon: "📍" },
+                  { href: "/about-us", label: "About Us", icon: <Info className="w-4 h-4" /> },
+                  { href: "/FAQ", label: "FAQ", icon: <HelpCircle className="w-4 h-4" /> },
+                  { href: "/terms", label: "Terms and Conditions", icon: <FileText className="w-4 h-4" /> },
+                  { href: "/cookies", label: "Cookies", icon: <Cookie className="w-4 h-4" /> },
+                  { href: "/privacy", label: "Privacy Policies", icon: <Lock className="w-4 h-4" /> },
                 ].map((link) => (
                   <li key={link.href}>
                     <Link
@@ -145,40 +154,32 @@ export default function Footer() {
               </ul>
             </div>
 
-            {/* Services */}
+            {/* Let's Do It Together */}
             <div className="space-y-6">
-              <h3 className="text-lg font-semibold text-white">Our Services</h3>
+              <h3 className="text-lg font-semibold text-white">Let's Do It Together</h3>
               <ul className="space-y-3">
                 {[
                   {
-                    icon: Truck,
-                    label: "Fast Delivery",
-                    desc: "30 minutes or free",
+                    href: "/vendor/register",
+                    label: "Become a Vendor",
+                    icon: <UserPlus className="w-4 h-4 text-orange-400" />,
                   },
                   {
-                    icon: Shield,
-                    label: "Secure Payment",
-                    desc: "100% secure",
+                    href: "/become-a-rider",
+                    label: "Join as a Rider",
+                    icon: <Bike className="w-4 h-4 text-orange-400" />,
                   },
-                  {
-                    icon: Star,
-                    label: "Quality Food",
-                    desc: "Fresh ingredients",
-                  },
-                  { icon: Heart, label: "Customer Care", desc: "24/7 support" },
-                ].map((service, index) => (
-                  <li key={index}>
-                    <div className="flex items-center space-x-3 text-gray-300 hover:text-orange-400 transition-all duration-300 group">
-                      <service.icon className="w-4 h-4 text-orange-400" />
-                      <div>
-                        <div className="text-sm font-medium">
-                          {service.label}
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          {service.desc}
-                        </div>
-                      </div>
-                    </div>
+                ].map((item) => (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      className="flex items-center space-x-3 text-gray-300 hover:text-orange-400 transition-all duration-300 group"
+                    >
+                      {item.icon}
+                      <span className="text-sm group-hover:translate-x-1 transition-transform duration-300">
+                        {item.label}
+                      </span>
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -244,12 +245,23 @@ export default function Footer() {
                       label: "Instagram",
                       color: "hover:text-pink-400",
                     },
-
                     {
                       href: "https://www.facebook.com/share/16nYLmfi26/?mibextid=wwXIfr",
                       Icon: Facebook,
                       label: "Facebook",
                       color: "hover:text-blue-600",
+                    },
+                    {
+                      href: "https://x.com/rideex", // Updated to use "x.com" for X
+                      Icon: Twitter, // Using Twitter icon as a stand-in for X
+                      label: "X",
+                      color: "hover:text-blue-400",
+                    },
+                    {
+                      href: "https://www.youtube.com/@rideex", // Placeholder YouTube URL
+                      Icon: Youtube,
+                      label: "YouTube",
+                      color: "hover:text-red-600", // YouTube's brand color on hover
                     },
                   ].map((social) => (
                     <a

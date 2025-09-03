@@ -556,7 +556,7 @@ const Header = () => {
                     variant="outline"
                     className="text-orange-600 border-orange-500 bg-white hover:bg-orange-50 dark:bg-orange-950/80 dark:text-orange-300 dark:border-orange-400 dark:hover:bg-orange-900/60 font-semibold px-4 py-2 rounded-lg transition-all"
                   >
-                    Login
+                    Login as user
                   </Button>
                 </Link>
                 <Link href="/signup">
@@ -1006,7 +1006,7 @@ const Header = () => {
                 </DropdownMenu>
 
                 {/* Profile */}
-                {isAuthenticated ? (
+                {isAuthenticated && (
                   <>
                     <DropdownMenuItem
                       onClick={() => router.push("/myorders")}
@@ -1068,17 +1068,7 @@ const Header = () => {
                       <span>Logout</span>
                     </DropdownMenuItem>
                   </>
-                ) : (
-                  <DropdownMenuItem asChild>
-                    <Link
-                      href="/login"
-                      className="flex items-center gap-3 px-4 py-3"
-                    >
-                      <UserCircle className="w-4 h-4" />
-                      <span>Profile</span>
-                    </Link>
-                  </DropdownMenuItem>
-                )}
+                ) }
 
                 {/* Show Login/Sign Up for unauthenticated users on mobile inside dropdown at the bottom */}
                 {!isAuthenticated && (
@@ -1094,7 +1084,7 @@ const Header = () => {
                         variant="outline"
                         className="w-full text-orange-600 border-orange-500 bg-white hover:bg-orange-50 dark:bg-orange-950/80 dark:text-orange-300 dark:border-orange-400 dark:hover:bg-orange-900/60 font-semibold px-3 py-2 rounded-lg transition-all text-sm"
                       >
-                        Login
+                        Login as user
                       </Button>
                     </Link>
                     <Link href="/signup">

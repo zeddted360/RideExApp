@@ -15,7 +15,8 @@ import {
   AlertCircle, 
   CheckCircle2,
   Calendar,
-  Loader2
+  Loader2,
+  MessageCircle
 } from 'lucide-react';
 import { VendorRegistrationFormData, vendorRegistrationSchema } from '@/utils/schema';
 import { account, databases, validateEnv } from '@/utils/appwrite';
@@ -23,16 +24,20 @@ import { ID } from 'appwrite';
 import { IVendor } from '../../../types/types';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { loginAsync } from '@/state/authSlice';
+import { getCurrentUserAsync, loginAsync } from '@/state/authSlice';
 import { useDispatch } from 'react-redux';
 import { AppDispatch } from '@/state/store';
+
 const VendorRegistrationForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-const router = useRouter();
-const dispatch = useDispatch<AppDispatch>();
+  const [whatsappUpdates, setWhatsappUpdates] = useState(false);
+  
+  const router = useRouter();
+  const dispatch = useDispatch<AppDispatch>();
+  
   const {
     register,
     handleSubmit,
@@ -41,7 +46,6 @@ const dispatch = useDispatch<AppDispatch>();
   } = useForm<VendorRegistrationFormData>({
     resolver: zodResolver(vendorRegistrationSchema),
     defaultValues: {
-      instantDelivery: false,
       agreeTerms: false,
     },
     mode: 'onChange'
@@ -79,27 +83,19 @@ const dispatch = useDispatch<AppDispatch>();
     'Umuokanne',
     'Obube'
   ];
+  
   const categories = [
-    'Restaurant & Food', 'Grocery & Supermarket', 'Pharmacy & Health',
-    'Electronics & Gadgets', 'Fashion & Clothing', 'Home & Garden',
-    'Books & Stationery', 'Sports & Fitness', 'Beauty & Personal Care',
-    'Automotive', 'Services', 'Others'
+    'Restaurant & Food', 'Grocery & Supermarket', 'Pharmacy & Health' 
   ];
-
-  const deliveryOptions = [
-    '1-2 days', '3-5 days', '1 week', '2 weeks', '1 month', 'Custom timeline'
-  ];
-
-
+  
 
   const onSubmit = async (data: VendorRegistrationFormData) => {
     setIsSubmitting(true);
     setSubmitError(null);
   
     try {
-  
       // Prepare data for Appwrite
-      const vendorData:IVendor = {
+      const vendorData: IVendor = {
         fullName: data.fullName,
         phoneNumber: data.phoneNumber,
         email: data.email,
@@ -108,44 +104,48 @@ const dispatch = useDispatch<AppDispatch>();
         businessName: data.businessName,
         category: data.category,
         password: data.password,
-        deliveryDays: data.instantDelivery ? null : data.deliveryDays,
-        instantDelivery: data.instantDelivery,
         agreeTerms: data.agreeTerms,
+        whatsappUpdates, 
         status: 'pending',
       };
   
       // Save to Appwrite database
-      const { databaseId, vendorsCollectionId,userCollectionId } = validateEnv();
+      const { databaseId, vendorsCollectionId, userCollectionId } = validateEnv();
       await databases.createDocument(
         databaseId,
         vendorsCollectionId,
         ID.unique(),
         vendorData
       );
-            // 1. Create the user account
-            const user = await account.create(
-              "unique()",
-              data.email,
-              data.password,
-              `${data.fullName}`
-            );
       
-            // 2. Create user profile in users collection
-            await databases.createDocument(databaseId, userCollectionId, user.$id, {
-              userId: user.$id,
-              fullName: `${data.fullName}`,
-              phone: data.phoneNumber,
-              isVendor:true,
-              
-            });
-            // 3. Login the user to get the session
-            const loginResult = await dispatch(
-              loginAsync({
-                email: data.email,
-                password: data.password,
-                rememberMe: true,
-              })
-            );
+      // 1. Create the user account
+      const user = await account.create(
+        "unique()",
+        data.email,
+        data.password,
+        `${data.fullName}`
+      );
+
+      // 2. Create user profile in users collection
+      await databases.createDocument(databaseId, userCollectionId, user.$id, {
+        userId: user.$id,
+        fullName: `${data.fullName}`,
+        phone: data.phoneNumber,
+        isVendor: true,
+      });
+      
+      // 3. Login the user to get the session
+      const loginResult = await dispatch(
+        loginAsync({
+          email: data.email,
+          password: data.password,
+          rememberMe: true,
+        })
+      );
+      
+      //trying to update vendor
+      dispatch(getCurrentUserAsync());
+      
       // Call API route to send email notifications
       const notificationResponse = await fetch('/api/vendor/send-notifications', {
         method: 'POST',
@@ -156,6 +156,7 @@ const dispatch = useDispatch<AppDispatch>();
           vendorEmail: data.email,
           vendorName: data.fullName,
           businessName: data.businessName,
+          whatsappUpdates: whatsappUpdates,
         }),
       });
   
@@ -165,7 +166,6 @@ const dispatch = useDispatch<AppDispatch>();
       }
   
       alert('Registration successful! Your account is pending admin approval. Check your email for a welcome message.');
-
       router.push("/add-item");
 
     } catch (error: any) {
@@ -180,8 +180,6 @@ const dispatch = useDispatch<AppDispatch>();
     }
   };
 
-
-  const instantDelivery = watch('instantDelivery');
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border-0 p-8">
@@ -478,59 +476,62 @@ const dispatch = useDispatch<AppDispatch>();
           )}
         </div>
 
-        {/* Vendor Type Section */}
+        {/* WhatsApp Updates Section */}
         <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
           <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            What type of vendor are you?
+            I accept to receive updates via
           </h4>
           
-          <div className="space-y-3">
-            <label className="flex items-start space-x-3 cursor-pointer">
-              <input
-                {...register('instantDelivery')}
-                type="checkbox"
-                className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 dark:focus:ring-orange-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 mt-1"
-              />
-              <div className="text-sm">
-                <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
-                  Check the box if you offer instant deliveries, i.e. your packages are delivered immediately.
+          <div className="flex items-center space-x-3">
+            <button
+              type="button"
+              onClick={() => setWhatsappUpdates(!whatsappUpdates)}
+              className={`flex items-center space-x-3 p-4 rounded-xl border-2 transition-all duration-200 ${
+                whatsappUpdates
+                  ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                  : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-green-400'
+              }`}
+            >
+              <div className="relative">
+                <MessageCircle 
+                  className={`w-6 h-6 transition-colors ${
+                    whatsappUpdates ? 'text-green-600' : 'text-gray-400'
+                  }`} 
+                />
+                {/* WhatsApp-style icon overlay */}
+                <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full transition-colors ${
+                  whatsappUpdates ? 'bg-green-500' : 'bg-gray-300'
+                }`} />
+              </div>
+              <div className="text-left">
+                <p className={`text-sm font-medium transition-colors ${
+                  whatsappUpdates ? 'text-green-700 dark:text-green-300' : 'text-gray-700 dark:text-gray-300'
+                }`}>
+                  WhatsApp
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Get instant updates on your phone
                 </p>
               </div>
-            </label>
-
-            {!instantDelivery && (
-              <div className="ml-7 space-y-2">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Average number of days for product delivery
-                </label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <select
-                    {...register('deliveryDays')}
-                    className={`w-full h-12 pl-10 pr-10 border rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:border-orange-500 focus:ring-orange-500 transition-colors appearance-none ${
-                      errors.deliveryDays 
-                        ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
-                        : 'border-gray-300 dark:border-gray-600'
-                    }`}
-                  >
-                    <option value="">Select delivery timeline</option>
-                    {deliveryOptions.map((option) => (
-                      <option key={option} value={option}>{option}</option>
-                    ))}
-                  </select>
-                  {errors.deliveryDays && (
-                    <AlertCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-red-500" />
-                  )}
-                </div>
-                {errors.deliveryDays && (
-                  <p className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
-                    <AlertCircle className="w-3 h-3" />
-                    {errors.deliveryDays.message}
-                  </p>
+              <div className={`ml-auto w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                whatsappUpdates
+                  ? 'border-green-500 bg-green-500'
+                  : 'border-gray-300 dark:border-gray-600'
+              }`}>
+                {whatsappUpdates && (
+                  <CheckCircle2 className="w-3 h-3 text-white" />
                 )}
               </div>
-            )}
+            </button>
           </div>
+          
+          {whatsappUpdates && (
+            <div className="ml-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+              <p className="text-sm text-green-700 dark:text-green-300">
+                ✓ You'll receive order updates, delivery notifications, and business insights via WhatsApp on {watch('phoneNumber') || 'your registered phone number'}.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Terms and Conditions */}

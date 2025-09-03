@@ -140,33 +140,29 @@ export const popularItemSchema = z.object({
     .max(36, "Restaurant ID is too long"),
 });
 
-export const vendorRegistrationSchema = z.object({
-  fullName: z.string().min(2, 'Full name must be at least 2 characters'),
-  phoneNumber: z.string()
-    .min(10, 'Phone number must be at least 10 digits')
-    .regex(/^(\+234|0)[789]\d{9}$/, 'Please enter a valid Nigerian phone number'),
-  email: z.string().email('Please enter a valid email address'),
-  catchmentArea: z.string().min(1, 'Please select a catchment area'),
-  location: z.string().min(3, 'Location must be at least 3 characters'),
-  businessName: z.string().min(2, 'Business name must be at least 2 characters'),
-  category: z.string().min(1, 'Please select a category'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  confirmPassword: z.string(),
-  deliveryDays: z.string().optional(),
-  agreeTerms: z.boolean().refine(val => val === true, 'You must agree to the terms and conditions'),
-  instantDelivery: z.boolean().optional()
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-}).superRefine((data, ctx) => {
-  if (!data.instantDelivery && (!data.deliveryDays || data.deliveryDays === '')) {
-    ctx.addIssue({
-      code: 'custom',
-      message: 'Please select a delivery timeline',
-      path: ['deliveryDays'],
-    });
-  }
-});
+
+export const vendorRegistrationSchema = z
+  .object({
+    fullName: z.string().min(2, "Full name must be at least 2 characters"),
+    phoneNumber: z
+      .string()
+      .min(10, "Phone number must be at least 10 digits")
+      .regex(/^(\+234|0)[789]\d{9}$/, "Please enter a valid Nigerian phone number"),
+    email: z.string().email("Please enter a valid email address"),
+    catchmentArea: z.string().min(1, "Please select a catchment area"),
+    location: z.string().min(3, "Location must be at least 3 characters"),
+    businessName: z.string().min(2, "Business name must be at least 2 characters"),
+    category: z.string().min(1, "Please select a category"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+    confirmPassword: z.string(),
+    agreeTerms: z.boolean().refine((val) => val === true, "You must agree to the terms and conditions"),
+    whatsappUpdates: z.boolean().optional(), // Optional field for WhatsApp toggle
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
+
 
 export type VendorRegistrationFormData = z.infer<typeof vendorRegistrationSchema>;
 export type FeaturedItemFormData = z.infer<typeof featuredItemSchema>;

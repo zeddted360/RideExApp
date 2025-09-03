@@ -12,7 +12,7 @@ import {
   Loader2,
   LogIn
 } from 'lucide-react';
-import { loginAsync } from '@/state/authSlice';
+import { getCurrentUserAsync, loginAsync } from '@/state/authSlice';
 import { useDispatch } from 'react-redux';
 import { AppDispatch } from '@/state/store';
 import { useRouter } from 'next/navigation';
@@ -53,6 +53,8 @@ const router = useRouter();
               rememberMe: true,
             })
           );
+          //trying to update vendor
+          dispatch(getCurrentUserAsync());
       alert('Login successful!');
       router.push("/add-item");
     } catch (error) {
@@ -215,7 +217,7 @@ const router = useRouter();
                 type="button"
                 className="w-full h-12 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-orange-300 dark:hover:border-orange-600 font-semibold rounded-xl transition-all duration-200 bg-white dark:bg-gray-800"
               >
-                Create New Account
+               Start Selling on RideEx
               </button>
             </div>
           </div>

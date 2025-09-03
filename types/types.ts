@@ -239,10 +239,9 @@ export interface IVendor {
   businessName: string
   category: string;
   password: string;
-  deliveryDays: string | null | undefined;
-  instantDelivery: boolean | undefined;
   agreeTerms: boolean;
   status: 'pending' | "approved" |"rejected";
+  whatsappUpdates:boolean;
 }
 
 export interface IVendorFetched extends IVendor, Models.Document {};
