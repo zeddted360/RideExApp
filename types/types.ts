@@ -245,3 +245,15 @@ export interface IVendor {
 }
 
 export interface IVendorFetched extends IVendor, Models.Document {};
+
+export interface IRiders {
+  fullName: "";
+  email: "";
+  phone: "";
+  address: "";
+  licenseNumber: "";
+  motorcycleModel: "";
+  status:"pending" | "approved";
+}
+
+export interface IRidersFetched extends IRiders, Models.Document{};

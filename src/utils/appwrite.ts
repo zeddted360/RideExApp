@@ -24,6 +24,7 @@ interface EnvConfig {
   guestUserCollectionId: string;
   newsLetterCollectionId: string;
   vendorsCollectionId: string;
+  ridersCollectionId:string;
 }
 
 // Validate environment variables
@@ -55,7 +56,7 @@ export function validateEnv(): EnvConfig {
       process.env.NEXT_PUBLIC_APPWRITE_GUEST_USER_COLLECTION_ID,
     newsLetterCollectionId: process.env.NEXT_PUBLIC_APPWRITE_NEWSLETTER_COLLECTION_ID,
     vendorsCollectionId:process.env.NEXT_PUBLIC_VENDORS_COLLECTION_ID,
-    
+    ridersCollectionId:process.env.NEXT_PUBLIC_RIDERS_COLLECTION_ID,
   };
 
   // Check for undefined environment variables
@@ -84,7 +85,7 @@ export function validateEnv(): EnvConfig {
     popularItemsCollectionId: requiredEnvVars.popularItemsCollectionId!,
     popularBucketId: requiredEnvVars.popularBucketId!,
     userCollectionId: requiredEnvVars.userCollectionId!,
-    googleMapsApiKey: requiredEnvVars.googleMapsApiKey!, // Added for Google Maps
+    googleMapsApiKey: requiredEnvVars.googleMapsApiKey!, 
     bookedOrdersCollectionId: requiredEnvVars.bookedOrdersCollectionId!,
     mapBoxAccessToken: requiredEnvVars.mapBoxAccessToken!,
     notificationCollectionId: requiredEnvVars.notificationCollectionId!,
@@ -92,6 +93,7 @@ export function validateEnv(): EnvConfig {
     guestUserCollectionId: requiredEnvVars.guestUserCollectionId!,
     newsLetterCollectionId:requiredEnvVars.newsLetterCollectionId!,
     vendorsCollectionId:requiredEnvVars.vendorsCollectionId!,
+    ridersCollectionId:requiredEnvVars.ridersCollectionId!,
   };
 }
 

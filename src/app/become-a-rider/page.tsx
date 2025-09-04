@@ -3,16 +3,18 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { databases, validateEnv } from "@/utils/appwrite";
 import { ID } from "appwrite";
+import { IRiders } from "../../../types/types";
 
 const BecomeARiderPage = () => {
   const router = useRouter();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<IRiders>({
     fullName: "",
     email: "",
     phone: "",
     address: "",
     licenseNumber: "",
     motorcycleModel: "",
+    status:"pending" 
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
@@ -28,10 +30,10 @@ const BecomeARiderPage = () => {
     setMessage({ text: "", type: "" });
 
     try {
-      const { databaseId } = validateEnv();
+      const { databaseId,ridersCollectionId } = validateEnv();
       await databases.createDocument(
         databaseId,
-        "riderApplications", // Collection ID
+        ridersCollectionId, 
         ID.unique(),
         {
           fullName: formData.fullName,
@@ -41,8 +43,7 @@ const BecomeARiderPage = () => {
           licenseNumber: formData.licenseNumber,
           motorcycleModel: formData.motorcycleModel,
           status: "pending",
-          submittedAt: new Date().toISOString(),
-        }
+        } as IRiders
       );
 
       // Notify server to send emails
@@ -65,6 +66,7 @@ const BecomeARiderPage = () => {
           address: "",
           licenseNumber: "",
           motorcycleModel: "",
+          status:"pending",
         });
       } else {
         setMessage({
