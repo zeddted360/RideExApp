@@ -256,7 +256,7 @@ export default function Footer() {
                       color: "hover:text-blue-400",
                     },
                     {
-                      href: "https://www.youtube.com/@rideex", // Placeholder YouTube URL
+                      href:"https://youtube.com/@rideexpresslogistics?si=A3WVHwtNYG9Lqdjg", 
                       Icon: Youtube,
                       label: "YouTube",
                       color: "hover:text-red-600", // YouTube's brand color on hover
