@@ -46,7 +46,7 @@ const AboutPage = () => {
           {/* Hero Section */}
           <div className="text-center">
             <Image
-              src="/images/ridex_logo.jpg" 
+              src="/images/rideex_food_delivery_logo.jpg" 
               alt="RideEx Logo"
               width={150}
               height={150}

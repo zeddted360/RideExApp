@@ -364,11 +364,17 @@ const Header = () => {
           <div className="flex items-center justify-between h-16 lg:h-20">
             {/* Logo */}
             <div className="flex items-center">
-              <Link
-                href="/"
-                className="text-2xl lg:text-3xl font-bold text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-colors"
-              >
-                RideEx
+              <Link href="/" className="hover:opacity-80 transition-opacity">
+                <div className="relative w-12 h-12 lg:w-16 lg:h-16">
+                  <Image
+                    src="/images/rideex_food_delivery_logo.jpg"
+                    alt="RideEx Logo"
+                    fill
+                    priority
+                    quality={100}
+                    className="object-contain rounded-full shadow-md"
+                  />
+                </div>
               </Link>
             </div>
 
@@ -461,12 +467,18 @@ const Header = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
-          <div className="flex items-center">
-            <Link
-              href="/"
-              className="text-2xl lg:text-3xl font-bold text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-colors"
-            >
-              RideEx
+          <div className="flex items-center md:mr-4">
+            <Link href="/" className="hover:opacity-80 transition-opacity">
+              <div className="relative w-12 h-12 lg:w-16 lg:h-16">
+                <Image
+                  src="/images/rideex_food_delivery_logo.jpg"
+                  alt="RideEx Logo"
+                  fill
+                  priority
+                  quality={100}
+                  className="object-contain rounded-full shadow-md"
+                />
+              </div>
             </Link>
           </div>
 
@@ -556,7 +568,7 @@ const Header = () => {
                     variant="outline"
                     className="text-orange-600 border-orange-500 bg-white hover:bg-orange-50 dark:bg-orange-950/80 dark:text-orange-300 dark:border-orange-400 dark:hover:bg-orange-900/60 font-semibold px-4 py-2 rounded-lg transition-all"
                   >
-                    Login as user
+                    Login 
                   </Button>
                 </Link>
                 <Link href="/signup">
@@ -1084,7 +1096,7 @@ const Header = () => {
                         variant="outline"
                         className="w-full text-orange-600 border-orange-500 bg-white hover:bg-orange-50 dark:bg-orange-950/80 dark:text-orange-300 dark:border-orange-400 dark:hover:bg-orange-900/60 font-semibold px-3 py-2 rounded-lg transition-all text-sm"
                       >
-                        Login as user
+                        Login
                       </Button>
                     </Link>
                     <Link href="/signup">

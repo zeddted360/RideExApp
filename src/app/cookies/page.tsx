@@ -1,6 +1,7 @@
 "use client";
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 const CookiesPage = () => {
   const router = useRouter();
@@ -49,14 +50,9 @@ const CookiesPage = () => {
             </h2>
             <p className="text-lg text-gray-700 dark:text-gray-300 leading-7">
               This page explains what cookies are, how RideEx uses them, and how you can manage your preferences. Cookies help us improve your experience on our website and app. For more details, feel free to contact us at{' '}
-              <a href="mailto:support@rideex.com" className="text-orange-600 dark:text-orange-400 underline hover:text-red-600 dark:hover:text-red-400 transition-colors">
+              <Link href="mailto:support@rideex.com" className="text-orange-600 dark:text-orange-400 underline hover:text-red-600 dark:hover:text-red-400 transition-colors">
                 support@rideex.com
-              </a>{' '}
-              or{' '}
-              <a href="tel:+2348012345678" className="text-orange-600 dark:text-orange-400 underline hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                +234 801 234 5678
-              </a>
-              .
+              </Link>
             </p>
           </div>
 

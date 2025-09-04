@@ -545,7 +545,7 @@ const VendorRegistrationForm = () => {
             <div className="text-sm">
               <p className="text-gray-700 dark:text-gray-300">
                 By checking this box, you agree to our{' '}
-                <a href="#" className="text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 font-medium underline">
+                <a href="/terms" className="text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 font-medium underline">
                   terms and conditions
                 </a>
               </p>

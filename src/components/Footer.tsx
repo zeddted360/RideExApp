@@ -7,10 +7,6 @@ import {
   Phone,
   MapPin,
   ArrowRight,
-  Star,
-  Heart,
-  Shield,
-  Truck,
   Info, // For About Us
   HelpCircle, // For FAQ
   FileText, // For Terms and Conditions
@@ -97,13 +93,15 @@ export default function Footer() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
             {/* Brand Section */}
             <div className="lg:col-span-1 space-y-6">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">R</span>
-                </div>
-                <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-400 to-red-400 bg-clip-text text-transparent">
-                  RideEx
-                </h2>
+              <div className="relative h-20 w-20 rounded-full overflow-hidden shadow-md">
+                <Image
+                  src={"/images/rideex_food_delivery_logo.jpg"}
+                  alt="RideEx logo"
+                  fill
+                  priority
+                  quality={100}
+                  className="object-contain"
+                />
               </div>
               <p className="text-gray-300 leading-relaxed">
                 {t("footer.brandDescription")}
