@@ -223,7 +223,7 @@ const VendorRegistrationForm = () => {
         {/* Phone Number */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Phone number
+            Enter Your Business Phone Number
           </label>
           <div className="relative">
             <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -235,7 +235,7 @@ const VendorRegistrationForm = () => {
                   ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
                   : 'border-gray-300 dark:border-gray-600 focus:border-orange-500 focus:ring-orange-500'
               }`}
-              placeholder="+2348012345678"
+              placeholder="+234 XXX XXX XXXX"
             />
             {errors.phoneNumber && (
               <AlertCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-red-500" />
@@ -252,7 +252,7 @@ const VendorRegistrationForm = () => {
         {/* Email */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Email address
+            Enter Your Business Email
           </label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -264,7 +264,7 @@ const VendorRegistrationForm = () => {
                   ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
                   : 'border-gray-300 dark:border-gray-600 focus:border-orange-500 focus:ring-orange-500'
               }`}
-              placeholder="Enter your email address"
+              placeholder="Enter your business email"
             />
             {errors.email && (
               <AlertCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-red-500" />
