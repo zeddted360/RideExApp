@@ -624,8 +624,8 @@ const Header = () => {
               {isSearchVisible && (
                 <div className="absolute top-full left-0 right-0 mt-3 transition-all duration-300 ease-out">
                   <div className="relative group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 to-orange-600/10 rounded-2xl blur-sm" />
-                    <div className="relative bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-orange-200/50 dark:border-orange-700/50 rounded-2xl shadow-2xl">
+                    <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 to-orange-600/10 rounded-2xl blur-sm"  />
+                    <div className="relative bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-orange-200/50 dark:border-orange-700/50 rounded-2xl shadow-2xl w-[400px] mx-auto md:mr-10">
                       <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-orange-500 dark:text-orange-400" />
                       <input
                         ref={inputRef}
@@ -657,7 +657,7 @@ const Header = () => {
 
                   {/* Search Results Dropdown */}
                   {isSearchOpen && searchResults.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 max-h-96 overflow-y-auto z-30">
+                    <div className="absolute w-[400px] mx-auto md:mr-10 top-full left-0 right-0 mt-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 max-h-96 overflow-y-auto z-30">
                       <div className="p-3">
                         <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 px-2">
                           {searchResults.length} result
@@ -1177,6 +1177,7 @@ const Header = () => {
               </div>
             )}
           </div>
+
 
           {/* Mobile Search Results */}
           {isSearchVisible && isSearchOpen && searchResults.length > 0 && (
