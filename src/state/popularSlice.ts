@@ -74,7 +74,7 @@ export const listAsyncPopularItems = createAsyncThunk<
     const response = await databases.listDocuments(
       databaseId,
       popularItemsCollectionId,
-      [Query.orderDesc("createdAt")]
+      [Query.orderDesc("createdAt"),Query.equal("isApproved",true)]
     );
     return response.documents as IPopularItemFetched[];
   } catch (error) {
