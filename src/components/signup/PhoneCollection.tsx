@@ -37,7 +37,7 @@ const PhoneCollection: React.FC<PhoneCollectionProps> = ({
           setPhoneNumber(e.target.value);
           setPhoneError("");
         }}
-        placeholder="+2348012345678"
+        placeholder="+234 XXX XXX XXXX"
         className="h-12 bg-white dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400"
         required
       />
