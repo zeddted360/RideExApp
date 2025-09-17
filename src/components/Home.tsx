@@ -10,7 +10,6 @@ import MiniNavigation from "@/components/Hero";
 
 export default function HomeClient() {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
-  const [isMobile, setIsMobile] = useState(false);
 
 
   const toggleFavorite = (id: string) => {

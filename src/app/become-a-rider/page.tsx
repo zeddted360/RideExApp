@@ -1,27 +1,68 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { databases, validateEnv } from "@/utils/appwrite";
+import { databases, storage, validateEnv } from "@/utils/appwrite";
 import { ID } from "appwrite";
 import { IRiders } from "../../../types/types";
 
 const BecomeARiderPage = () => {
   const router = useRouter();
+  const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<IRiders>({
     fullName: "",
     email: "",
     phone: "",
     address: "",
-    licenseNumber: "",
-    motorcycleModel: "",
-    status:"pending" 
+    gender: "",
+    dateOfBirth: "",
+    nin: "",
+    bvn: "",
+    vehicleType: "",
+    previousWorkPlace: "",
+    workDuration: "",
+    guarantor1Name: "",
+    guarantor1Phone: "",
+    guarantor1Relationship: "",
+    guarantor2Name: "",
+    guarantor2Phone: "",
+    guarantor2Relationship: "",
+    referralCode: "",
+    status: "pending",
   });
+  const [driversLicensePicture, setDriversLicensePicture] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
   const [focusedField, setFocusedField] = useState("");
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setDriversLicensePicture(e.target.files[0]);
+    }
+  };
+
+  const validateStep1 = () => {
+    const requiredFields = ['fullName', 'email', 'phone', 'address', 'gender', 'dateOfBirth', 'nin',];
+    for (const field of requiredFields) {
+      if (!formData[field as keyof IRiders]) {
+        setMessage({ text: `Please fill in ${field}`, type: "error" });
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleContinue = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateStep1()) {
+      setStep(2);
+      setMessage({ text: "", type: "" });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,27 +71,39 @@ const BecomeARiderPage = () => {
     setMessage({ text: "", type: "" });
 
     try {
-      const { databaseId,ridersCollectionId } = validateEnv();
+      const { databaseId, ridersCollectionId, driversLicenceBuckedId } = validateEnv(); 
+
+      let driversLicensePictureId = null;
+      if (driversLicensePicture) {
+        const uploadedFile = await storage.createFile(
+          driversLicenceBuckedId,
+          ID.unique(),
+          driversLicensePicture
+        );
+        driversLicensePictureId = uploadedFile.$id;
+      }
+      const riderId = ID.unique()
+
+      const documentData = {
+        ...formData,
+        driversLicensePicture: driversLicensePictureId || "",
+        referralCode:riderId,
+        status: "pending",
+        refferedBy:formData.referralCode
+      };
+
       await databases.createDocument(
         databaseId,
-        ridersCollectionId, 
-        ID.unique(),
-        {
-          fullName: formData.fullName,
-          email: formData.email,
-          phone: formData.phone,
-          address: formData.address,
-          licenseNumber: formData.licenseNumber,
-          motorcycleModel: formData.motorcycleModel,
-          status: "pending",
-        } as IRiders
+        ridersCollectionId,
+       riderId,
+        documentData
       );
 
       // Notify server to send emails
       const response = await fetch("/api/become-a-rider", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(documentData),
       });
 
       const result = await response.json();
@@ -64,10 +117,24 @@ const BecomeARiderPage = () => {
           email: "",
           phone: "",
           address: "",
-          licenseNumber: "",
-          motorcycleModel: "",
-          status:"pending",
+          gender: "",
+          dateOfBirth: "",
+          nin: "",
+          bvn: "",
+          vehicleType: "",
+          previousWorkPlace: "",
+          workDuration: "",
+          guarantor1Name: "",
+          guarantor1Phone: "",
+          guarantor1Relationship: "",
+          guarantor2Name: "",
+          guarantor2Phone: "",
+          guarantor2Relationship: "",
+          referralCode: "",
+          status: "pending",
         });
+        setDriversLicensePicture(null);
+        setStep(1);
       } else {
         setMessage({
           text: result.error || "Failed to notify. Please contact support.",
@@ -169,61 +236,196 @@ const BecomeARiderPage = () => {
           <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-lg rounded-2xl shadow-2xl border border-orange-200/30 dark:border-orange-800/30 p-8 md:p-10">
             <div className="text-center mb-8">
               <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                Application Form
+                Application Form - Step {step} of 2
               </h3>
               <p className="text-gray-600 dark:text-gray-400">
                 Fill out the details below to start your journey with us
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {[
-                { name: "fullName", label: "Full Name", type: "text", icon: "👤" },
-                { name: "email", label: "Email Address", type: "email", icon: "📧" },
-                { name: "phone", label: "Phone Number", type: "tel", icon: "📱" },
-                { name: "address", label: "Home Address", type: "text", icon: "🏠" },
-                { name: "licenseNumber", label: "Driver's License Number", type: "text", icon: "🪪" },
-                { name: "motorcycleModel", label: "Preferred Motorcycle Model", type: "text", icon: "🏍️" },
-              ].map((field) => (
-                <div key={field.name} className="space-y-2">
-                  <label
-                    htmlFor={field.name}
-                    className="block text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2"
-                  >
-                    <span className="text-lg">{field.icon}</span>
-                    {field.label}
-                  </label>
-                  <div className="relative">
+            <form onSubmit={step === 1 ? handleContinue : handleSubmit} className="space-y-6">
+              {step === 1 && (
+                <>
+                  {[
+                    { name: "fullName", label: "Full Name", type: "text", icon: "👤" },
+                    { name: "email", label: "Email Address", type: "email", icon: "📧" },
+                    { name: "phone", label: "Phone Number", type: "tel", icon: "📱" },
+                    { name: "address", label: "Home Address", type: "text", icon: "🏠" },
+                    { name: "gender", label: "Gender", type: "select", icon: "⚧", options: ["Male", "Female", "Other", "Prefer not to say"] },
+                    { name: "dateOfBirth", label: "Date of Birth", type: "date", icon: "🎂" },
+                    { name: "nin", label: "NIN", type: "text", icon: "🆔" },
+                    { name: "bvn", label: "BVN (optional)", type: "text", icon: "🏦", required: false },
+                  ].map((field) => (
+                    <div key={field.name} className="space-y-2">
+                      <label
+                        htmlFor={field.name}
+                        className="block text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2"
+                      >
+                        <span className="text-lg">{field.icon}</span>
+                        {field.label}
+                      </label>
+                      <div className="relative">
+                        {field.type === "select" ? (
+                          <select
+                            id={field.name}
+                            name={field.name}
+                            value={formData[field.name as keyof IRiders] || ""}
+                            onChange={handleChange}
+                            onFocus={() => setFocusedField(field.name)}
+                            onBlur={() => setFocusedField("")}
+                            required={field.required !== false}
+                            className={`w-full px-4 py-3 rounded-xl border-2 transition-all duration-300 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-orange-500/20 ${
+                              focusedField === field.name
+                                ? "border-orange-500 dark:border-orange-400 shadow-lg transform scale-[1.02]"
+                                : "border-gray-300 dark:border-gray-600 hover:border-orange-400 dark:hover:border-orange-500"
+                            }`}
+                          >
+                            <option value="" disabled>
+                              Select your {field.label.toLowerCase()}
+                            </option>
+                            {field.options!.map((option) => (
+                              <option key={option} value={option}>
+                                {option}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type={field.type}
+                            id={field.name}
+                            name={field.name}
+                            value={formData[field.name as keyof IRiders] || ""}
+                            onChange={handleChange}
+                            onFocus={() => setFocusedField(field.name)}
+                            onBlur={() => setFocusedField("")}
+                            required={field.required !== false}
+                            className={`w-full px-4 py-3 rounded-xl border-2 transition-all duration-300 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-orange-500/20 ${
+                              focusedField === field.name
+                                ? "border-orange-500 dark:border-orange-400 shadow-lg transform scale-[1.02]"
+                                : "border-gray-300 dark:border-gray-600 hover:border-orange-400 dark:hover:border-orange-500"
+                            }`}
+                            placeholder={
+                              field.type !== "date" ? `Enter your ${field.label.toLowerCase()}` : ""
+                            }
+                          />
+                        )}
+                        <div
+                          className={`absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-orange-500 to-red-500 transition-all duration-300 ${
+                            focusedField === field.name ? "w-full" : "w-0"
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="driversLicensePicture"
+                      className="block text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2"
+                    >
+                      <span className="text-lg">📸</span>
+                      Upload Driver's License Picture
+                    </label>
                     <input
-                      type={field.type}
-                      id={field.name}
-                      name={field.name}
-                      value={formData[field.name as keyof typeof formData]}
-                      onChange={handleChange}
-                      onFocus={() => setFocusedField(field.name)}
-                      onBlur={() => setFocusedField("")}
-                      required
-                      className={`w-full px-4 py-3 rounded-xl border-2 transition-all duration-300 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-orange-500/20 ${
-                        focusedField === field.name
-                          ? "border-orange-500 dark:border-orange-400 shadow-lg transform scale-[1.02]"
-                          : "border-gray-300 dark:border-gray-600 hover:border-orange-400 dark:hover:border-orange-500"
-                      }`}
-                      placeholder={`Enter your ${field.label.toLowerCase()}`}
-                    />
-                    <div
-                      className={`absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-orange-500 to-red-500 transition-all duration-300 ${
-                        focusedField === field.name ? "w-full" : "w-0"
-                      }`}
+                      type="file"
+                      id="driversLicensePicture"
+                      accept="image/*"
+                      onChange={handleFileChange}
+                      className="w-full px-4 py-3 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm text-gray-900 dark:text-white file:bg-orange-500 file:text-white file:px-4 file:py-2 file:rounded-full file:border-0 file:font-semibold hover:file:bg-orange-600 transition-all duration-300"
                     />
                   </div>
-                </div>
-              ))}
+                </>
+              )}
 
-              <div className="pt-4">
+              {step === 2 && (
+                <>
+                  {[
+                    { name: "vehicleType", label: "Vehicle Type", type: "select", icon: "🚲", options: ["Bike", "Bicycle"] },
+                    { name: "previousWorkPlace", label: "Previous Place of Work", type: "text", icon: "🏢" },
+                    { name: "workDuration", label: "How Long Did You Work There?", type: "text", icon: "⏳", placeholder: "e.g., 2 years" },
+                    { name: "guarantor1Name", label: "Guarantor 1 Name", type: "text", icon: "🤝" },
+                    { name: "guarantor1Phone", label: "Guarantor 1 Phone", type: "tel", icon: "📞" },
+                    { name: "guarantor1Relationship", label: "Guarantor 1 Relationship", type: "select", icon: "👥", options: ["Family", "Friend", "Colleague", "Other"] },
+                    { name: "guarantor2Name", label: "Guarantor 2 Name", type: "text", icon: "🤝" },
+                    { name: "guarantor2Phone", label: "Guarantor 2 Phone", type: "tel", icon: "📞" },
+                    { name: "guarantor2Relationship", label: "Guarantor 2 Relationship", type: "select", icon: "👥", options: ["Family", "Friend", "Colleague", "Other"] },
+                    { name: "referralCode", label: "Referral Code (optional)", type: "text", icon: "🔑", required: false },
+                  ].map((field) => (
+                    <div key={field.name} className="space-y-2">
+                      <label
+                        htmlFor={field.name}
+                        className="block text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2"
+                      >
+                        <span className="text-lg">{field.icon}</span>
+                        {field.label}
+                      </label>
+                      <div className="relative">
+                        {field.type === "select" ? (
+                          <select
+                            id={field.name}
+                            name={field.name}
+                            value={formData[field.name as keyof IRiders] || ""}
+                            onChange={handleChange}
+                            onFocus={() => setFocusedField(field.name)}
+                            onBlur={() => setFocusedField("")}
+                            required={field.required !== false}
+                            className={`w-full px-4 py-3 rounded-xl border-2 transition-all duration-300 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-orange-500/20 ${
+                              focusedField === field.name
+                                ? "border-orange-500 dark:border-orange-400 shadow-lg transform scale-[1.02]"
+                                : "border-gray-300 dark:border-gray-600 hover:border-orange-400 dark:hover:border-orange-500"
+                            }`}
+                          >
+                            <option value="" disabled>
+                              Select {field.label.toLowerCase()}
+                            </option>
+                            {field.options!.map((option) => (
+                              <option key={option} value={option}>
+                                {option}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type={field.type}
+                            id={field.name}
+                            name={field.name}
+                            value={formData[field.name as keyof IRiders] || ""}
+                            onChange={handleChange}
+                            onFocus={() => setFocusedField(field.name)}
+                            onBlur={() => setFocusedField("")}
+                            required={field.required !== false}
+                            className={`w-full px-4 py-3 rounded-xl border-2 transition-all duration-300 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-orange-500/20 ${
+                              focusedField === field.name
+                                ? "border-orange-500 dark:border-orange-400 shadow-lg transform scale-[1.02]"
+                                : "border-gray-300 dark:border-gray-600 hover:border-orange-400 dark:hover:border-orange-500"
+                            }`}
+                            placeholder={`Enter ${field.label.toLowerCase()}`}
+                          />
+                        )}
+                        <div
+                          className={`absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-orange-500 to-red-500 transition-all duration-300 ${
+                            focusedField === field.name ? "w-full" : "w-0"
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              <div className="pt-4 flex gap-4">
+                {step === 2 && (
+                  <button
+                    type="button"
+                    onClick={() => setStep(1)}
+                    className="flex-1 py-3 px-6 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    Back
+                  </button>
+                )}
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full relative overflow-hidden bg-gradient-to-r from-orange-500 via-red-500 to-orange-600 dark:from-orange-400 dark:via-red-400 dark:to-orange-500 text-white font-bold py-4 px-8 rounded-xl hover:from-orange-600 hover:via-red-600 hover:to-orange-700 disabled:opacity-50 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] focus:outline-none focus:ring-4 focus:ring-orange-500/30"
+                  className="flex-1 relative overflow-hidden bg-gradient-to-r from-orange-500 via-red-500 to-orange-600 dark:from-orange-400 dark:via-red-400 dark:to-orange-500 text-white font-bold py-4 px-8 rounded-xl hover:from-orange-600 hover:via-red-600 hover:to-orange-700 disabled:opacity-50 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] focus:outline-none focus:ring-4 focus:ring-orange-500/30"
                 >
                   <span className="relative z-10 flex items-center justify-center gap-2">
                     {loading ? (
@@ -234,7 +436,7 @@ const BecomeARiderPage = () => {
                     ) : (
                       <>
                         <span>🚀</span>
-                        Submit Application
+                        {step === 1 ? "Continue" : "Submit Application"}
                       </>
                     )}
                   </span>

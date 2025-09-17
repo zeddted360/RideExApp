@@ -25,6 +25,7 @@ interface EnvConfig {
   newsLetterCollectionId: string;
   vendorsCollectionId: string;
   ridersCollectionId:string;
+  driversLicenceBuckedId:string;
 }
 
 // Validate environment variables
@@ -57,6 +58,7 @@ export function validateEnv(): EnvConfig {
     newsLetterCollectionId: process.env.NEXT_PUBLIC_APPWRITE_NEWSLETTER_COLLECTION_ID,
     vendorsCollectionId:process.env.NEXT_PUBLIC_VENDORS_COLLECTION_ID,
     ridersCollectionId:process.env.NEXT_PUBLIC_RIDERS_COLLECTION_ID,
+    driversLicenceBuckedId:process.env.NEXT_PUBLIC_APPWRITE_DRIVERS_LICENCE_COLLECTION_ID
   };
 
   // Check for undefined environment variables
@@ -94,6 +96,7 @@ export function validateEnv(): EnvConfig {
     newsLetterCollectionId:requiredEnvVars.newsLetterCollectionId!,
     vendorsCollectionId:requiredEnvVars.vendorsCollectionId!,
     ridersCollectionId:requiredEnvVars.ridersCollectionId!,
+    driversLicenceBuckedId:requiredEnvVars.driversLicenceBuckedId!,
   };
 }
 

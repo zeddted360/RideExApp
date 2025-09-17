@@ -247,13 +247,26 @@ export interface IVendor {
 export interface IVendorFetched extends IVendor, Models.Document {};
 
 export interface IRiders {
-  fullName: "";
-  email: "";
-  phone: "";
-  address: "";
-  licenseNumber: "";
-  motorcycleModel: "";
-  status:"pending" | "approved";
+  fullName: string;
+  email: string;
+  phone: string;
+  address: string;
+  gender: string;
+  dateOfBirth: string;
+  nin: string;
+  bvn?: string; // optional
+  driversLicensePicture?: string; // file ID, optional
+  vehicleType: string;
+  previousWorkPlace: string;
+  workDuration: string;
+  guarantor1Name: string;
+  guarantor1Phone: string;
+  guarantor1Relationship: string;
+  guarantor2Name: string;
+  guarantor2Phone: string;
+  guarantor2Relationship: string;
+  referralCode?: string; // optional
+  refferedBy?:string;
+  status: string;
 }
-
 export interface IRidersFetched extends IRiders, Models.Document{};
