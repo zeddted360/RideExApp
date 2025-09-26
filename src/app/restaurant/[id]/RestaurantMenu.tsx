@@ -2,15 +2,13 @@
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Star, Plus, Clock, Loader2, Heart } from 'lucide-react';
-import { useDispatch } from 'react-redux';
-import { createOrderAsync } from '@/state/orderSlice';
 import { useAuth } from '@/context/authContext';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useState } from 'react';
-import { AppDispatch } from '@/state/store';
 import { fileUrl, validateEnv } from '@/utils/appwrite';
 import { IMenuItemFetched } from '../../../../types/types';
+import { useShowCart } from '@/context/showCart';
 
 interface MenuItemCardProps {
   item: IMenuItemFetched;
@@ -18,22 +16,15 @@ interface MenuItemCardProps {
 }
 
 export const RestaurantMenuItem: React.FC<MenuItemCardProps> = ({ item, restaurantId }) => {
-  const dispatch = useDispatch<AppDispatch>();
   const { user } = useAuth();
   const router = useRouter();
-  const [isAdding, setIsAdding] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const {setIsOpen,setItem,} = useShowCart();
 
   const handleAddToCart = async () => {
-    if (!user?.userId) {
-      router.push('/login');
-      return;
-    }
-
-    setIsAdding(true);
-    try {
-      const orderData = {
+    if(user) {
+      setItem({
         userId: user.userId,
         itemId: item.$id,
         name: item.name,
@@ -43,28 +34,13 @@ export const RestaurantMenuItem: React.FC<MenuItemCardProps> = ({ item, restaura
         quantity: 1,
         category: item.category,
         source: 'menu' as const,
-        totalPrice: parseFloat(item.price),
-        status: 'pending' as const,
-      };
-      await dispatch(createOrderAsync(orderData)).unwrap();
-      toast.success(`${item.name} added to cart!`, {
-        duration: 3000,
-        position: 'top-right',
-        style: {
-          background: '#f97316',
-          color: 'white',
-          fontWeight: '500',
-        }
-      });
-    } catch (err) {
-      toast.error(`Failed to add ${item.name} to cart`, {
-        duration: 4000,
-        position: 'top-right',
-      });
-    } finally {
-      setIsAdding(false);
+      })
+      setIsOpen(true);
+    }else {
+      router.push("/login");
+
     }
-  };
+  }
 
   const handleFavoriteToggle = () => {
     setIsFavorited(!isFavorited);
@@ -174,23 +150,12 @@ export const RestaurantMenuItem: React.FC<MenuItemCardProps> = ({ item, restaura
         {/* Add to Cart Button */}
         <Button
           onClick={handleAddToCart}
-          disabled={isAdding}
           className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold py-3 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-95 disabled:transform-none disabled:hover:scale-100"
         >
-          {isAdding ? (
-            <div className="flex items-center justify-center">
-              <div className="relative">
-                <Loader2 className="w-5 h-5 animate-spin mr-3" />
-                <div className="absolute inset-0 w-5 h-5 border-2 border-white/30 rounded-full animate-pulse mr-3"></div>
-              </div>
-              <span>Adding to Cart...</span>
-            </div>
-          ) : (
             <div className="flex items-center justify-center group/btn">
               <Plus className="w-5 h-5 mr-2 group-hover/btn:rotate-90 transition-transform duration-300" />
               <span>Add to Cart</span>
             </div>
-          )}
         </Button>
       </div>
     </div>

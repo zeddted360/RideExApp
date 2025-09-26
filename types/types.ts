@@ -112,6 +112,9 @@ export interface IPromoOffer {
   decorativeElements: string[];
 }
 
+export interface IPromoOfferFetched extends IPromoOffer, Models.Document {}
+
+
 export interface IPopularItem {
   id: number;
   name: string;

@@ -26,6 +26,8 @@ interface EnvConfig {
   vendorsCollectionId: string;
   ridersCollectionId:string;
   driversLicenceBuckedId:string;
+  promoOfferCollectionId:string;
+  promoOfferBucketId:string;
 }
 
 // Validate environment variables
@@ -58,7 +60,9 @@ export function validateEnv(): EnvConfig {
     newsLetterCollectionId: process.env.NEXT_PUBLIC_APPWRITE_NEWSLETTER_COLLECTION_ID,
     vendorsCollectionId:process.env.NEXT_PUBLIC_VENDORS_COLLECTION_ID,
     ridersCollectionId:process.env.NEXT_PUBLIC_RIDERS_COLLECTION_ID,
-    driversLicenceBuckedId:process.env.NEXT_PUBLIC_APPWRITE_DRIVERS_LICENCE_COLLECTION_ID
+    driversLicenceBuckedId:process.env.NEXT_PUBLIC_APPWRITE_DRIVERS_LICENCE_COLLECTION_ID,
+    promoOfferCollectionId:process.env.NEXT_PUBLIC_APPWRITE_PROMO_OFFER_COLLECTION_ID,
+    promoOfferBucketId:process.env.NEXT_PUBLIC_APPWRITE_PROMO_OFFER_BUCKET_ID,
   };
 
   // Check for undefined environment variables
@@ -97,6 +101,8 @@ export function validateEnv(): EnvConfig {
     vendorsCollectionId:requiredEnvVars.vendorsCollectionId!,
     ridersCollectionId:requiredEnvVars.ridersCollectionId!,
     driversLicenceBuckedId:requiredEnvVars.driversLicenceBuckedId!,
+    promoOfferCollectionId:requiredEnvVars.promoOfferCollectionId!,
+    promoOfferBucketId:requiredEnvVars.promoOfferBucketId!,
   };
 }
 

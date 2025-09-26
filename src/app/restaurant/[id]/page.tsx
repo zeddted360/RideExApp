@@ -53,7 +53,7 @@ export default function RestaurantPage({}: RestaurantPageProps) {
           validateEnv().menuItemsCollectionId, 
           [Query.equal('restaurantId', restaurantDoc.$id)]
         );
-        setMenuItems(menuResponse.documents as IMenuItemFetched[]);
+        setMenuItems(menuResponse.documents.filter(item=>item.isApproved === true) as IMenuItemFetched[]);
       } catch (err) {
         console.error('Failed to fetch data:', err);
         setError('Failed to load restaurant data. Please try again.');
@@ -64,6 +64,7 @@ export default function RestaurantPage({}: RestaurantPageProps) {
 
     fetchData();
   }, [decodedId]);
+
 
   if (loading) {
     return (
