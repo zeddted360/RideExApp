@@ -3,8 +3,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
-  ShoppingBag, 
-  Cross, 
   X,
   Clock,
   type LucideIcon
@@ -56,8 +54,7 @@ const MiniNavigation = () => {
       title: 'Shops',
       href: '/shops',
       available: false,
-      image: '/home.jpg',
-      icon: ShoppingBag,
+      image: '/shopping_cart.jpg',
     },
     {
       id: 'pharmacy',
@@ -65,7 +62,6 @@ const MiniNavigation = () => {
       href: '/pharmacy',
       available: false,
       image: '/hospital.jpg',
-      icon: Cross,
     },
   ];
 
@@ -293,7 +289,7 @@ const MiniNavigation = () => {
               </p>
             ) : (
               <div className="flex items-center justify-start gap-10 sm:gap-12 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-4">
-                {restaurants.map((restaurant) => renderCategoryItem({ ...restaurant, href: `/menu/?restaurant=${restaurant.name}`, available: true }, true))}
+                {restaurants.map((restaurant) => renderCategoryItem({ ...restaurant, href: `/restaurant/${restaurant.name}`, available: true }, true))}
               </div>
             )}
           </div>
