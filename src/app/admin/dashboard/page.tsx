@@ -10,11 +10,6 @@ import { branches } from "../../../../data/branches";
 import { IBookedOrderFetched, IRidersFetched, IVendor, IVendorFetched, OrderStatus } from "../../../../types/types";
 import { useRouter } from "next/navigation";
 import { account, databases, validateEnv, client } from "@/utils/appwrite";
-import {
-  sendOrderStatusUpdateSMS,
-  sendDeliveryStartedSMS,
-  sendOrderDeliveredSMS,
-} from "@/utils/smsService";
 import toast from "react-hot-toast";
 import {
   Search,
@@ -227,55 +222,7 @@ export default function AdminDashboard() {
         updateBookedOrderAsync({ orderId, orderData: { status: newStatus } })
       ).unwrap();
 
-      let smsSent = false;
-      switch (newStatus) {
-        case "confirmed":
-          smsSent = await sendOrderStatusUpdateSMS(
-            order.orderId,
-            "confirmed",
-            order.phone,
-            "30-45 minutes"
-          );
-          break;
-        case "preparing":
-          smsSent = await sendOrderStatusUpdateSMS(
-            order.orderId,
-            "preparing",
-            order.phone,
-            "20-30 minutes"
-          );
-          break;
-        case "out_for_delivery":
-          smsSent = await sendDeliveryStartedSMS(
-            order.orderId,
-            order.phone,
-            "15-20 minutes"
-          );
-          break;
-        case "delivered":
-          smsSent = await sendOrderDeliveredSMS(order.orderId, order.phone);
-          break;
-        case "cancelled":
-          smsSent = await sendOrderStatusUpdateSMS(
-            order.orderId,
-            "cancelled",
-            order.phone
-          );
-          break;
-        default:
-          smsSent = await sendOrderStatusUpdateSMS(
-            order.orderId,
-            newStatus,
-            order.phone
-          );
-      }
-
-      if (smsSent) {
-        toast.success(`Order status updated and SMS sent`);
-      } else {
-        toast.success(`Order status updated`);
-        toast.error("Failed to send SMS notification");
-      }
+      toast.success("Order status updated");
     } catch (error) {
       toast.error("Failed to update order status");
       console.error("Error updating order status:", error);
@@ -353,27 +300,7 @@ export default function AdminDashboard() {
         )
       );
 
-      // Send SMS notification
-      const smsResponse = await fetch("/api/rider/send-approval-sms", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: rider.email,
-          fullName: rider.fullName,
-          message: `Congratulations ${rider.fullName}! Your rider application has been approved. You can now start delivering with RideEx. Contact support for next steps.`,
-        }),
-      });
-
-      if (!smsResponse.ok) {
-        console.error("Failed to send SMS:", await smsResponse.text());
-        toast.success("Rider approved");
-        toast.error("Failed to send SMS notification");
-        return;
-      }
-
-      toast.success("Rider approved and SMS sent");
+      toast.success("Rider approved");
     } catch (error) {
       console.error("Error updating rider status:", error);
       toast.error("Failed to approve rider");

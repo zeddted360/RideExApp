@@ -380,7 +380,7 @@ const RidersTab: React.FC<RidersTabProps> = ({
                         </span>
                         <Link
                           href={fileUrl(
-                            validateEnv().driversLicenceBuckedId,
+                            validateEnv().driversLicenceBucketId,
                             selectedRider.driversLicensePicture
                           )}
                           target="_blank"

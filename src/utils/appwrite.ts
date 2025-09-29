@@ -25,7 +25,7 @@ interface EnvConfig {
   newsLetterCollectionId: string;
   vendorsCollectionId: string;
   ridersCollectionId:string;
-  driversLicenceBuckedId:string;
+  driversLicenceBucketId:string;
   promoOfferCollectionId:string;
   promoOfferBucketId:string;
 }
@@ -60,7 +60,7 @@ export function validateEnv(): EnvConfig {
     newsLetterCollectionId: process.env.NEXT_PUBLIC_APPWRITE_NEWSLETTER_COLLECTION_ID,
     vendorsCollectionId:process.env.NEXT_PUBLIC_VENDORS_COLLECTION_ID,
     ridersCollectionId:process.env.NEXT_PUBLIC_RIDERS_COLLECTION_ID,
-    driversLicenceBuckedId:process.env.NEXT_PUBLIC_APPWRITE_DRIVERS_LICENCE_COLLECTION_ID,
+    driversLicenceBucketId:process.env.NEXT_PUBLIC_APPWRITE_DRIVERS_LICENCE_COLLECTION_ID,
     promoOfferCollectionId:process.env.NEXT_PUBLIC_APPWRITE_PROMO_OFFER_COLLECTION_ID,
     promoOfferBucketId:process.env.NEXT_PUBLIC_APPWRITE_PROMO_OFFER_BUCKET_ID,
   };
@@ -69,6 +69,7 @@ export function validateEnv(): EnvConfig {
   const missingVars = Object.entries(requiredEnvVars)
     .filter(([_, value]) => value === undefined)
     .map(([key]) => key);
+
 
   if (missingVars.length > 0) {
     throw new Error(
@@ -100,7 +101,7 @@ export function validateEnv(): EnvConfig {
     newsLetterCollectionId:requiredEnvVars.newsLetterCollectionId!,
     vendorsCollectionId:requiredEnvVars.vendorsCollectionId!,
     ridersCollectionId:requiredEnvVars.ridersCollectionId!,
-    driversLicenceBuckedId:requiredEnvVars.driversLicenceBuckedId!,
+    driversLicenceBucketId:requiredEnvVars.driversLicenceBucketId!,
     promoOfferCollectionId:requiredEnvVars.promoOfferCollectionId!,
     promoOfferBucketId:requiredEnvVars.promoOfferBucketId!,
   };

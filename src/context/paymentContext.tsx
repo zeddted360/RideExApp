@@ -1,10 +1,10 @@
+"use client";
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { useDispatch } from 'react-redux';
 import { AppDispatch } from '@/state/store';
 import { updateBookedOrderAsync } from '@/state/bookedOrdersSlice';
 import toast from 'react-hot-toast';
 import { validateEnv } from '@/utils/appwrite';
-import { sendPaymentConfirmationSMS, sendPaymentReceivedAdminSMS } from '@/utils/smsService';
 
 interface PaystackParams {
   email: string;
@@ -50,50 +50,7 @@ export const PaymentProvider = ({ children }: { children: ReactNode }) => {
           orderData: { paid: true },
         })).unwrap();
         
-        // Get order details for SMS
-        const { databaseId, bookedOrdersCollectionId } = validateEnv();
-        const orderResponse = await fetch(`/api/orders/${orderId}`, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        }).catch(() => null);
-        
-        let orderDetails = null;
-        if (orderResponse?.ok) {
-          orderDetails = await orderResponse.json();
-        }
-        
-        // Send SMS notifications
-        if (orderDetails) {
-          const userSmsPromise = sendPaymentConfirmationSMS(
-            orderDetails.orderId || reference,
-            orderDetails.phone || email,
-            amount
-          );
-          
-          const adminSmsPromise = sendPaymentReceivedAdminSMS(
-            orderDetails.orderId || reference,
-            orderDetails.customerId || email,
-            amount
-          );
-          
-          // Send both SMS notifications
-          const [userSmsSent, adminSmsSent] = await Promise.all([
-            userSmsPromise,
-            adminSmsPromise
-          ]);
-          
-          if (userSmsSent && adminSmsSent) {
-            toast.success('Payment successful! SMS notifications sent.');
-          } else if (userSmsSent) {
-            toast.success('Payment successful!');
-            toast.error('Failed to send admin notification.');
-          } else {
-            toast.success('Payment successful!');
-            toast.error('Failed to send SMS notifications.');
-          }
-        } else {
-          toast.success('Payment successful!');
-        }
+        toast.success('Payment successful!');
         
         if (onSuccess) onSuccess();
       } catch (err) {
@@ -107,7 +64,7 @@ export const PaymentProvider = ({ children }: { children: ReactNode }) => {
     const runPaystack = () => {
       // @ts-ignore
       const handler = window.PaystackPop && window.PaystackPop.setup({
-        key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
+        key:validateEnv().payStackPublickKey,
         email,
         amount: amount * 100, // Paystack expects kobo
         ref: reference,
@@ -141,4 +98,4 @@ export const usePayment = () => {
   const context = useContext(PaymentContext);
   if (!context) throw new Error('usePayment must be used within a PaymentProvider');
   return context;
-}; 
+};

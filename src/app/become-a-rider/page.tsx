@@ -71,12 +71,12 @@ const BecomeARiderPage = () => {
     setMessage({ text: "", type: "" });
 
     try {
-      const { databaseId, ridersCollectionId, driversLicenceBuckedId } = validateEnv(); 
+      const { databaseId, ridersCollectionId, driversLicenceBucketId } = validateEnv(); 
 
       let driversLicensePictureId = null;
       if (driversLicensePicture) {
         const uploadedFile = await storage.createFile(
-          driversLicenceBuckedId,
+          driversLicenceBucketId,
           ID.unique(),
           driversLicensePicture
         );
@@ -259,7 +259,7 @@ const BecomeARiderPage = () => {
                     <div key={field.name} className="space-y-2">
                       <label
                         htmlFor={field.name}
-                        className="block text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2"
+                        className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2"
                       >
                         <span className="text-lg">{field.icon}</span>
                         {field.label}
@@ -320,7 +320,7 @@ const BecomeARiderPage = () => {
                   <div className="space-y-2">
                     <label
                       htmlFor="driversLicensePicture"
-                      className="block text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2"
+                      className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2"
                     >
                       <span className="text-lg">📸</span>
                       Upload Driver's License Picture
@@ -353,7 +353,7 @@ const BecomeARiderPage = () => {
                     <div key={field.name} className="space-y-2">
                       <label
                         htmlFor={field.name}
-                        className="block text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2"
+                        className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2"
                       >
                         <span className="text-lg">{field.icon}</span>
                         {field.label}

@@ -20,7 +20,6 @@ import AddressSection from "@/components/checkout/AddressSection";
 import PaymentMethodSelector, { PaymentMethod } from "@/components/checkout/PaymentMethodSelector";
 import PlaceOrderButton from "@/components/checkout/PlaceOrderButton";
 import { generateTimeSlots, formatDeliveryTime } from "@/utils/checkoutUtils";
-import { sendOrderPlacedSMS } from "@/utils/smsService";
 import { branches } from "../../../data/branches";
 import { useAuth } from "@/context/authContext";
 
@@ -392,12 +391,6 @@ export default function CheckoutClient() {
       await Promise.all([
         sendNotification(order, "admin"),
         sendNotification(order, userId),
-        sendOrderPlacedSMS({
-          userPhone: phoneNumber,
-          orderId,
-          userName: user.username || user.email || userId,
-          origin: window.location.origin,
-        }).catch(() => handleError("Failed to send SMS confirmation.")),
       ]);
 
       await Promise.all(

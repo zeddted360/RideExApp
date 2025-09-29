@@ -56,7 +56,7 @@ const AboutPage = () => {
               Welcome to RideEx
             </h2>
             <p className="text-lg text-gray-700 dark:text-gray-300 leading-7">
-              At RideEx, we are revolutionizing the way people access essential services across Nigeria and beyond. Established with a vision to deliver efficiency and convenience, we combine cutting-edge technology with a robust motorcycle-based logistics network.
+              At Rideex Logistics and Freight company Limited, we are revolutionizing the way people access essential services across Nigeria and beyond. Established with a vision to deliver efficiency and convenience, we combine cutting-edge technology with a robust motorcycle-based logistics network.
             </p>
           </div>
 
