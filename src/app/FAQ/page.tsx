@@ -14,7 +14,7 @@ const FAQPage = () => {
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-5 border-b border-gray-200/10 dark:border-white/10 relative z-10">
         <button
-          className="p-2 rounded-full bg-gray-900/10 dark:bg-white/10 hover:bg-orange-400/20 dark:hover:bg-orange-500/20 transition-all duration-300 flex items-center justify-center"
+          className="group p-2 rounded-full bg-gray-900/10 dark:bg-white/10 hover:bg-orange-400/20 dark:hover:bg-orange-500/20 transition-all duration-300 flex items-center justify-center"
           onClick={() => router.back()}
           aria-label="Go back"
         >
@@ -48,13 +48,13 @@ const FAQPage = () => {
               Frequently Asked Questions
             </h2>
             <p className="text-lg text-gray-700 dark:text-gray-300 leading-7">
-              Find answers to common questions about RideEx, your Moto freight and logistics solution. If you need further assistance, contact us at{' '}
-              <a href="mailto:support@rideex.com" className="text-orange-600 dark:text-orange-400 underline hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                support@rideex.com
+              Find answers to common questions about RideEx, your on-demand food delivery platform. If you need further assistance, contact us at{' '}
+              <a href="mailto:rideexapp@gmail.com" className="text-orange-600 dark:text-orange-400 underline hover:text-red-600 dark:hover:text-red-400 transition-colors">
+                rideexapp@gmail.com
               </a>{' '}
               or{' '}
-              <a href="tel:+2348012345678" className="text-orange-600 dark:text-orange-400 underline hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                +234 801 234 5678
+              <a href="tel:+2347072087857" className="text-orange-600 dark:text-orange-400 underline hover:text-red-600 dark:hover:text-red-400 transition-colors">
+                +234 707 208 7857
               </a>
               .
             </p>
@@ -63,32 +63,56 @@ const FAQPage = () => {
           {/* FAQ Sections */}
           {[
             {
-              question: 'What services does RideEx offer?',
-              answer: 'RideEx is a Moto freight and logistics company that connects users with restaurants, fruit, grocery and supermarket, pharmacy, and health services. We facilitate ordering, delivery, and logistics through our mobile application and motorcycle network.',
+              question: 'What is RideEx food delivery?',
+              answer: 'RideEx is an on-demand food delivery platform that connects customers with a wide range of restaurants and vendors, ensuring quick, reliable, and convenient delivery of meals and essentials.',
             },
             {
-              question: 'How fast is the delivery?',
-              answer: 'Delivery times are estimates and may vary based on location, weather, and preparation time. Our efficient motorcycle network aims to provide quick service, typically within 30-60 minutes in urban areas.',
+              question: 'Where is your office located?',
+              answer: 'Our head office is located in Owerri, Nigeria. For specific directions or visits, kindly check our contact section.',
+            },
+            {
+              question: 'What are your working hours?',
+              answer: 'We operate daily from 8:00am to 8:00pm, including weekends and public holidays, to serve our customers efficiently.',
+            },
+            {
+              question: 'What services does RideEx offer?',
+              answer: 'RideEx provides food delivery, grocery delivery, and vendor support services designed to make ordering and delivery fast, secure, and reliable.',
+            },
+            {
+              question: 'Where do you cover?',
+              answer: 'Our delivery services currently cover Owerri, New Owerri and Obinze. We are continuously expanding our service areas to reach more customers.',
             },
             {
               question: 'How can I place an order?',
-              answer: 'You can place an order through our mobile application. Simply download the app, sign up, browse available services, and follow the checkout process.',
+              answer: 'Orders can be placed directly through the RideEx mobile application, website, or WhatsApp chatbot. Simply browse available restaurants or vendors, select your items, and proceed to checkout.',
             },
             {
               question: 'What payment methods are accepted?',
-              answer: 'We accept various payment methods available on the platform, including mobile money, credit/debit cards, and cash on delivery (where applicable). Check the app for specific options.',
+              answer: 'We accept secure payment options which include Bank transfer, and cash on delivery.',
+            },
+            {
+              question: 'How is the delivery fee calculated?',
+              answer: 'Delivery fees are determined by distance, order size, and location. The applicable fee will be displayed before you confirm your order.',
+            },
+            {
+              question: 'There are missing or incomplete products in my order. What should I do?',
+              answer: 'In such cases, please contact our customer support immediately through our <a href="https://wa.me/2347072087857" className="text-orange-600 dark:text-orange-400 underline hover:text-red-600 dark:hover:text-red-400 transition-colors">WhatsApp line</a>. We will promptly investigate and resolve the issue.',
             },
             {
               question: 'Can I cancel my order?',
-              answer: 'Yes, orders can be cancelled within a limited time frame after placement. Refund policies vary by service provider; please refer to our refund policy in the app for details.',
+              answer: 'Yes. Orders may be canceled within a limited time frame after placement. Cancellation policies may vary depending on the restaurant/vendor, and applicable charges may apply.',
+            },
+            {
+              question: 'Should I tip my couriers?',
+              answer: 'Tipping is optional but greatly appreciated. It serves as recognition for the effort and service of our delivery partners.',
             },
             {
               question: 'Is my personal information secure?',
-              answer: 'Yes, we are committed to protecting your privacy. Review our <a href="/privacy" className="text-orange-600 dark:text-orange-400 underline hover:text-red-600 dark:hover:text-red-400 transition-colors">Privacy Policy</a> to learn how we collect, use, and protect your data.',
+              answer: 'Yes. We prioritize data privacy and employ advanced security measures to ensure that your personal information remains safe and confidential.',
             },
             {
               question: 'How can I contact customer support?',
-              answer: 'You can reach us via email at <a href="mailto:support@rideex.com" className="text-orange-600 dark:text-orange-400 underline hover:text-red-600 dark:hover:text-red-400 transition-colors">support@rideex.com</a> or by phone at <a href="tel:+2348012345678" className="text-orange-600 dark:text-orange-400 underline hover:text-red-600 dark:hover:text-red-400 transition-colors">+234 801 234 5678</a>. Support is also available through the app.',
+              answer: 'You can reach our customer support team through <a href="tel:+2347072087857" className="text-orange-600 dark:text-orange-400 underline hover:text-red-600 dark:hover:text-red-400 transition-colors">+234 707 208 7857</a> or via email at <a href="mailto:rideexapp@gmail.com" className="text-orange-600 dark:text-orange-400 underline hover:text-red-600 dark:hover:text-red-400 transition-colors">rideexapp@gmail.com</a>. We are available to assist you during working hours.',
             },
           ].map((faq, index) => (
             <div key={index} className="my-6">
@@ -101,15 +125,6 @@ const FAQPage = () => {
               />
             </div>
           ))}
-
-          <div className="mt-12 pt-6 border-t border-gray-200/10 dark:border-white/10 text-center">
-            <p className="text-sm text-gray-600 dark:text-gray-400 font-mono mb-2">
-              Last updated: September 2025
-            </p>
-            <p className="text-sm text-gray-600 dark:text-gray-400 font-mono">
-              © 2025 RideEx. All rights reserved.
-            </p>
-          </div>
         </div>
       </main>
     </div>

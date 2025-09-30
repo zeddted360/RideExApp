@@ -1,5 +1,5 @@
 "use client";
-import { ChevronLeft, ChevronRight, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import React, { useEffect, useRef, Suspense } from "react";
 import Image from "next/image";
 import { useDispatch, useSelector } from "react-redux";
@@ -106,6 +106,7 @@ const Menu = () => {
               Our Menu
             </h2>
             <Button
+            onClick={() => router.push('/menu')}
               variant="outline"
               className="bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-800/30 hover:text-orange-700 dark:hover:text-orange-300 transition-colors duration-200"
             >
@@ -114,28 +115,11 @@ const Menu = () => {
           </div>
 
           <div className="relative">
-            {/* Navigation Arrows */}
-            <Button
-              onClick={scrollLeft}
-              variant="outline"
-              size="icon"
-              className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-md hover:bg-white dark:hover:bg-gray-700 z-10 hidden sm:flex"
-            >
-              <ChevronLeft className="w-6 h-6 text-gray-600 dark:text-gray-300" />
-            </Button>
-            <Button
-              onClick={scrollRight}
-              variant="outline"
-              size="icon"
-              className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-md hover:bg-white dark:hover:bg-gray-700 z-10 hidden sm:flex"
-            >
-              <ChevronRight className="w-6 h-6 text-gray-600 dark:text-gray-300" />
-            </Button>
 
             {/* Scrollable/grid container */}
             <Suspense
               fallback={
-                <div className="flex overflow-x-auto space-x-3 sm:space-x-4 pb-4 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-4 sm:gap-6 sm:overflow-visible scrollbar-hide">
+                <div className="flex overflow-x-auto space-x-3 sm:space-x-4 pb-4 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-6 sm:overflow-visible scrollbar-hide">
                   {[...Array(4)].map((_, index) => (
                     <RestaurantCardSkeleton key={index} />
                   ))}
@@ -157,7 +141,7 @@ const Menu = () => {
                     </p>
                   </div>
                 ) : restaurants.length > 0 ? (
-                  restaurants.map((restaurant, index) => (
+                  restaurants.slice(0, 4).map((restaurant, index) => (
                     <RestaurantCard
                       key={`${restaurant.$id}-${index}`}
                       restaurant={restaurant}

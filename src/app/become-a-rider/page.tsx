@@ -341,7 +341,7 @@ const BecomeARiderPage = () => {
                   {[
                     { name: "vehicleType", label: "Vehicle Type", type: "select", icon: "🚲", options: ["Bike", "Bicycle"] },
                     { name: "previousWorkPlace", label: "Previous Place of Work", type: "text", icon: "🏢" },
-                    { name: "workDuration", label: "How Long Did You Work There?", type: "text", icon: "⏳", placeholder: "e.g., 2 years" },
+                    { name: "workDuration", label: "How Long Did You Work There?", type: "select", icon: "⏳", options: ["Less than 6 months", "6-12 months", "1-2 years", "2-5 years", "5+ years"] },
                     { name: "guarantor1Name", label: "Guarantor 1 Name", type: "text", icon: "🤝" },
                     { name: "guarantor1Phone", label: "Guarantor 1 Phone", type: "tel", icon: "📞" },
                     { name: "guarantor1Relationship", label: "Guarantor 1 Relationship", type: "select", icon: "👥", options: ["Family", "Friend", "Colleague", "Other"] },
