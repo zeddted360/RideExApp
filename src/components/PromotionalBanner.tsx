@@ -158,7 +158,7 @@ export default function PromotionalBanner() {
         </div>
 
         <div className="grid gap-8 lg:gap-12">
-          {popularItems.map((item, index) => (
+          {popularItems.filter((item)=>item.isApproved === true).map((item, index) => (
             <div
               key={item.$id}
               className={`flex flex-col ${

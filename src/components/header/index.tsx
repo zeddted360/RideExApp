@@ -6,16 +6,13 @@ import { useTheme } from "next-themes";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "@/state/store";
 import { deleteOrderAsync, resetOrders } from "@/state/orderSlice";
-import { createOrderAsync } from "@/state/orderSlice";
 import toast from "react-hot-toast";
 import { useAuth } from "@/context/authContext";
 import { logoutAsync } from "@/state/authSlice";
 import { useLanguage } from "@/context/languageContext";
 import { useTranslation } from "react-i18next";
-import ProfileDropdown from "@/components/ui/ProfileDropdown";
 import {
     Globe,
-  Menu,
   Search,
   ShoppingCart,
   Star,
@@ -32,6 +29,7 @@ import RightActions from "./RightActions";
 import MobileNav from "./MobileNav";
 import MobileSearch from "./MobileSearch";
 import DesktopNav from "./DesktopNav";
+import { useShowCart } from "@/context/showCart";
 
 const Header = () => {
   const router = useRouter();
@@ -62,6 +60,7 @@ const Header = () => {
   const cartItems = orders || [];
   const { currentLanguage, changeLanguage, isLanguageLoading } = useLanguage();
   const { t } = useTranslation();
+  const {setItem, setIsOpen} = useShowCart();
 
   useEffect(() => {
     setIsClient(true);
@@ -94,12 +93,13 @@ const Header = () => {
           id: restaurant.$id,
           name: restaurant.name,
           type: "restaurant",
-          image: restaurant.image,
+          image: restaurant.logo, // Use logo as image for restaurants
           description: restaurant.description,
           category: restaurant.category,
           rating: restaurant.rating,
           deliveryTime: restaurant.deliveryTime,
           distance: restaurant.distance,
+          slug: restaurant.name, // Use name directly for slug (to match page query by name)
         });
       }
     });
@@ -120,6 +120,7 @@ const Header = () => {
           description: item.description,
           category: item.category,
           restaurantName: item.restaurantName,
+          restaurantId: item.restaurantId || "unknown", // Assume available or fallback
         });
       }
     });
@@ -132,13 +133,15 @@ const Header = () => {
         item.category?.toLowerCase().includes(query)
       ) {
         results.push({
-          id: item.$id,
+          id: item.$id || String(item.id), // Ensure string, fallback to 'undefined' if both missing but unlikely
           name: item.name,
           type: "popular",
           image: item.image,
           price: item.price,
           description: item.description,
           category: item.category,
+          restaurantName: item.restaurantName || `Popular ${item.category}`,
+          restaurantId: item.restaurantId || "unknown",
         });
       }
     });
@@ -151,13 +154,15 @@ const Header = () => {
         item.category?.toLowerCase().includes(query)
       ) {
         results.push({
-          id: item.$id,
+          id: item.$id, // Assuming $id always present for fetched items
           name: item.name,
           type: "featured",
           image: item.image,
           price: item.price,
           description: item.description,
           category: item.category,
+          restaurantName: item.restaurantName || `Featured from ${item.restaurant}`,
+          restaurantId: item.restaurant || "unknown",
         });
       }
     });
@@ -239,18 +244,21 @@ const Header = () => {
   };
 
   const handleResultClick = (result: ISearchResult) => {
+    // Immediately close all search UI
     setIsSearchOpen(false);
     setSearchQuery("");
     setSelectedIndex(-1);
+    setIsSearchVisible(false);
 
     switch (result.type) {
       case "restaurant":
-        router.push(`/restaurant/${result.id}`); // Fixed: Route to specific restaurant page
+        // Use encoded name for slug route to match page query by name
+        router.push(`/restaurant/${encodeURIComponent(result.slug as string)}`);
         break;
       case "menu":
       case "popular":
       case "featured":
-        router.push(`/menu/${result.id}`); // Fixed: Route to specific menu item page
+        router.push(`/menu`); 
         break;
     }
   };
@@ -258,37 +266,40 @@ const Header = () => {
   const handleAddToCart = async (result: ISearchResult) => {
     if (result.type === "restaurant") return;
     if (!userId) {
+      // Close search before redirect
+      setIsSearchOpen(false);
+      setSearchQuery("");
+      setSelectedIndex(-1);
+      setIsSearchVisible(false);
       router.push("/login");
       return;
     }
+    // Close search UI first to avoid any overlay issues
+    setIsSearchOpen(false);
+    setSearchQuery("");
+    setSelectedIndex(-1);
+    setIsSearchVisible(false);
     setIsAddingToCart(result.id);
-    try {
-      const orderData = {
-        userId: userId as string,
-        itemId: result.id,
-        name: result.name,
-        image: result.image || "",
-        price: result.price || "0",
-        restaurantId: result.restaurantName || "unknown",
-        quantity: 1,
-        category: result.category || "general",
-        source: result.type,
-        totalPrice: parseFloat(result.price || "0"),
-        status: "pending" as const,
-      };
-      await dispatch(createOrderAsync(orderData)).unwrap();
-      toast.success(`${result.name} added to cart!`, {
-        duration: 3000,
-        position: "top-right",
-      });
-    } catch (err) {
-      toast.error(`Failed to add ${result.name} to cart`, {
-        duration: 4000,
-        position: "top-right",
-      });
-    } finally {
-      setIsAddingToCart(null);
-    }
+
+    // Prepare cart item with better fallbacks
+    const cartItem = {
+      userId: user.userId,
+      itemId: result.id,
+      restaurantId: result.restaurantId || result.restaurantName || "unknown",
+      category: result.category || "general",
+      image: result.image || "",
+      name: result.name,
+      price: result.price || "0",
+      source: result.type as "menu" | "featured" | "popular",
+      quantity: 1,
+    };
+
+    // Set item and open modal after a micro-task to ensure search closes first
+    setItem(cartItem);
+    requestAnimationFrame(() => {
+      setIsOpen(true);
+      setIsAddingToCart(null); // Reset loading
+    });
   };
 
   const getTypeIcon = (type: string) => {

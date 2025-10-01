@@ -226,12 +226,13 @@ export interface ISearchResult {
   price?: string;
   description?: string;
   restaurantName?: string;
+  restaurantId?: string; // Added for better cart handling
   category?: string;
   rating?: number;
   deliveryTime?: string;
   distance?: string;
+  slug?: string;
 }
-
 // newly added
 export interface IVendor {
   fullName:string;

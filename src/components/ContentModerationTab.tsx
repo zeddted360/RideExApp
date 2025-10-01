@@ -42,6 +42,8 @@ export default function ContentModerationTab() {
   const { featuredItems } = useSelector((state: RootState) => state.featuredItem);
   const { menuItems } = useSelector((state: RootState) => state.menuItem);
   const { popularItems } = useSelector((state: RootState) => state.popularItem);
+  
+
 
   // Effect to fetch data when tab changes
   useEffect(() => {

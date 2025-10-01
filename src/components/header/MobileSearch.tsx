@@ -58,7 +58,7 @@ const MobileSearch: React.FC<MobileSearchProps> = ({
         )}
 
         {isSearchVisible && (
-          <div className="relative">
+          <div className="relative z-40"> {/* Increased z-index for consistency */}
             <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 to-orange-600/10 rounded-2xl blur-sm" />
             <div className="relative bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-orange-200/50 dark:border-orange-700/50 rounded-2xl shadow-2xl">
               <div className="flex items-center px-4 py-3">

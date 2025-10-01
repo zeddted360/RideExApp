@@ -18,7 +18,7 @@ interface DesktopSearchProps {
   handleSearchToggle: () => void;
   isSearchVisible: boolean;
   handleResultClick: (result: ISearchResult) => void;
-  handleAddToCart: (result: ISearchResult) => void;
+  handleAddToCart: (result: ISearchResult) => Promise<void>; // Made async for consistency
   getImageUrl: (result: ISearchResult) => string;
   getTypeLabel: (type: string) => string;
   getTypeIcon: (type: string) => JSX.Element;
@@ -81,7 +81,7 @@ const DesktopSearch: React.FC<DesktopSearchProps> = ({
         </Button>
 
         {isSearchVisible && (
-          <div className="absolute top-full left-0 right-0 mt-3 transition-all duration-300 ease-out">
+          <div className="absolute top-full left-0 right-0 mt-3 transition-all duration-300 ease-out z-40"> {/* Increased z-index */}
             <div className="relative group">
               <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 to-orange-600/10 rounded-2xl blur-sm" />
               <div className="relative bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-orange-200/50 dark:border-orange-700/50 rounded-2xl shadow-2xl w-[400px] mx-auto md:mr-10">
@@ -115,7 +115,7 @@ const DesktopSearch: React.FC<DesktopSearchProps> = ({
             </div>
 
             {isSearchOpen && searchResults.length > 0 && (
-              <div className="absolute w-[400px] mx-auto md:mr-10 top-full left-0 right-0 mt-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 max-h-96 overflow-y-auto z-30">
+              <div className="w-[400px] mx-auto md:mr-10 top-full left-0 right-0 mt-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-700/50 max-h-96 overflow-y-auto z-10 relative"> {/* Adjusted z-index relative to parent */}
                 <div className="p-3">
                   <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 px-2">
                     {searchResults.length} result
@@ -129,6 +129,7 @@ const DesktopSearch: React.FC<DesktopSearchProps> = ({
                           ? "bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 border border-orange-200 dark:border-orange-700"
                           : "hover:bg-gray-50 dark:hover:bg-gray-700/50 border border-transparent"
                       }`}
+                      onClick={() => handleResultClick(result)} // Added direct click for better UX
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 ring-2 ring-gray-100 dark:ring-gray-700">
@@ -195,13 +196,14 @@ const DesktopSearch: React.FC<DesktopSearchProps> = ({
                             </button>
                             {result.type !== "restaurant" && (
                               <button
-                                onClick={(e) => {
+                                onClick={async (e) => {
+                                  console.log("the result clicked is :", result)
                                   e.preventDefault();
                                   e.stopPropagation();
-                                  handleAddToCart(result);
+                                  await handleAddToCart(result);
                                 }}
                                 disabled={isAddingToCart === result.id}
-                                className="px-3 py-1.5 text-xs bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-lg transition-all duration-200 flex items-center gap-1 font-medium shadow-sm"
+                                className="cursor-pointer px-3 py-1.5 text-xs bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-lg transition-all duration-200 flex items-center gap-1 font-medium shadow-sm"
                               >
                                 {isAddingToCart === result.id ? (
                                   <>

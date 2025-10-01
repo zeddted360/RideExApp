@@ -77,7 +77,7 @@ export const listAsyncMenusItem = createAsyncThunk<
     const response = await databases.listDocuments(
       databaseId,
       menuItemsCollectionId,
-      [Query.orderDesc("createdAt"),Query.equal("isApproved",true)]
+      [Query.orderDesc("createdAt")]
     );
     return response.documents as IMenuItemFetched[];
   } catch (error) {

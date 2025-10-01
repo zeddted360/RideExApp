@@ -75,7 +75,7 @@ export const listAsyncFeaturedItems = createAsyncThunk<
     const response = await databases.listDocuments(
       databaseId,
       featuredId,
-      [Query.orderDesc("createdAt"),Query.equal("isApproved",true) ]
+      [Query.orderDesc("createdAt")]
     );
     return response.documents as IFeaturedItemFetched[];
   } catch (error) {
