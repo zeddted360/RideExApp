@@ -1,3 +1,4 @@
+// app/add-item/page.tsx
 import AddFoodItemForm from "@/components/AddItemForm";
 import { cookies } from "next/headers";
 
@@ -21,10 +22,8 @@ const AddItemPage = async () => {
   const cookie = (await cookies()).getAll();
 
   return (
-    <div className="py-8 px-4 flex justify-center items-start">
-      <div className="w-full max-w-2xl">
-        <AddFoodItemForm />
-      </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <AddFoodItemForm/>
     </div>
   );
 };

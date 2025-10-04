@@ -274,3 +274,24 @@ export interface IRiders {
   status: string;
 }
 export interface IRidersFetched extends IRiders, Models.Document{};
+
+export interface IDiscount {
+  title: string; // e.g., "20% Off on Biryani"
+  description: string; // e.g., "Get 20% off on all Biryani orders this weekend"
+  discountType: "percentage" | "fixed"; // Type of discount
+  discountValue: number; // e.g., 20 for 20%, or 500 for ₦500 off
+  originalPrice?: number; // If item-specific
+  discountedPrice?: number; // Calculated or set
+  validFrom: string; // ISO date string, e.g., "2025-10-04T00:00:00Z"
+  validTo: string; // ISO date string
+  minOrderValue?: number; // Minimum cart value to apply (optional)
+  maxUses?: number; // Total uses limit (optional)
+  code?: string; // Promo code if applicable
+  appliesTo: "all" | "item" | "category" | "restaurant"; // Scope
+  targetId?: string; // Item ID, Category, or Restaurant ID if targeted
+  image?: string | FileList; // Promo banner image ID from storage
+  isActive: boolean; // For admin toggling
+  usageCount?: number; // Track uses (for maxUses enforcement)
+}
+
+export interface IDiscountFetched extends IDiscount, Models.Document {}

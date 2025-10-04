@@ -47,14 +47,14 @@ const MiniNavigation = () => {
       title: 'Restaurant',
       href: '/menu',
       available: true,
-      image: '/shopping_cart.jpg', // Replace with file ID if stored in Appwrite
+      image: '/shopping_cart.jpg',
     },
     {
       id: 'shops',
       title: 'Shops',
       href: '/shops',
       available: false,
-      image: '/shopping_cart.jpg',
+      image: '/home.jpg',
     },
     {
       id: 'pharmacy',

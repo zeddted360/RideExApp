@@ -1,0 +1,272 @@
+import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { databases, storage, validateEnv } from "@/utils/appwrite";
+import { ID, Query } from "appwrite";
+import toast from "react-hot-toast";
+import { IDiscount, IDiscountFetched } from "../../types/types";
+
+interface DiscountState {
+  discounts: IDiscountFetched[];
+  loading: "idle" | "pending" | "succeeded" | "failed";
+  error: string | null;
+}
+
+const initialState: DiscountState = {
+  discounts: [],
+  loading: "idle",
+  error: null,
+};
+
+// Async thunk for listing discounts
+export const listAsyncDiscounts = createAsyncThunk<
+  IDiscountFetched[],
+  void,
+  { rejectValue: string }
+>("discount/listDiscounts", async (_, { rejectWithValue }) => {
+  try {
+    const { databaseId, discountsCollectionId } = validateEnv();
+
+    const response = await databases.listDocuments(
+      databaseId,
+      discountsCollectionId,
+      [
+        Query.orderDesc("validTo"), // Order by expiry descending
+        Query.equal("isActive", true), // Only active discounts
+      ]
+    );
+    return response.documents as IDiscountFetched[];
+  } catch (error) {
+    toast.error(
+      `Failed to fetch discounts: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
+    return rejectWithValue(
+      error instanceof Error ? error.message : "Failed to fetch discounts"
+    );
+  }
+});
+
+// Async thunk for creating discount
+export const createAsyncDiscount = createAsyncThunk<
+  IDiscountFetched,
+  IDiscount,
+  { rejectValue: string }
+>("discount/createDiscount", async (data, { rejectWithValue }) => {
+  try {
+    const { databaseId, discountsCollectionId, discountBucketId } = validateEnv();
+
+    let imageId: string | undefined;
+    if (data.image && data.image[0]) {
+      // Upload image if provided
+      const uploadedFile = await storage.createFile(
+        discountBucketId,
+        ID.unique(),
+        data.image[0] as  unknown as File,
+      );
+      imageId = uploadedFile.$id;
+    }
+
+    const createdDocument = await databases.createDocument(
+      databaseId,
+      discountsCollectionId,
+      ID.unique(),
+      {
+        title: data.title,
+        description: data.description,
+        discountType: data.discountType,
+        discountValue: data.discountValue,
+        originalPrice: data.originalPrice,
+        discountedPrice: data.discountedPrice,
+        validFrom: data.validFrom,
+        validTo: data.validTo,
+        minOrderValue: data.minOrderValue,
+        maxUses: data.maxUses,
+        code: data.code,
+        appliesTo: data.appliesTo,
+        targetId: data.targetId,
+        image: imageId,
+        isActive: data.isActive ?? true,
+        usageCount: 0,
+      }
+    );
+
+    toast.success("Discount created successfully!");
+    return createdDocument as IDiscountFetched;
+  } catch (error) {
+    toast.error(
+      `Failed to create discount: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
+    return rejectWithValue(
+      error instanceof Error ? error.message : "Failed to create discount"
+    );
+  }
+});
+
+// Async thunk for updating discount
+export const updateAsyncDiscount = createAsyncThunk<
+  IDiscountFetched,
+  { id: string; data: Partial<Omit<IDiscount, "image">>; imageFile?: FileList },
+  { rejectValue: string }
+>("discount/updateDiscount", async ({ id, data, imageFile }, { rejectWithValue }) => {
+  try {
+    const { databaseId, discountsCollectionId, discountBucketId } = validateEnv();
+
+    let imageId: string | undefined; // If not updating image, keep existing
+
+    if (imageFile && imageFile[0]) {
+      // Upload new image if provided
+      const uploadedFile = await storage.createFile(
+        discountBucketId,
+        ID.unique(),
+        imageFile[0]
+      );
+      imageId = uploadedFile.$id;
+      // TODO: Delete old image if exists (fetch current and delete)
+    }
+
+    const updatePayload = {
+      ...data,
+      ...(imageId !== undefined && { image: imageId }),
+    };
+
+    const updatedDocument = await databases.updateDocument(
+      databaseId,
+      discountsCollectionId,
+      id,
+      updatePayload
+    );
+
+    toast.success("Discount updated successfully!");
+    return updatedDocument as IDiscountFetched;
+  } catch (error) {
+    toast.error(
+      `Failed to update discount: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
+    return rejectWithValue(
+      error instanceof Error ? error.message : "Failed to update discount"
+    );
+  }
+});
+
+// Async thunk for deleting discount
+export const deleteAsyncDiscount = createAsyncThunk<
+  string,
+  string,
+  { rejectValue: string }
+>("discount/deleteDiscount", async (id, { rejectWithValue }) => {
+  try {
+    const { databaseId, discountsCollectionId } = validateEnv();
+
+    await databases.deleteDocument(databaseId, discountsCollectionId, id);
+
+    toast.success("Discount deleted successfully!");
+    return id;
+  } catch (error) {
+    toast.error(
+      `Failed to delete discount: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
+    return rejectWithValue(
+      error instanceof Error ? error.message : "Failed to delete discount"
+    );
+  }
+});
+
+// Slice
+export const discountSlice = createSlice({
+  name: "discount",
+  initialState,
+  reducers: {},
+  extraReducers: (builder) => {
+    // Handle listAsyncDiscounts
+    builder
+      .addCase(listAsyncDiscounts.pending, (state) => {
+        state.loading = "pending";
+        state.error = null;
+      })
+      .addCase(
+        listAsyncDiscounts.fulfilled,
+        (state, action: PayloadAction<IDiscountFetched[]>) => {
+          state.loading = "succeeded";
+          state.discounts = action.payload;
+          state.error = null;
+        }
+      )
+      .addCase(
+        listAsyncDiscounts.rejected,
+        (state, action: PayloadAction<string | undefined>) => {
+          state.loading = "failed";
+          state.error = action.payload || "Failed to fetch discounts";
+        }
+      )
+      // Handle createAsyncDiscount
+      .addCase(createAsyncDiscount.pending, (state) => {
+        state.loading = "pending";
+        state.error = null;
+      })
+      .addCase(
+        createAsyncDiscount.fulfilled,
+        (state, action: PayloadAction<IDiscountFetched>) => {
+          state.loading = "succeeded";
+          state.discounts = [...state.discounts, action.payload];
+          state.error = null;
+        }
+      )
+      .addCase(
+        createAsyncDiscount.rejected,
+        (state, action: PayloadAction<string | undefined>) => {
+          state.loading = "failed";
+          state.error = action.payload || "Failed to create discount";
+        }
+      )
+      // Handle updateAsyncDiscount
+      .addCase(updateAsyncDiscount.pending, (state) => {
+        state.loading = "pending";
+        state.error = null;
+      })
+      .addCase(
+        updateAsyncDiscount.fulfilled,
+        (state, action: PayloadAction<IDiscountFetched>) => {
+          state.loading = "succeeded";
+          state.discounts = state.discounts.map((d) =>
+            d.$id === action.payload.$id ? action.payload : d
+          );
+          state.error = null;
+        }
+      )
+      .addCase(
+        updateAsyncDiscount.rejected,
+        (state, action: PayloadAction<string | undefined>) => {
+          state.loading = "failed";
+          state.error = action.payload || "Failed to update discount";
+        }
+      )
+      // Handle deleteAsyncDiscount
+      .addCase(deleteAsyncDiscount.pending, (state) => {
+        state.loading = "pending";
+        state.error = null;
+      })
+      .addCase(
+        deleteAsyncDiscount.fulfilled,
+        (state, action: PayloadAction<string>) => {
+          state.loading = "succeeded";
+          state.discounts = state.discounts.filter((d) => d.$id !== action.payload);
+          state.error = null;
+        }
+      )
+      .addCase(
+        deleteAsyncDiscount.rejected,
+        (state, action: PayloadAction<string | undefined>) => {
+          state.loading = "failed";
+          state.error = action.payload || "Failed to delete discount";
+        }
+      );
+  },
+});
+
+export default discountSlice.reducer;

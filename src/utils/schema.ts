@@ -3,7 +3,7 @@ import { z } from "zod";
 
 // Custom refinement to validate FileList and extract the first File
 const fileListSchema = z
-  .custom<FileList>((value) => {
+  .custom<FileList | undefined>((value) => {
     // Check if we're in a browser environment and if the value is a FileList
     if (typeof window !== "undefined" && value instanceof FileList) {
       return value.length > 0;
@@ -140,6 +140,57 @@ export const popularItemSchema = z.object({
     .max(36, "Restaurant ID is too long"),
 });
 
+export const discountSchema = z.object({
+  title: z
+    .string()
+    .min(1, "Title is required")
+    .max(255, "Title is too long"),
+  description: z
+    .string()
+    .min(1, "Description is required")
+    .max(1000, "Description is too long"),
+  discountType: z.enum(["percentage", "fixed"], {
+    required_error: "Discount type is required",
+  }),
+  discountValue: z
+    .number({ required_error: "Discount value is required" })
+    .positive("Discount value must be greater than 0")
+    .max(100, "Discount cannot exceed 100%"),
+  validFrom: z
+    .string()
+    .min(1, "Valid from date is required")
+    .refine((val) => !isNaN(Date.parse(val)), "Invalid date format"),
+  validTo: z
+    .string()
+    .min(1, "Valid to date is required")
+    .refine((val) => !isNaN(Date.parse(val)), "Invalid date format"),
+  minOrderValue: z
+    .number({ required_error: "Min order value is required" })
+    .min(0, "Min order value cannot be negative")
+    .optional()
+    .or(z.literal(0)),
+  maxUses: z
+    .number({ required_error: "Max uses is required" })
+    .min(0, "Max uses cannot be negative")
+    .optional()
+    .or(z.literal(0)),
+  code: z
+    .string()
+    .max(50, "Code is too long")
+    .optional(),
+  appliesTo: z.enum(["all", "item", "category", "restaurant"], {
+    required_error: "Applies to is required",
+  }),
+  targetId: z
+    .string()
+    .max(36, "Target ID is too long")
+    .optional(),
+  image: fileListSchema.optional(),
+  isActive: z.boolean(),
+}).refine((data) => new Date(data.validFrom) < new Date(data.validTo), {
+  message: "Valid to date must be after valid from date",
+  path: ["validTo"],
+});
 
 export const vendorRegistrationSchema = z
   .object({
@@ -169,3 +220,4 @@ export type FeaturedItemFormData = z.infer<typeof featuredItemSchema>;
 export type RestaurantFormData = z.infer<typeof restaurantSchema>;
 export type MenuItemFormData = z.infer<typeof menuItemSchema>;
 export type PopularItemFormData = z.infer<typeof popularItemSchema>;
+export type DiscountFormData = z.infer<typeof discountSchema>;

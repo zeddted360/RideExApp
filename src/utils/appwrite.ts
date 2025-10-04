@@ -28,6 +28,9 @@ interface EnvConfig {
   driversLicenceBucketId:string;
   promoOfferCollectionId:string;
   promoOfferBucketId:string;
+  discountsCollectionId:string;
+  discountBucketId:string;
+  promoImagesBucketId:string;
 }
 
 // Validate environment variables
@@ -63,6 +66,9 @@ export function validateEnv(): EnvConfig {
     driversLicenceBucketId:process.env.NEXT_PUBLIC_APPWRITE_DRIVERS_LICENCE_COLLECTION_ID,
     promoOfferCollectionId:process.env.NEXT_PUBLIC_APPWRITE_PROMO_OFFER_COLLECTION_ID,
     promoOfferBucketId:process.env.NEXT_PUBLIC_APPWRITE_PROMO_OFFER_BUCKET_ID,
+    discountsCollectionId:process.env.NEXT_PUBLIC_APPWRITE_DISCOUNTS_COLLECTION_ID,
+    discountBucketId:process.env.NEXT_PUBLIC_APPWRITE_DISCOUNT_BUCKET_ID,
+    promoImagesBucketId:process.env.NEXT_PUBLIC_APPWRITE_PROMO_IMAGES_BUCKET_ID,
   };
 
   // Check for undefined environment variables
@@ -72,6 +78,7 @@ export function validateEnv(): EnvConfig {
 
 
   if (missingVars.length > 0) {
+    console.log("The missing vars are", missingVars);
     throw new Error(
       `Missing required environment variables: ${missingVars.join(", ")}`
     );
@@ -104,6 +111,9 @@ export function validateEnv(): EnvConfig {
     driversLicenceBucketId:requiredEnvVars.driversLicenceBucketId!,
     promoOfferCollectionId:requiredEnvVars.promoOfferCollectionId!,
     promoOfferBucketId:requiredEnvVars.promoOfferBucketId!,
+    discountsCollectionId:requiredEnvVars.discountsCollectionId!,
+    discountBucketId:requiredEnvVars.discountBucketId!,
+    promoImagesBucketId:requiredEnvVars.promoImagesBucketId!,
   };
 }
 

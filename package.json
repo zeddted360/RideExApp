@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "now": "next dev --turbo",
+    "dev": "node server.js",
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "start": "NODE_ENV=production node server.js"
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^1.16.10",
@@ -43,7 +43,9 @@
     "tailwind-merge": "^3.3.1",
     "twilio": "^5.7.3",
     "vaul": "^1.1.2",
-    "zod": "^3.25.74"
+    "zod": "^3.25.74",
+    "typescript": "^5"
+
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -54,7 +56,6 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "tailwindcss": "^4",
-    "tw-animate-css": "^1.3.5",
-    "typescript": "^5"
+    "tw-animate-css": "^1.3.5"
   }
 }

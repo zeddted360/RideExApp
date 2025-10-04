@@ -6,10 +6,15 @@ import {
   fetchBookedOrders,
   updateBookedOrderAsync,
 } from "@/state/bookedOrdersSlice";
+import {
+  listAsyncRestaurants,
+  updateAsyncRestaurant,
+  deleteAsyncRestaurant,
+} from "@/state/restaurantSlice"; // Updated import
 import { branches } from "../../../../data/branches";
-import { IBookedOrderFetched, IRidersFetched, IVendor, IVendorFetched, OrderStatus } from "../../../../types/types";
+import { IBookedOrderFetched, IRidersFetched, IVendor, IVendorFetched, OrderStatus, IRestaurantFetched } from "../../../../types/types";
 import { useRouter } from "next/navigation";
-import { account, databases, validateEnv, client } from "@/utils/appwrite";
+import { account, databases, validateEnv, client, storage } from "@/utils/appwrite";
 import toast from "react-hot-toast";
 import {
   Search,
@@ -29,12 +34,15 @@ import {
   Eye,
   Loader2,
   Package,
+  Edit3,
+  Trash2,
 } from "lucide-react";
 import { Query } from "appwrite";
 import OrdersTab from "@/components/OrdersTab";
 import VendorsTab from "@/components/VendorsTab";
 import ContentModerationTab from "@/components/ContentModerationTab";
-import RidersTab from "@/components/RidersTab"; // New component
+import RidersTab from "@/components/RidersTab";
+import RestaurantsTab from "@/components/RestaurantsTab"; // New component
 
 const ORDER_STATUSES = [
   "pending",
@@ -53,10 +61,13 @@ export default function AdminDashboard() {
   const { orders, loading: ordersLoading, error: ordersError } = useSelector(
     (state: RootState) => state.bookedOrders
   );
+  const { restaurants, loading: restaurantsLoading, error: restaurantsError } = useSelector(
+    (state: RootState) => state.restaurant
+  );
 
   // Tab state
   const [activeTab, setActiveTab] = useState<
-    "orders" | "vendors" | "content" | "riders"
+    "orders" | "vendors" | "content" | "riders" | "restaurants"
   >("orders");
 
   // Orders state
@@ -77,7 +88,7 @@ export default function AdminDashboard() {
   const vendorsPerPage = 10;
 
   // Riders state
-  const [riders, setRiders] = useState<any[]>([]); // Adjust type based on your IRiders interface
+  const [riders, setRiders] = useState<IRidersFetched[]>([]); 
   const [ridersLoading, setRidersLoading] = useState(false);
   const [ridersError, setRidersError] = useState<string | null>(null);
   const [riderSearchTerm, setRiderSearchTerm] = useState("");
@@ -86,6 +97,11 @@ export default function AdminDashboard() {
   >("all");
   const [riderCurrentPage, setRiderCurrentPage] = useState(1);
   const ridersPerPage = 10;
+
+  // Restaurants state
+  const [restaurantSearchTerm, setRestaurantSearchTerm] = useState("");
+  const [restaurantCurrentPage, setRestaurantCurrentPage] = useState(1);
+  const restaurantsPerPage = 10;
 
   // Authentication check
   useEffect(() => {
@@ -112,6 +128,13 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (activeTab === "orders") {
       dispatch(fetchBookedOrders());
+    }
+  }, [dispatch, activeTab]);
+
+  // Fetch restaurants
+  useEffect(() => {
+    if (activeTab === "restaurants") {
+      dispatch(listAsyncRestaurants());
     }
   }, [dispatch, activeTab]);
 
@@ -149,7 +172,7 @@ export default function AdminDashboard() {
         ridersCollectionId,
         [Query.orderDesc("$createdAt"), Query.limit(100)]
       );
-      setRiders(response.documents);
+      setRiders(response.documents as unknown as IRidersFetched[]);
     } catch (error: any) {
       console.error("Error fetching riders:", error);
       setRidersError("Failed to fetch riders");
@@ -174,6 +197,21 @@ export default function AdminDashboard() {
           style: { background: "#dcfce7", color: "#166534" },
         });
         dispatch(fetchBookedOrders());
+      }
+    );
+    return () => unsubscribe();
+  }, [dispatch]);
+
+  // Real-time updates for restaurants
+  useEffect(() => {
+    const { databaseId, restaurantsCollectionId } = validateEnv();
+    const unsubscribe = client.subscribe(
+      `databases.${databaseId}.collections.${restaurantsCollectionId}.documents`,
+      () => {
+        toast.success("Restaurant list has been updated!", {
+          style: { background: "#dcfce7", color: "#166534" },
+        });
+        dispatch(listAsyncRestaurants());
       }
     );
     return () => unsubscribe();
@@ -280,7 +318,7 @@ export default function AdminDashboard() {
   // Rider status change handler
   const handleRiderStatusChange = async (riderId: string) => {
     try {
-      const rider:IRidersFetched = riders.find((r) => r.$id === riderId);
+      const rider:IRidersFetched = riders.find((r) => r.$id === riderId) as IRidersFetched;
 
 
       if (!rider) {
@@ -340,6 +378,11 @@ export default function AdminDashboard() {
     return matchesSearch && matchesStatus;
   });
 
+  // Filter restaurants
+  const filteredRestaurants = restaurants.filter((restaurant: IRestaurantFetched) => {
+    return restaurant.name.toLowerCase().includes(restaurantSearchTerm.toLowerCase());
+  });
+
   const paginatedOrders = filteredOrders.slice(
     (currentPage - 1) * ordersPerPage,
     currentPage * ordersPerPage
@@ -353,6 +396,11 @@ export default function AdminDashboard() {
   const paginatedRiders = filteredRiders.slice(
     (riderCurrentPage - 1) * ridersPerPage,
     riderCurrentPage * ridersPerPage
+  );
+
+  const paginatedRestaurants = filteredRestaurants.slice(
+    (restaurantCurrentPage - 1) * restaurantsPerPage,
+    restaurantCurrentPage * restaurantsPerPage
   );
 
   return (
@@ -387,6 +435,17 @@ export default function AdminDashboard() {
             >
               <Users className="w-4 h-4" />
               Vendors
+            </button>
+            <button
+              onClick={() => setActiveTab("restaurants")}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
+                activeTab === "restaurants"
+                  ? "bg-white dark:bg-gray-700 text-orange-600 shadow-sm"
+                  : "text-gray-600 dark:text-gray-300 hover:text-orange-600"
+              }`}
+            >
+              <Building className="w-4 h-4" />
+              Restaurants
             </button>
             <button
               onClick={() => setActiveTab("content")}
@@ -448,6 +507,20 @@ export default function AdminDashboard() {
             vendorsPerPage={vendorsPerPage}
             handleVendorStatusChange={handleVendorStatusChange}
             VENDOR_STATUSES={VENDOR_STATUSES}
+          />
+        )}
+
+        {activeTab === "restaurants" && (
+          <RestaurantsTab
+            restaurants={paginatedRestaurants}
+            loading={restaurantsLoading}
+            error={restaurantsError}
+            searchTerm={restaurantSearchTerm}
+            setSearchTerm={setRestaurantSearchTerm}
+            currentPage={restaurantCurrentPage}
+            setCurrentPage={setRestaurantCurrentPage}
+            filteredRestaurants={filteredRestaurants}
+            restaurantsPerPage={restaurantsPerPage}
           />
         )}
 
