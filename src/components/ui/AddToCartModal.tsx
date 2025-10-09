@@ -199,6 +199,9 @@ const AddToCartModal = () => {
               <DialogTitle className="text-lg sm:text-2xl font-bold text-white mb-2 tracking-tight line-clamp-2">
                 {item.name === "Jollof" ? "African Jollof" : item.name}
               </DialogTitle>
+              <p className="text-orange-100 text-sm leading-relaxed line-clamp-2 mb-3">
+                {item.description || "Delicious and freshly prepared item."}
+              </p>
               <div className="flex items-center space-x-2">
                 <span className="text-lg sm:text-2xl font-semibold text-white">
                   ₦{itemPrice.toLocaleString()}

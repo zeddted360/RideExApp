@@ -84,6 +84,7 @@ export interface ICartItem {
   quantity: number;
   category: string;
   source: "menu" | "featured" | "popular" | "";
+  description?:string;
 }
 
 //  cart item order processed

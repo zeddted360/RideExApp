@@ -1,11 +1,9 @@
 "use client";
 import FeaturedItem from "@/components/FeaturedItem";
-import Hero from "@/components/Hero";
 import Menu from "@/components/Menu";
 import PromotionalBanner from "@/components/PromotionalBanner";
 import PopularItem from "@/components/PopularItem";
 import { useState } from "react";
-import { useAuth } from "@/context/authContext";
 import MiniNavigation from "@/components/Hero";
 
 export default function HomeClient() {

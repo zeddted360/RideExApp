@@ -132,6 +132,13 @@ const Menu = () => {
   );
   const router = useRouter();
 
+  // Sort restaurants by rating descending
+  const sortedRestaurants = React.useMemo(() => {
+    return [...restaurants].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+  }, [restaurants]);
+
+  const displayRestaurants = sortedRestaurants.slice(0, 4);
+
   // Check scroll position for arrow visibility
   const checkScrollPosition = () => {
     if (scrollRef.current) {
@@ -174,12 +181,11 @@ const Menu = () => {
         window.removeEventListener("resize", checkScrollPosition);
       };
     }
-  }, [restaurants]);
+  }, [sortedRestaurants]);
 
   const isLoading = loading === "idle" || loading === "pending";
   const hasFailed = loading === "failed";
-  const hasRestaurants = restaurants.length > 0;
-  const displayRestaurants = restaurants.slice(0, 4);
+  const hasRestaurants = sortedRestaurants.length > 0;
 
   return (
     <div className="bg-gray-50 dark:bg-gray-900">

@@ -11,6 +11,7 @@ import bookedOrdersReducer from "./bookedOrdersSlice";
 import discountSlice from "./discountSlice";
 import vendorSlice from "./vendorSlice";
 import riderSlice from "./riderSlice";
+import{ categoryLogosReducer} from "./categoryLogosSlice";
 
 
 export const store = configureStore({
@@ -26,6 +27,7 @@ export const store = configureStore({
     discounts:discountSlice,
     vendors:vendorSlice,
     riders:riderSlice,
+     categoryLogos: categoryLogosReducer,
   },
 });
 

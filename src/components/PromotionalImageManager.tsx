@@ -219,11 +219,6 @@ const PromotionalImageManager: React.FC = () => {
                 {/* Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 
-                {/* Image Info Badge */}
-                <div className="absolute top-3 left-3 bg-orange-600 text-white px-3 py-1 rounded-full text-xs font-semibold shadow-md">
-                  Promo {index + 1}
-                </div>
-
                 {/* Admin Controls */}
                 {isAdmin && (
                   <div className="absolute bottom-4 right-4 flex gap-2 transition-all duration-300">

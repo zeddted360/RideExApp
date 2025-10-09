@@ -1,3 +1,4 @@
+"use client";
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -5,35 +6,63 @@ import { useDispatch, useSelector } from 'react-redux';
 import { 
   X,
   Clock,
-  type LucideIcon
+  Settings
 } from 'lucide-react';
-import { fileUrl, validateEnv } from '@/utils/appwrite';
+import { fileUrl, validateEnv, storage, client } from '@/utils/appwrite';
+import { Models } from 'appwrite';
 import toast from 'react-hot-toast';
 import { IRestaurantFetched } from '../../types/types';
 import { AppDispatch, RootState } from '@/state/store';
 import { listAsyncRestaurants } from '@/state/restaurantSlice';
+import { listAsyncLogos } from '@/state/categoryLogosSlice';
+import { useAuth } from '@/context/authContext';
+import CategoryLogoManager from './CategoryLogoManager';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface CategoryItem {
   id: string;
   title: string;
   href: string;
   available: boolean;
-  image?: string; // Path for public folder or file ID for Appwrite
-  icon?: LucideIcon;
+  image?: string; 
+  icon?: any;
 }
 
 const MiniNavigation = () => {
   const [isClient, setIsClient] = useState(false);
   const [showComingSoon, setShowComingSoon] = useState(false);
+  const [showAdminModal, setShowAdminModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<CategoryItem | IRestaurantFetched | null>(null);
   const dispatch = useDispatch<AppDispatch>();
   const { restaurants, loading, error } = useSelector((state: RootState) => state.restaurant);
-  const { restaurantBucketId } = validateEnv();
+  const { logos } = useSelector((state: RootState) => state.categoryLogos);
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  const { restaurantBucketId, categoryLogosBucketId } = validateEnv();
 
   useEffect(() => {
     setIsClient(true);
     dispatch(listAsyncRestaurants());
+    dispatch(listAsyncLogos());
   }, [dispatch]);
+
+  useEffect(() => {
+    if (!isClient) return;
+
+    const channel = `buckets.${categoryLogosBucketId}.files`;
+    const unsubscribe = client.subscribe(channel, (payload) => {
+      console.log('Realtime payload in MiniNav:', payload); // Debug log
+      if (payload.events && payload.events.some(event => 
+        event.startsWith('storage.buckets.') && event.includes('.files')
+      )) {
+        dispatch(listAsyncLogos());
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [categoryLogosBucketId, isClient, dispatch]);
 
   useEffect(() => {
     if (error) {
@@ -47,21 +76,21 @@ const MiniNavigation = () => {
       title: 'Restaurant',
       href: '/menu',
       available: true,
-      image: '/shopping_cart.jpg',
+      image: logos.restaurant ? fileUrl(categoryLogosBucketId, logos.restaurant.$id) : '/shopping_cart.jpg',
     },
     {
       id: 'shops',
       title: 'Shops',
       href: '/shops',
       available: false,
-      image: '/home.jpg',
+      image: logos.shops ? fileUrl(categoryLogosBucketId, logos.shops.$id) : '/home.jpg',
     },
     {
       id: 'pharmacy',
       title: 'Pharmacy',
       href: '/pharmacy',
       available: false,
-      image: '/hospital.jpg',
+      image: logos.pharmacy ? fileUrl(categoryLogosBucketId, logos.pharmacy.$id) : '/hospital.jpg',
     },
   ];
 
@@ -93,11 +122,7 @@ const MiniNavigation = () => {
 
     const imageUrl = isRestaurant && item.logo 
       ? fileUrl(restaurantBucketId, item.logo as string)
-      : (item as CategoryItem).image?.startsWith('/') 
-        ? (item as CategoryItem).image 
-        : (item as CategoryItem).image 
-          ? fileUrl(restaurantBucketId, item.image)
-          : '/placeholder.jpg';
+      : (item as CategoryItem).image || '/placeholder.jpg';
 
     if (item.available) {
       return (
@@ -108,7 +133,7 @@ const MiniNavigation = () => {
         >
           <div className={`relative flex items-center justify-center ${containerSize} ${isExploreItem ? 'rounded-full' : 'rounded-2xl'} overflow-hidden bg-gray-100/90 dark:bg-gray-800/90 group-hover:bg-orange-100/40 dark:group-hover:bg-orange-900/40 transition-all duration-300 shadow-md group-hover:shadow-lg ring-1 ring-gray-200/50 dark:ring-gray-700/50`}>
             <Image
-              src={imageUrl || "/logo"}
+              src={imageUrl}
               alt={isRestaurant ? item.name : item.title}
               fill
               sizes="(max-width: 640px) 80px, 100px"
@@ -139,7 +164,7 @@ const MiniNavigation = () => {
               />
             ) : (
               <Image
-                src={imageUrl || "/logo"}
+                src={imageUrl}
                 alt={isRestaurant ? item.name : item.title}
                 fill
                 sizes="(max-width: 640px) 80px, 100px"
@@ -164,11 +189,7 @@ const MiniNavigation = () => {
     const isRestaurant = '$id' in selectedItem;
     const imageUrl = isRestaurant && selectedItem.logo 
       ? fileUrl(restaurantBucketId, selectedItem.logo as string)
-      : (selectedItem as CategoryItem).image?.startsWith('/')
-        ? (selectedItem as CategoryItem).image
-        : (selectedItem as CategoryItem).image
-          ? fileUrl(restaurantBucketId, selectedItem.image)
-          : '/placeholder.jpg';
+      : (selectedItem as CategoryItem).image || '/placeholder.jpg';
 
     const Icon = (selectedItem as CategoryItem).icon;
 
@@ -180,7 +201,7 @@ const MiniNavigation = () => {
         aria-labelledby="coming-soon-title"
       >
         <div 
-          className="bg-white dark:bg-gray-900 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl ring-1 ring-gray-200/50 dark:ring-gray-800/50 transform transition-all duration-300 scale-100 hover:scale-[1.02]"
+          className="bg-white dark:bg-gray-900 rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl ring-1 ring-gray-200/50 dark:ring-gray-800/50"
           onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
         >
           <div className="flex items-center justify-between mb-6">
@@ -190,7 +211,7 @@ const MiniNavigation = () => {
                   <Icon className="w-7 h-7 text-orange-500 dark:text-orange-400" />
                 ) : (
                   <Image
-                    src={imageUrl || "/logo"}
+                    src={imageUrl}
                     alt={isRestaurant ? selectedItem.name : selectedItem.title}
                     fill
                     className="object-cover"
@@ -223,7 +244,7 @@ const MiniNavigation = () => {
               ) : (
                 <>
                   <Image
-                    src={imageUrl as string}
+                    src={imageUrl}
                     alt={isRestaurant ? selectedItem.name : selectedItem.title}
                     fill
                     className="object-cover opacity-80"
@@ -266,6 +287,19 @@ const MiniNavigation = () => {
     <section className="mb-8 bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 border-b border-gray-200/50 dark:border-gray-800/50 shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         <div className="space-y-8 sm:space-y-10">
+          {isAdmin && (
+            <div className="flex justify-end -mt-2 mb-4">
+              <button
+                onClick={() => setShowAdminModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 text-sm font-medium"
+                aria-label="Manage category logos"
+              >
+                <Settings className="w-4 h-4" />
+                <span className="hidden sm:inline">Manage Logos</span>
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center justify-center gap-10 sm:gap-12 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-4">
             {mainCategories.map((category) => renderCategoryItem(category))}
           </div>
@@ -297,6 +331,16 @@ const MiniNavigation = () => {
           </div>
         </div>
       </div>
+
+      <Dialog open={showAdminModal} onOpenChange={setShowAdminModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold">Manage Category Logos</DialogTitle>
+          </DialogHeader>
+          <CategoryLogoManager />
+        </DialogContent>
+      </Dialog>
+
       <ComingSoonModal />
     </section>
   );

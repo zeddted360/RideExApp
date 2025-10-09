@@ -1,12 +1,10 @@
 "use client";
 import {
   Heart,
-  Star,
-  ChevronLeft,
-  ChevronRight,
   ShoppingBag,
+  ThumbsUp,
 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import Image from "next/image";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/state/store";
@@ -16,6 +14,7 @@ import { fileUrl, validateEnv } from "@/utils/appwrite";
 import { listAsyncPopularItems } from "@/state/popularSlice";
 import { useAuth } from "@/context/authContext";
 import { useRouter } from "next/navigation";
+import { Button } from "./ui/button";
 
 interface IPopularItemProps {
   toggleFavorite: (id: string) => void;
@@ -23,8 +22,6 @@ interface IPopularItemProps {
 }
 
 const PopularItem = ({ toggleFavorite, favorites }: IPopularItemProps) => {
-  const [currentPage, setCurrentPage] = useState(0);
-  const itemsPerPage = 8;
   const dispatch = useDispatch<AppDispatch>();
   const { popularItems, loading, error } = useSelector(
     (state: RootState) => state.popularItem
@@ -48,28 +45,12 @@ const PopularItem = ({ toggleFavorite, favorites }: IPopularItemProps) => {
     }
   }, [dispatch, loading]);
 
-  // Filter approved items
-  const approvedItems = popularItems.filter((item) => item.isApproved === true);
-
-  // Calculate the items to display based on the current page
-  const startIndex = currentPage * itemsPerPage;
-  const displayedItems = approvedItems.slice(
-    startIndex,
-    startIndex + itemsPerPage
-  );
-
-  // Navigation handlers
-  const handleNext = () => {
-    if (startIndex + itemsPerPage < approvedItems.length) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentPage > 0) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
+  // Filter and sort approved items by rating descending
+  const approvedItems = React.useMemo(() => {
+    return popularItems
+      .filter((item) => item.isApproved === true)
+      .sort((a, b) => (b.rating || 0) - (a.rating || 0));
+  }, [popularItems]);
 
   // Handle loading and error states
   if (loading === "pending") {
@@ -94,94 +75,67 @@ const PopularItem = ({ toggleFavorite, favorites }: IPopularItemProps) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
             <h2 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-gray-100 mb-3">
-              Popular Items
+              Most Popular Items
             </h2>
-            <p className="text-gray-600 dark:text-gray-400 text-base">
-              Discover our trending dishes
-            </p>
           </div>
 
-          {/* Navigation Buttons and Grid Container */}
-          <div className="relative">
-            {/* Previous Button */}
-            <button
-              onClick={handlePrevious}
-              disabled={currentPage === 0}
-              className={`absolute left-0 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-2 rounded-full shadow-md transition-colors duration-200 z-10 ${
-                currentPage === 0
-                  ? "opacity-50 cursor-not-allowed"
-                  : "hover:bg-white dark:hover:bg-gray-700"
-              }`}
-            >
-              <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-            </button>
-
-            {/* Next Button */}
-            <button
-              onClick={handleNext}
-              disabled={startIndex + itemsPerPage >= approvedItems.length}
-              className={`absolute right-0 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-2 rounded-full shadow-md transition-colors duration-200 z-10 ${
-                startIndex + itemsPerPage >= approvedItems.length
-                  ? "opacity-50 cursor-not-allowed"
-                  : "hover:bg-white dark:hover:bg-gray-700"
-              }`}
-            >
-              <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-            </button>
-
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-              {displayedItems.length > 0 ? (
-                displayedItems.map((item: IPopularItemFetched) => (
+          {approvedItems.length > 0 ? (
+            <div className="space-y-6">
+              {approvedItems.map((item: IPopularItemFetched) => {
+                // Calculate percentage: (rating / 5) * 100
+                const ratingPercentage = ((item.rating || 0) / 5) * 100;
+                return (
                   <div
                     key={item.$id}
-                    className="group bg-gradient-to-br from-orange-50 to-red-50 dark:from-gray-800 dark:to-gray-700 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
+                    className="group flex bg-white dark:bg-gray-800 rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 w-full h-[240px] border border-gray-200 dark:border-gray-700"
                   >
-                    <div className="relative">
-                      <div className="w-full h-28 sm:h-32 overflow-hidden">
-                        <Image
-                          src={fileUrl(validateEnv().popularBucketId, item.image)}
-                          alt={item.name}
-                          width={200}
-                          height={150}
-                          className="object-cover w-full h-full"
-                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, 20vw"
-                        />
-                      </div>
+                    {/* Image on the left */}
+                    <div className="relative w-64 h-full overflow-hidden flex-shrink-0">
+                      <Image
+                        src={fileUrl(validateEnv().popularBucketId, item.image)}
+                        alt={item.name}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        sizes="250px"
+                      />
                       <button
                         onClick={() => toggleFavorite(item.$id)}
-                        className="absolute top-2 right-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-1.5 rounded-full hover:bg-white dark:hover:bg-gray-700 transition-colors duration-200"
+                        className="absolute top-3 right-3 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-1.5 rounded-full hover:bg-white dark:hover:bg-gray-700 transition-colors duration-200 z-10"
                       >
                         <Heart
-                          className={`w-3.5 h-3.5 ${
+                          className={`w-4 h-4 ${
                             favorites.has(item.$id)
                               ? "fill-red-500 text-red-500"
                               : "text-gray-600 dark:text-gray-300"
                           }`}
                         />
                       </button>
-                      <div className="absolute bottom-2 left-2 bg-orange-500 text-white px-1.5 py-0.5 rounded-full text-xs font-medium">
-                        <div className="flex items-center gap-0.5">
-                          <Star className="w-2.5 h-2.5 fill-current" />
-                          {item.rating}
+                      <div className="absolute bottom-3 right-3 bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+                        <div className="flex items-center gap-1">
+                          <ThumbsUp className="w-3 h-3 fill-current" />
+                          <span>{Math.round(ratingPercentage)}%</span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="p-2 sm:p-3">
-                      <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm mb-1 line-clamp-1">
-                        {item.name}
-                      </h3>
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-1 line-clamp-1">
-                        {item.category}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 line-clamp-2">
-                        {item.description}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm sm:text-base font-bold text-orange-600 dark:text-orange-400">
+                    {/* Other contents on the right */}
+                    <div className="flex-1 p-4 flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg line-clamp-1">
+                          {item.name}
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-3">
+                          {item.description}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                          {item.category}
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+                        <span className="text-xl font-bold text-orange-600 dark:text-orange-400">
                           ₦{item.price}
                         </span>
-                        <button
+                        <Button
                           onClick={() => {
                             if (user) {
                               setItem({
@@ -194,6 +148,7 @@ const PopularItem = ({ toggleFavorite, favorites }: IPopularItemProps) => {
                                 quantity: 1,
                                 category: item.category,
                                 source: "popular",
+                                description: item.description,
                               });
                               setIsOpen(true);
                             } else {
@@ -201,23 +156,22 @@ const PopularItem = ({ toggleFavorite, favorites }: IPopularItemProps) => {
                             }
                           }}
                           aria-label={`Add ${item.name} to cart`}
-                          className="flex items-center bg-gradient-to-r from-orange-500 to-orange-600 text-white px-2 sm:px-3 py-1 sm:py-1.5 rounded-full font-semibold text-xs hover:from-orange-600 hover:to-orange-700 transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-opacity-50"
+                          className="flex items-center justify-center bg-gradient-to-r from-orange-500 to-orange-600 text-white px-2 py-2 rounded-xl font-semibold text-sm hover:from-orange-600 hover:to-orange-700 transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-opacity-50 min-w-[120px]"
                         >
-                          <ShoppingBag className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1" />
-                          <span className="hidden sm:inline">Add to Cart</span>
-                          <span className="sm:hidden">Add</span>
-                        </button>
+                          <ShoppingBag className="w-4 h-4" />
+                          Add
+                        </Button>
                       </div>
                     </div>
                   </div>
-                ))
-              ) : (
-                <div className="col-span-full text-center text-gray-500 py-8">
-                  No approved popular items available.
-                </div>
-              )}
+                );
+              })}
             </div>
-          </div>
+          ) : (
+            <div className="text-center text-gray-500 py-8">
+              No approved popular items available.
+            </div>
+          )}
         </div>
       </section>
     </div>

@@ -48,6 +48,7 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({ item }) => {
                   quantity: 1,
                   category: item.category,
                   source: "menu",
+                  description:item.description,
                 });
                 setIsOpen(true);
               } else {
