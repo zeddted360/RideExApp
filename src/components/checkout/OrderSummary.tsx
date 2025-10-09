@@ -1,4 +1,5 @@
 import React from "react";
+import { PaymentMethod } from "./PaymentMethodSelector";
 
 interface OrderItem {
   name: string;
@@ -14,6 +15,8 @@ interface OrderSummaryProps {
   isCalculatingFee: boolean;
   deliveryDistance: string;
   deliveryDuration: string;
+  paymentMethod:PaymentMethod;
+  originalDeliveryFee:number;
 }
 
 const OrderSummary: React.FC<OrderSummaryProps> = ({
@@ -23,6 +26,8 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
   isCalculatingFee,
   deliveryDistance,
   deliveryDuration,
+  paymentMethod,
+  originalDeliveryFee
 }) => (
   <div>
     <div className="pb-2">

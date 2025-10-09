@@ -57,7 +57,7 @@ const RestaurantCard = React.memo(
         <div className="relative">
           <div className="w-full aspect-[4/3] overflow-hidden rounded-t-xl bg-gray-200 dark:bg-gray-700">
             <Image
-              src={fileUrl(validateEnv().restaurantBucketId, restaurant.logo)}
+              src={fileUrl(validateEnv().restaurantBucketId, restaurant.logo as unknown as string)}
               alt={`${restaurant.name} logo`}
               width={200}
               height={150}

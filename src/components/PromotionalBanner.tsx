@@ -12,6 +12,7 @@ import { useAuth } from "@/context/authContext";
 import { useRouter } from "next/navigation";
 import { IPromoOfferFetched, IDiscountFetched } from "../../types/types"; 
 import PromotionalImageManager from "./PromotionalImageManager";
+import { Button } from "./ui/button";
 
 export default function PromotionalBanner() {
   const [favorites, setFavorites] = useState(new Set());
@@ -290,7 +291,7 @@ export default function PromotionalBanner() {
                         )}
                       </div>
 
-                      <button
+                      <Button
                         aria-label={`Apply ${discount.title}`}
                         onClick={() => {
                           // Handle discount application (e.g., add to cart with code, or navigate to items)
@@ -305,7 +306,7 @@ export default function PromotionalBanner() {
                       >
                         <ShoppingCart className="w-5 h-5 mr-2" />
                         Apply Deal
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </div>

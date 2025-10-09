@@ -8,41 +8,35 @@ import {
 } from "@/state/bookedOrdersSlice";
 import {
   listAsyncRestaurants,
-  updateAsyncRestaurant,
-  deleteAsyncRestaurant,
-} from "@/state/restaurantSlice"; // Updated import
+} from "@/state/restaurantSlice"; 
+import {
+  listAsyncVendors,
+  updateVendorStatusAsync,
+  deleteVendorAsync,
+} from "@/state/vendorSlice";
+import {
+  listAsyncRiders,
+  updateRiderStatusAsync,
+  deleteRiderAsync,
+} from "@/state/riderSlice";
 import { branches } from "../../../../data/branches";
-import { IBookedOrderFetched, IRidersFetched, IVendor, IVendorFetched, OrderStatus, IRestaurantFetched } from "../../../../types/types";
+import { IBookedOrderFetched, IRidersFetched, OrderStatus, IRestaurantFetched } from "../../../../types/types";
 import { useRouter } from "next/navigation";
 import { account, databases, validateEnv, client, storage } from "@/utils/appwrite";
 import toast from "react-hot-toast";
 import {
-  Search,
-  Filter,
-  ChevronDown,
   Users,
   ShoppingCart,
-  CheckCircle,
-  XCircle,
-  Clock,
   User,
-  Mail,
-  Phone,
   Building,
-  MapPin,
-  Calendar,
-  Eye,
-  Loader2,
   Package,
-  Edit3,
-  Trash2,
 } from "lucide-react";
 import { Query } from "appwrite";
 import OrdersTab from "@/components/OrdersTab";
 import VendorsTab from "@/components/VendorsTab";
 import ContentModerationTab from "@/components/ContentModerationTab";
 import RidersTab from "@/components/RidersTab";
-import RestaurantsTab from "@/components/RestaurantsTab"; // New component
+import RestaurantsTab from "@/components/RestaurantsTab";
 
 const ORDER_STATUSES = [
   "pending",
@@ -54,6 +48,7 @@ const ORDER_STATUSES = [
 ];
 
 const VENDOR_STATUSES = ["pending", "approved", "rejected"];
+const RIDER_STATUSES = ["pending", "approved", "rejected"];
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -63,6 +58,12 @@ export default function AdminDashboard() {
   );
   const { restaurants, loading: restaurantsLoading, error: restaurantsError } = useSelector(
     (state: RootState) => state.restaurant
+  );
+  const { vendors, loading: vendorsLoading, error: vendorsError } = useSelector(
+    (state: RootState) => state.vendors
+  );
+  const { riders, loading: ridersLoading, error: ridersError } = useSelector(
+    (state: RootState) => state.riders
   );
 
   // Tab state
@@ -77,9 +78,6 @@ export default function AdminDashboard() {
   const ordersPerPage = 10;
 
   // Vendors state
-  const [vendors, setVendors] = useState<IVendorFetched[]>([]);
-  const [vendorsLoading, setVendorsLoading] = useState(false);
-  const [vendorsError, setVendorsError] = useState<string | null>(null);
   const [vendorSearchTerm, setVendorSearchTerm] = useState("");
   const [vendorStatusFilter, setVendorStatusFilter] = useState<
     "pending" | "approved" | "rejected" | "all"
@@ -88,12 +86,9 @@ export default function AdminDashboard() {
   const vendorsPerPage = 10;
 
   // Riders state
-  const [riders, setRiders] = useState<IRidersFetched[]>([]); 
-  const [ridersLoading, setRidersLoading] = useState(false);
-  const [ridersError, setRidersError] = useState<string | null>(null);
   const [riderSearchTerm, setRiderSearchTerm] = useState("");
   const [riderStatusFilter, setRiderStatusFilter] = useState<
-    "pending" | "approved" | "all"
+    "pending" | "approved" | "rejected" | "all"
   >("all");
   const [riderCurrentPage, setRiderCurrentPage] = useState(1);
   const ridersPerPage = 10;
@@ -131,61 +126,26 @@ export default function AdminDashboard() {
     }
   }, [dispatch, activeTab]);
 
+  // Fetch vendors
+  useEffect(() => {
+    if (activeTab === "vendors") {
+      dispatch(listAsyncVendors());
+    }
+  }, [dispatch, activeTab]);
+
+  // Fetch riders
+  useEffect(() => {
+    if (activeTab === "riders") {
+      dispatch(listAsyncRiders());
+    }
+  }, [dispatch, activeTab]);
+
   // Fetch restaurants
   useEffect(() => {
     if (activeTab === "restaurants") {
       dispatch(listAsyncRestaurants());
     }
   }, [dispatch, activeTab]);
-
-  // Fetch vendors
-  const fetchVendors = async () => {
-    if (activeTab !== "vendors") return;
-    setVendorsLoading(true);
-    setVendorsError(null);
-    try {
-      const { databaseId, vendorsCollectionId } = validateEnv();
-      const response = await databases.listDocuments(
-        databaseId,
-        vendorsCollectionId,
-        [Query.orderDesc("$createdAt"), Query.limit(100)]
-      );
-      setVendors(response.documents as unknown as IVendorFetched[]);
-    } catch (error: any) {
-      console.error("Error fetching vendors:", error);
-      setVendorsError("Failed to fetch vendors");
-      toast.error("Failed to fetch vendors");
-    } finally {
-      setVendorsLoading(false);
-    }
-  };
-
-  // Fetch riders
-  const fetchRiders = async () => {
-    if (activeTab !== "riders") return;
-    setRidersLoading(true);
-    setRidersError(null);
-    try {
-      const { databaseId, ridersCollectionId } = validateEnv(); // Ensure ridersCollectionId is defined in validateEnv
-      const response = await databases.listDocuments(
-        databaseId,
-        ridersCollectionId,
-        [Query.orderDesc("$createdAt"), Query.limit(100)]
-      );
-      setRiders(response.documents as unknown as IRidersFetched[]);
-    } catch (error: any) {
-      console.error("Error fetching riders:", error);
-      setRidersError("Failed to fetch riders");
-      toast.error("Failed to fetch riders");
-    } finally {
-      setRidersLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === "vendors") fetchVendors();
-    if (activeTab === "riders") fetchRiders();
-  }, [activeTab]);
 
   // Real-time updates for orders
   useEffect(() => {
@@ -226,11 +186,11 @@ export default function AdminDashboard() {
         toast.success("Vendor list has been updated!", {
           style: { background: "#dcfce7", color: "#166534" },
         });
-        fetchVendors();
+        dispatch(listAsyncVendors());
       }
     );
     return () => unsubscribe();
-  }, []);
+  }, [dispatch]);
 
   // Real-time updates for riders
   useEffect(() => {
@@ -241,11 +201,11 @@ export default function AdminDashboard() {
         toast.success("Rider list has been updated!", {
           style: { background: "#dcfce7", color: "#166534" },
         });
-        fetchRiders();
+        dispatch(listAsyncRiders());
       }
     );
     return () => unsubscribe();
-  }, []);
+  }, [dispatch]);
 
   // Order status change handler
   const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
@@ -270,7 +230,7 @@ export default function AdminDashboard() {
   // Vendor status change handler
   const handleVendorStatusChange = async (
     vendorId: string,
-    newStatus: "approved" | "rejected"
+    newStatus: "pending" | "approved" | "rejected"
   ) => {
     try {
       const vendor = vendors.find((v) => v.$id === vendorId);
@@ -279,74 +239,98 @@ export default function AdminDashboard() {
         return;
       }
 
-      const { databaseId, vendorsCollectionId } = validateEnv();
-      await databases.updateDocument(databaseId, vendorsCollectionId, vendorId, {
-        status: newStatus,
-      });
+      await dispatch(
+        updateVendorStatusAsync({ vendorId, newStatus })
+      ).unwrap();
 
-      setVendors((prev) =>
-        prev.map((v) => (v.$id === vendorId ? { ...v, status: newStatus } : v))
-      );
+      if (newStatus !== "pending") {
+        const notificationResponse = await fetch("/api/vendor/send-notifications", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            vendorEmail: vendor.email,
+            vendorName: vendor.fullName,
+            businessName: vendor.businessName,
+            status: newStatus,
+          }),
+        });
 
-      const notificationResponse = await fetch("/api/vendor/send-notifications", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          vendorEmail: vendor.email,
-          vendorName: vendor.fullName,
-          businessName: vendor.businessName,
-          status: newStatus,
-        }),
-      });
+        if (!notificationResponse.ok) {
+          console.error("Failed to send notification:", await notificationResponse.text());
+          toast.success(`Vendor status updated to ${newStatus}`);
+          toast.error("Failed to send email notification");
+          return;
+        }
 
-      if (!notificationResponse.ok) {
-        console.error("Failed to send notification:", await notificationResponse.text());
+        toast.success(`Vendor status updated to ${newStatus} and email sent`);
+      } else {
         toast.success(`Vendor status updated to ${newStatus}`);
-        toast.error("Failed to send email notification");
+      }
+    } catch (error: any) {
+      console.error("Error updating vendor status:", error);
+      toast.error(error.message || "Failed to update vendor status");
+    }
+  };
+
+  // Vendor delete handler
+  const handleVendorDelete = async (vendorId: string) => {
+    try {
+      const vendor = vendors.find((v) => v.$id === vendorId);
+      if (!vendor) {
+        toast.error("Vendor not found");
         return;
       }
-
-      toast.success(`Vendor status updated to ${newStatus} and email sent`);
-    } catch (error) {
-      console.error("Error updating vendor status:", error);
-      toast.error("Failed to update vendor status");
+      await dispatch(deleteVendorAsync(vendorId)).unwrap();
+      toast.success("Vendor deleted successfully");
+    } catch (error: any) {
+      console.error("Error deleting vendor:", error);
+      toast.error(error.message || "Failed to delete vendor");
     }
   };
 
   // Rider status change handler
-  const handleRiderStatusChange = async (riderId: string) => {
+  const handleRiderStatusChange = async (
+    riderId: string,
+    newStatus: "pending" | "approved" | "rejected"
+  ) => {
     try {
-      const rider:IRidersFetched = riders.find((r) => r.$id === riderId) as IRidersFetched;
-
-
+      const rider = riders.find((r) => r.$id === riderId);
       if (!rider) {
         toast.error("Rider not found");
         return;
       }
 
-      const { databaseId, ridersCollectionId } = validateEnv();
-      await databases.updateDocument(databaseId, ridersCollectionId, riderId, {
-        status: "approved",
-      });
+      await dispatch(
+        updateRiderStatusAsync({ riderId, newStatus })
+      ).unwrap();
 
-      // Update local state
-      setRiders((prev) =>
-        prev.map((r) =>
-          r.$id === riderId ? { ...r, status: "approved" } : r
-        )
-      );
-
-      toast.success("Rider approved");
-    } catch (error) {
+      toast.success(`Rider status updated to ${newStatus}`);
+    } catch (error: any) {
       console.error("Error updating rider status:", error);
-      toast.error("Failed to approve rider");
+      toast.error(error.message || "Failed to update rider status");
+    }
+  };
+
+  // Rider delete handler
+  const handleRiderDelete = async (riderId: string) => {
+    try {
+      const rider = riders.find((r) => r.$id === riderId);
+      if (!rider) {
+        toast.error("Rider not found");
+        return;
+      }
+      await dispatch(deleteRiderAsync(riderId)).unwrap();
+      toast.success("Rider deleted successfully");
+    } catch (error: any) {
+      console.error("Error deleting rider:", error);
+      toast.error(error.message || "Failed to delete rider");
     }
   };
 
   // Filter orders
-  const filteredOrders = orders.filter((order:IBookedOrderFetched) => {
+  const filteredOrders = orders.filter((order: IBookedOrderFetched) => {
     const matchesSearch =
       order.orderId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.customerId.toLowerCase().includes(searchTerm.toLowerCase());
@@ -506,6 +490,7 @@ export default function AdminDashboard() {
             filteredVendors={filteredVendors}
             vendorsPerPage={vendorsPerPage}
             handleVendorStatusChange={handleVendorStatusChange}
+            handleVendorDelete={handleVendorDelete}
             VENDOR_STATUSES={VENDOR_STATUSES}
           />
         )}
@@ -540,6 +525,8 @@ export default function AdminDashboard() {
             filteredRiders={filteredRiders}
             ridersPerPage={ridersPerPage}
             handleRiderStatusChange={handleRiderStatusChange}
+            handleRiderDelete={handleRiderDelete}
+            RIDER_STATUSES={RIDER_STATUSES}
           />
         )}
       </div>

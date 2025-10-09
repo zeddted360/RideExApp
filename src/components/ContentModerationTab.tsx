@@ -4,7 +4,7 @@ import {
   IPopularItemFetched, 
   IFeaturedItemFetched 
 } from "../../types/types";
-import { databases, fileUrl, validateEnv } from "@/utils/appwrite";
+import { fileUrl, validateEnv } from "@/utils/appwrite";
 import toast from "react-hot-toast";
 import {
   Search,
@@ -18,13 +18,21 @@ import {
   Package,
   TrendingUp,
   Award,
+  Edit2,
+  Trash2,
+  Loader2,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/state/store";
-import { listAsyncFeaturedItems } from "@/state/featuredSlice";
-import { listAsyncPopularItems } from "@/state/popularSlice";
-import { listAsyncMenusItem } from "@/state/menuSlice";
+import { listAsyncFeaturedItems, updateAsyncFeaturedItem, deleteAsyncFeaturedItem } from "@/state/featuredSlice";
+import { listAsyncPopularItems, updateAsyncPopularItem, deleteAsyncPopularItem } from "@/state/popularSlice";
+import { listAsyncMenusItem, updateAsyncMenuItem, deleteAsyncMenuItem } from "@/state/menuSlice";
 import Image from "next/image";
+import { motion } from "framer-motion";
+import { Button } from "./ui/button"; 
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { getAsyncRestaurantById } from "@/state/restaurantSlice";
 
 type ContentType = "menu" | "popular" | "featured";
 type ContentItem = IMenuItemFetched | IPopularItemFetched | IFeaturedItemFetched;
@@ -42,8 +50,37 @@ export default function ContentModerationTab() {
   const { featuredItems } = useSelector((state: RootState) => state.featuredItem);
   const { menuItems } = useSelector((state: RootState) => state.menuItem);
   const { popularItems } = useSelector((state: RootState) => state.popularItem);
-  
 
+  // Edit/Delete states
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<ContentItem | null>(null);
+  const [editFormData, setEditFormData] = useState<any>({});
+  const [newImage, setNewImage] = useState<File | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+const [restaurantName, setRestaurantName] = useState<string>("");
+
+
+const getRestaurantName = async (restaurantId: string, dispatch: AppDispatch): Promise<string> => {
+  try {
+    const response = await dispatch(getAsyncRestaurantById(restaurantId)).unwrap();
+    return response.name || "Unknown restaurant";  
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : "Could not fetch restaurant");
+    return "Unknown restaurant";  
+  }
+};
+
+useEffect(() => {
+  if (editFormData.restaurantId && showEditModal) {
+    const fetchName = async () => {
+      const name = await getRestaurantName(editFormData.restaurantId, dispatch);
+      setRestaurantName(name);
+    };
+    fetchName();
+  }
+}, [editFormData.restaurantId, showEditModal, dispatch]);
 
   // Effect to fetch data when tab changes
   useEffect(() => {
@@ -51,7 +88,7 @@ export default function ContentModerationTab() {
     setError(null);
     setLoading(true);
 
-    let action:any;
+    let action;
     switch (activeContentTab) {
       case "menu":
         action = listAsyncMenusItem();
@@ -67,7 +104,7 @@ export default function ContentModerationTab() {
         return;
     }
 
-    dispatch(action)
+    dispatch(action as any)
       .then(() => setLoading(false))
       .catch((err:any) => {
         setError(err.message || "Failed to fetch items");
@@ -75,53 +112,193 @@ export default function ContentModerationTab() {
       });
   }, [activeContentTab, dispatch]);
 
-  // Approval handler
+  // Approval handler (updates isApproved)
   const handleApproval = async (itemId: string, isApproved: boolean) => {
     try {
-      let collectionId: string;
-      const { databaseId } = validateEnv();
+      setIsUpdating(true);
+      let updateData = { isApproved };
 
+      let action;
       switch (activeContentTab) {
         case "menu":
-          collectionId = validateEnv().menuItemsCollectionId;
+          action = updateAsyncMenuItem({ itemId, data: updateData });
           break;
         case "popular":
-          collectionId = validateEnv().popularItemsCollectionId;
+          action = updateAsyncPopularItem({ itemId, data: updateData });
           break;
         case "featured":
-          collectionId = validateEnv().featuredId; // Assuming this is correct; might be featuredItemsCollectionId
-          break;
-        default:
-          return;
-      }
-
-      await databases.updateDocument(databaseId, collectionId, itemId, {
-        isApproved,
-      });
-
-      // Refetch items to update Redux state
-      let action:any;
-      switch (activeContentTab) {
-        case "menu":
-          action = listAsyncMenusItem();
-          break;
-        case "popular":
-          action = listAsyncPopularItems();
-          break;
-        case "featured":
-          action = listAsyncFeaturedItems();
+          action = updateAsyncFeaturedItem({ itemId, data: updateData });
           break;
       }
+
       if (action) {
-        await dispatch(action);
+        await dispatch(action as any).unwrap();
+        toast.success(`Item ${isApproved ? "approved" : "rejected"} successfully`);
       }
-
-      toast.success(
-        `Item ${isApproved ? "approved" : "rejected"} successfully`
-      );
     } catch (error) {
       console.error("Error updating approval status:", error);
       toast.error("Failed to update approval status");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Edit handler
+  const handleEdit = (item: ContentItem) => {
+    setSelectedItem(item);
+    const commonData = {
+      name: item.name,
+      description: item.description || "",
+      price: item.price,
+      rating: item.rating,
+      category: item.category,
+      restaurantId: "restaurantId" in item ? item.restaurantId : (item as any).restaurant || "",
+      isApproved: item.isApproved,
+    };
+    let formData: any = { ...commonData };
+    switch (activeContentTab) {
+      case "menu":
+        formData = {
+          ...formData,
+          originalPrice: (item as IMenuItemFetched).originalPrice || "",
+          cookTime: (item as IMenuItemFetched).cookTime || "",
+        };
+        break;
+      case "popular":
+        formData = {
+          ...formData,
+          originalPrice: (item as IPopularItemFetched).originalPrice || "",
+          cookingTime: (item as IPopularItemFetched).cookingTime || "",
+          reviewCount: "reviewCount" in item ? (item as IPopularItemFetched).reviewCount : 0,
+          isPopular: "isPopular" in item ? (item as IPopularItemFetched).isPopular : false,
+          discount: "discount" in item ? (item as IPopularItemFetched).discount : "",
+        };
+        break;
+      case "featured":
+        // Only common fields
+        break;
+      default:
+        break;
+    }
+    setEditFormData(formData);
+    setNewImage(null);
+    setShowEditModal(true);
+  };
+  // handle update
+  const handleUpdate = async () => {
+    if (!selectedItem) return;
+    try {
+      setIsUpdating(true);
+      const itemId = selectedItem.$id;
+      let updateData: any;
+      let action;
+      switch (activeContentTab) {
+        case "menu":
+          updateData = {
+            name: editFormData.name,
+            description: editFormData.description,
+            price: editFormData.price,
+            originalPrice: editFormData.originalPrice,
+            rating: parseFloat(editFormData.rating),
+            cookTime: editFormData.cookTime,
+            category: editFormData.category,
+            restaurantId: editFormData.restaurantId,
+            isApproved: editFormData.isApproved,
+          };
+          action = updateAsyncMenuItem({ itemId, data: updateData, newImage });
+          break;
+        case "popular":
+          updateData = {
+            name: editFormData.name,
+            description: editFormData.description,
+            price: editFormData.price,
+            originalPrice: editFormData.originalPrice,
+            rating: parseFloat(editFormData.rating),
+            reviewCount: parseInt(editFormData.reviewCount?.toString() || "0", 10),
+            category: editFormData.category,
+            cookingTime: editFormData.cookingTime,
+            isPopular: editFormData.isPopular,
+            discount: editFormData.discount,
+            restaurantId: editFormData.restaurantId,
+            isApproved: editFormData.isApproved,
+          };
+          action = updateAsyncPopularItem({ itemId, data: updateData, newImage });
+          break;
+        case "featured":
+          updateData = {
+            name: editFormData.name,
+            description: editFormData.description,
+            price: editFormData.price,
+            rating: parseFloat(editFormData.rating),
+            category: editFormData.category,
+            restaurantId: editFormData.restaurantId,
+            isApproved: editFormData.isApproved,
+          };
+          action = updateAsyncFeaturedItem({ itemId, data: updateData, newImage });
+          break;
+      }
+
+      if (action) {
+        await dispatch(action as any).unwrap();
+        toast.success("Item updated successfully");
+        setShowEditModal(false);
+        // Refetch items
+        dispatch((
+          activeContentTab === "menu"
+            ? listAsyncMenusItem()
+            : activeContentTab === "popular"
+            ? listAsyncPopularItems()
+            : listAsyncFeaturedItems()
+        )as any);
+      }
+    } catch (error) {
+      toast.error("Failed to update item");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Delete handler
+  const handleDeleteClick = (item: ContentItem) => {
+    setSelectedItem(item);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedItem) return;
+
+    try {
+      setIsDeleting(true);
+      let action;
+      switch (activeContentTab) {
+        case "menu":
+          action = deleteAsyncMenuItem({ itemId: selectedItem.$id, imageId: selectedItem.image });
+          break;
+        case "popular":
+          action = deleteAsyncPopularItem({ itemId: selectedItem.$id, imageId: selectedItem.image });
+          break;
+        case "featured":
+          action = deleteAsyncFeaturedItem({ itemId: selectedItem.$id, imageId: selectedItem.image });
+          break;
+      }
+
+      if (action) {
+        await dispatch(action).unwrap();
+        toast.success("Item deleted successfully");
+        setShowDeleteModal(false);
+        // Refetch items
+        dispatch((
+          activeContentTab === "menu"
+            ? listAsyncMenusItem()
+            : activeContentTab === "popular"
+            ? listAsyncPopularItems()
+            : listAsyncFeaturedItems()
+        ) as any);
+      }
+    } catch (error) {
+      toast.error("Failed to delete item");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -186,21 +363,32 @@ export default function ContentModerationTab() {
         return <Package className="w-4 h-4" />;
     }
   };
-const {popularBucketId,menuBucketId,featuredBucketId} = validateEnv();
+
+  const {popularBucketId,menuBucketId,featuredBucketId} = validateEnv();
 
  // Get bucket ID based on active tab
  const getBucketId = (): string => {
   switch (activeContentTab) {
     case "menu":
-      return validateEnv().menuBucketId;
+      return menuBucketId;
     case "popular":
-      return validateEnv().popularBucketId;
+      return popularBucketId;
     case "featured":
-      return validateEnv().featuredBucketId;
+      return featuredBucketId;
     default:
       return "";
   }
 };
+
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setEditFormData({ ...editFormData, [e.target.name]: e.target.value });
+  };
+
+  const handleEditFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.[0]) {
+      setNewImage(e.target.files[0]);
+    }
+  };
 
   return (
     <>
@@ -328,7 +516,7 @@ const {popularBucketId,menuBucketId,featuredBucketId} = validateEnv();
                               <Image
                                 src={fileUrl(getBucketId(),item.image)}
                                 alt={item.name}
-                                className="w-full h-full object-cover hidden "
+                                className="w-full h-full object-cover"
                                 onError={(e) => {
                                   const target = e.target as HTMLImageElement;
                                   target.style.display = 'none';
@@ -336,6 +524,7 @@ const {popularBucketId,menuBucketId,featuredBucketId} = validateEnv();
                                 }}
                                 width={50}
                                 height={50}
+                                quality={100}
                               />
                             ) : null}
                             <div className={`w-full h-full flex items-center justify-center text-gray-400 absolute top-0 left-0 ${item.image ? 'hidden' : ''}`}>
@@ -431,6 +620,20 @@ const {popularBucketId,menuBucketId,featuredBucketId} = validateEnv();
                             title="Reject"
                           >
                             <XCircle className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleEdit(item)}
+                            className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                            title="Edit"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClick(item)}
+                            className="p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </td>
@@ -538,6 +741,20 @@ const {popularBucketId,menuBucketId,featuredBucketId} = validateEnv();
                         <XCircle className="w-4 h-4 mx-auto" />
                         <span className="text-xs mt-1 block">Reject</span>
                       </button>
+                      <button
+                        onClick={() => handleEdit(item)}
+                        className="flex-1 p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                      >
+                        <Edit2 className="w-4 h-4 mx-auto" />
+                        <span className="text-xs mt-1 block">Edit</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(item)}
+                        className="flex-1 p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                      >
+                        <Trash2 className="w-4 h-4 mx-auto" />
+                        <span className="text-xs mt-1 block">Delete</span>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -582,6 +799,343 @@ const {popularBucketId,menuBucketId,featuredBucketId} = validateEnv();
             </div>
           )}
         </>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && selectedItem && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          onClick={() => setShowEditModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-orange-200 dark:border-orange-800"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-orange-100 dark:border-orange-900">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                  <Edit2 className="w-5 h-5 text-orange-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  Edit {activeContentTab.charAt(0).toUpperCase() + activeContentTab.slice(1)} Item
+                </h3>
+              </div>
+              <Button
+                onClick={() => setShowEditModal(false)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+              >
+                <XCircle className="w-5 h-5 text-gray-500" />
+              </Button>
+            </div>
+
+            <form className="space-y-5">
+              {/* Basic Information Section */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Basic Information</h4>
+                
+                <div>
+                  <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Item Name
+                  </Label>
+                  <Input
+                    name="name"
+                    value={editFormData.name}
+                    onChange={handleEditChange}
+                    placeholder="Enter item name"
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  />
+                </div>
+
+                <div>
+                  <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Description
+                  </Label>
+                  <textarea
+                    name="description"
+                    value={editFormData.description}
+                    onChange={handleEditChange}
+                    placeholder="Enter item description"
+                    rows={3}
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 resize-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Category
+                    </Label>
+                      <select
+                        name="category"
+                        value={editFormData.category}
+                        onChange={handleEditChange}
+                        className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      >
+                        <option value="">Select category</option>
+                        <option value="veg">Vegetarian</option>
+                        <option value="non-veg">Non-Vegetarian</option>
+                      </select>
+                  </div>
+
+                  <div>
+                    <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Rating
+                    </Label>
+                    <Input
+                      name="rating"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="5"
+                      value={editFormData.rating}
+                      onChange={handleEditChange}
+                      placeholder="0.0"
+                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Pricing Section */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Pricing</h4>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Price (₦)
+                    </label>
+                    <input
+                      name="price"
+                      type="number"
+                      value={editFormData.price}
+                      onChange={handleEditChange}
+                      placeholder="0.00"
+                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    />
+                  </div>
+
+                  {("originalPrice" in editFormData && editFormData.originalPrice !== undefined) && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Original Price (₦)
+                      </label>
+                      <input
+                        name="originalPrice"
+                        type="number"
+                        value={editFormData.originalPrice}
+                        onChange={handleEditChange}
+                        placeholder="0.00"
+                        className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      />
+                    </div>
+                  )}
+
+                  {("discount" in editFormData && editFormData.discount !== undefined) && (
+                    <div>
+                      <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Discount
+                      </Label>
+                      <Input
+                        name="discount"
+                        value={editFormData.discount}
+                        onChange={handleEditChange}
+                        placeholder="e.g., 20% OFF"
+                        className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Additional Details Section */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Additional Details</h4>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  {("cookTime" in editFormData || "cookingTime" in editFormData) && (
+                    <div>
+                      <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Cooking Time
+                      </Label>
+                      <Input
+                        name={"cookTime" in editFormData ? "cookTime" : "cookingTime"}
+                        value={editFormData.cookTime || editFormData.cookingTime || ""}
+                        onChange={handleEditChange}
+                        placeholder="e.g., 20-25 mins"
+                        className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      />
+                    </div>
+                  )}
+
+                  {("reviewCount" in editFormData && editFormData.reviewCount !== undefined) && (
+                    <div>
+                      <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Review Count
+                      </Label>
+                      <input
+                        name="reviewCount"
+                        type="number"
+                        min="0"
+                        value={editFormData.reviewCount}
+                        onChange={handleEditChange}
+                        placeholder="0"
+                        className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Restaurant
+                    </Label>
+                    <Input
+                    title="This field is non editable"
+                      name="restaurantId"
+                      disabled
+                     value={restaurantName || editFormData.restaurantId}
+                      onChange={handleEditChange}
+                      placeholder="Enter restaurant ID"
+                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Image Upload Section */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Image</h4>
+                
+                <div>
+                  <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Upload New Image (Optional)
+                  </Label>
+                  <div className="flex items-center gap-4">
+                    <label className="flex-1 cursor-pointer">
+                      <div className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-orange-400 transition">
+                        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                          <ImageIcon className="w-5 h-5" />
+                          <span className="text-sm">
+                            {newImage ? newImage.name : 'Choose an image'}
+                          </span>
+                        </div>
+                      </div>
+                      <Input
+                        type="file" 
+                        onChange={handleEditFileChange}
+                        accept="image/*"
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                  {newImage && (
+                    <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" />
+                      New image selected
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Approval Status Section */}
+              <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Status</h4>
+                
+                <Label className="flex items-center gap-3 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-900/30 transition">
+                  <Input
+                    type="checkbox"
+                    name="isApproved"
+                    checked={editFormData.isApproved}
+                    onChange={(e) => setEditFormData({ ...editFormData, isApproved: e.target.checked })}
+                    className="w-5 h-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                  />
+                  <div className="flex-1">
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      Approved for display
+                    </span>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      This item will be visible to customers when approved
+                    </p>
+                  </div>
+                </Label>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+                <Button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="px-6 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition font-medium"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleUpdate}
+                  disabled={isUpdating}
+                  className="px-6 py-2.5 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white rounded-lg transition font-medium flex items-center gap-2"
+                >
+                  {isUpdating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4" />
+                      Update Item
+                    </>
+                  )}
+                </Button>
+              </div>
+            </form>
+          </motion.div>
+        </motion.div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowDeleteModal(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="bg-white dark:bg-gray-900 rounded-2xl p-6 max-w-md w-full border border-gray-200 dark:border-gray-700"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              Confirm Delete
+            </h3>
+            <p className="text-gray-700 dark:text-gray-300 mb-6">
+              Are you sure you want to delete this item? This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button onClick={() => setShowDeleteModal(false)} variant="outline">
+                Cancel
+              </Button>
+              <Button 
+                onClick={confirmDelete}
+                className="flex items-center bg-red-600 hover:bg-red-700 text-white"
+                disabled={isDeleting}
+              >
+                {isDeleting ? <Loader2 className="animate-spin mr-2" /> : null}
+                Delete
+              </Button>
+            </div>
+          </motion.div>
+        </motion.div>
       )}
     </>
   );

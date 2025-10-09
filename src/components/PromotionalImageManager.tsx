@@ -212,7 +212,7 @@ const PromotionalImageManager: React.FC = () => {
                   fill
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
                   sizes="100vw"
-                  quality={90}
+                  quality={100}
                   priority={index === 0}
                 />
                 

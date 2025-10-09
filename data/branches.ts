@@ -8,7 +8,7 @@ export const branches = [
   },
   {
     id: 2,
-    name: "RideEx FUTO (OWERRI)",
+    name: "RideEx Obinze (branch)",
     lat: 5.3846,
     lng: 6.996,
     address: "Federal University of Technology, Owerri, Imo State, Nigeria",

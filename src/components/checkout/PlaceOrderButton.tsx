@@ -15,6 +15,7 @@ interface PlaceOrderButtonProps {
   setShowConfirmation: (open: boolean) => void;
   handleConfirmOrder: () => void;
   error: string | null;
+  totalAmount:number;
 }
 
 const PlaceOrderButton: React.FC<PlaceOrderButtonProps> = ({
@@ -29,6 +30,7 @@ const PlaceOrderButton: React.FC<PlaceOrderButtonProps> = ({
   setShowConfirmation,
   handleConfirmOrder,
   error,
+  totalAmount
 }) => (
   <>
     <Button

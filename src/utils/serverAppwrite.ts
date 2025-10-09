@@ -1,13 +1,14 @@
 import { Client, Databases, ID, Messaging, Storage } from 'node-appwrite'; 
 
 // Validate server env vars
-function validateServerEnv() {
+export function validateServerEnv() {
   const required = {
     endpoint: process.env.APPWRITE_ENDPOINT,
     projectId: process.env.APPWRITE_PROJECT_ID,
     apiKey: process.env.APPWRITE_API_KEY,
-    databaseId: process.env.NEXT_PUBLIC_APPWRITE_FOODIEHUB_DB_ID, // Reuse public for consistency
+    databaseId: process.env.NEXT_PUBLIC_APPWRITE_FOODIEHUB_DB_ID!, // Reuse public for consistency
     bookedOrdersCollectionId: process.env.NEXT_PUBLIC_APPWRITE_BOOKED_ORDERS_COLLECTION_ID,
+    userCollectionId:process.env.APPWRITE_USER_COLLECTION_ID!,
     // Add others as needed, e.g., notificationCollectionId
   };
 

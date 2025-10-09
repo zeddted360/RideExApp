@@ -92,7 +92,7 @@ const MiniNavigation = () => {
     const isRestaurant = '$id' in item;
 
     const imageUrl = isRestaurant && item.logo 
-      ? fileUrl(restaurantBucketId, item.logo)
+      ? fileUrl(restaurantBucketId, item.logo as string)
       : (item as CategoryItem).image?.startsWith('/') 
         ? (item as CategoryItem).image 
         : (item as CategoryItem).image 
@@ -163,7 +163,7 @@ const MiniNavigation = () => {
     if (!showComingSoon || !selectedItem) return null;
     const isRestaurant = '$id' in selectedItem;
     const imageUrl = isRestaurant && selectedItem.logo 
-      ? fileUrl(restaurantBucketId, selectedItem.logo)
+      ? fileUrl(restaurantBucketId, selectedItem.logo as string)
       : (selectedItem as CategoryItem).image?.startsWith('/')
         ? (selectedItem as CategoryItem).image
         : (selectedItem as CategoryItem).image

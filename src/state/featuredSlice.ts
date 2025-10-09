@@ -31,7 +31,7 @@ export const createAsyncFeaturedItem = createAsyncThunk<
     const imageFile = await storage.createFile(
       featuredBucketId,
       ID.unique(),
-      data.image[0]
+      data.image[0] as File
     );
     const createdDocument = await databases.createDocument(
       databaseId,
@@ -45,7 +45,7 @@ export const createAsyncFeaturedItem = createAsyncThunk<
         restaurant: data.restaurantId,
         description: data.description,
         category: data.category,
-        createdAt: new Date().toISOString(),
+        isApproved: false, 
       }
     );
 
@@ -75,12 +75,84 @@ export const listAsyncFeaturedItems = createAsyncThunk<
     const response = await databases.listDocuments(
       databaseId,
       featuredId,
-      [Query.orderDesc("createdAt")]
+      [Query.orderDesc("$createdAt")]
     );
     return response.documents as IFeaturedItemFetched[];
   } catch (error) {
     toast.error(
       `Failed to fetch featured items: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
+    return rejectWithValue(
+      error instanceof Error ? error.message : "Unknown error"
+    );
+  }
+});
+
+// Function to update a featured item
+export const updateAsyncFeaturedItem = createAsyncThunk<
+  IFeaturedItemFetched,
+  { itemId: string; data: Partial<FeaturedItemFormData>; newImage?: File | null },
+  { rejectValue: string }
+>("featuredItem/updateFeaturedItem", async ({ itemId, data, newImage }, { rejectWithValue }) => {
+  try {
+    const { databaseId, featuredId, featuredBucketId } = validateEnv();
+
+    let updateData = { ...data };
+
+
+    if (newImage) {
+      // Upload new image
+      const imageFile = await storage.createFile(
+        featuredBucketId,
+        ID.unique(),
+        newImage
+      );
+      updateData.image = imageFile.$id;
+    }
+
+    const updatedDocument = await databases.updateDocument(
+      databaseId,
+      featuredId,
+      itemId,
+      updateData
+    );
+
+    return updatedDocument as IFeaturedItemFetched;
+  } catch (error) {
+    toast.error(
+      `Failed to update featured item: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
+    return rejectWithValue(
+      error instanceof Error ? error.message : "Unknown error"
+    );
+  }
+});
+
+// Function to delete a featured item
+export const deleteAsyncFeaturedItem = createAsyncThunk<
+  string,
+  { itemId: string; imageId: string },
+  { rejectValue: string }
+>("featuredItem/deleteFeaturedItem", async ({ itemId, imageId }, { rejectWithValue }) => {
+  try {
+    const { databaseId, featuredId, featuredBucketId } = validateEnv();
+
+    // Delete image if exists
+    if (imageId) {
+      await storage.deleteFile(featuredBucketId, imageId);
+    }
+
+    // Delete document
+    await databases.deleteDocument(databaseId, featuredId, itemId);
+
+    return itemId;
+  } catch (error) {
+    toast.error(
+      `Failed to delete featured item: ${
         error instanceof Error ? error.message : "Unknown error"
       }`
     );
@@ -133,6 +205,49 @@ export const featuredItemSlice = createSlice({
         (state, action: PayloadAction<string | undefined>) => {
           state.loading = "failed";
           state.error = action.payload || "Failed to fetch featured items";
+        }
+      )
+      // Update
+      .addCase(updateAsyncFeaturedItem.pending, (state) => {
+        state.loading = "pending";
+        state.error = null;
+      })
+      .addCase(
+        updateAsyncFeaturedItem.fulfilled,
+        (state, action: PayloadAction<IFeaturedItemFetched>) => {
+          state.loading = "succeeded";
+          const index = state.featuredItems.findIndex((item) => item.$id === action.payload.$id);
+          if (index !== -1) {
+            state.featuredItems[index] = action.payload;
+          }
+          state.error = null;
+        }
+      )
+      .addCase(
+        updateAsyncFeaturedItem.rejected,
+        (state, action: PayloadAction<string | undefined>) => {
+          state.loading = "failed";
+          state.error = action.payload || "Failed to update featured item";
+        }
+      )
+      // Delete
+      .addCase(deleteAsyncFeaturedItem.pending, (state) => {
+        state.loading = "pending";
+        state.error = null;
+      })
+      .addCase(
+        deleteAsyncFeaturedItem.fulfilled,
+        (state, action: PayloadAction<string>) => {
+          state.loading = "succeeded";
+          state.featuredItems = state.featuredItems.filter((item) => item.$id !== action.payload);
+          state.error = null;
+        }
+      )
+      .addCase(
+        deleteAsyncFeaturedItem.rejected,
+        (state, action: PayloadAction<string | undefined>) => {
+          state.loading = "failed";
+          state.error = action.payload || "Failed to delete featured item";
         }
       );
   },

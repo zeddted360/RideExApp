@@ -1,17 +1,19 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Search,
   Filter,
   ChevronDown,
-  CheckCircle,
-  XCircle,
   User,
   Phone,
   Building,
   MapPin,
   Calendar,
+  Trash2,
+  Loader2,
 } from "lucide-react";
+import { motion } from "framer-motion";
 import { IVendorFetched } from "../../types/types";
+import { Button } from "./ui/button";
 
 interface VendorsTabProps {
   vendors: IVendorFetched[];
@@ -25,7 +27,8 @@ interface VendorsTabProps {
   setCurrentPage: (page: number) => void;
   filteredVendors: IVendorFetched[];
   vendorsPerPage: number;
-  handleVendorStatusChange: (vendorId: string, newStatus: "approved" | "rejected") => Promise<void>;
+  handleVendorStatusChange: (vendorId: string, newStatus: "pending" | "approved" | "rejected") => Promise<void>;
+  handleVendorDelete: (vendorId: string) => Promise<void>;
   VENDOR_STATUSES: string[];
 }
 
@@ -42,8 +45,13 @@ export default function VendorsTab({
   filteredVendors,
   vendorsPerPage,
   handleVendorStatusChange,
+  handleVendorDelete,
   VENDOR_STATUSES,
 }: VendorsTabProps) {
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [vendorToDelete, setVendorToDelete] = useState<string | null>(null);
+  const [isDeletingVendor,setIsDeletingVendor] = useState<boolean>(false);
+
   const getStatusBadge = (status: string) => {
     const baseClasses =
       "inline-block px-3 py-1 rounded-full text-xs font-semibold border";
@@ -57,6 +65,31 @@ export default function VendorsTab({
       default:
         return `${baseClasses} bg-gray-100 text-gray-800 border-gray-200`;
     }
+  };
+
+  const handleStatusChange = (vendorId: string, e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newStatus = e.target.value as "pending" | "approved" | "rejected";
+    handleVendorStatusChange(vendorId, newStatus);
+  };
+
+  const handleDelete = (vendorId: string) => {
+    setVendorToDelete(vendorId);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+      setIsDeletingVendor(true)
+    if (vendorToDelete) {
+      await handleVendorDelete(vendorToDelete);
+    }
+      setIsDeletingVendor(false)
+    setShowDeleteModal(false);
+    setVendorToDelete(null);
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setVendorToDelete(null);
   };
 
   return (
@@ -209,30 +242,24 @@ export default function VendorsTab({
                         </span>
                       </td>
                       <td className="py-4 px-6">
-                        {vendor.status === "pending" ? (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() =>
-                                handleVendorStatusChange(vendor.$id, "approved")
-                              }
-                              className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-                              title="Approve"
-                            >
-                              <CheckCircle className="w-5 h-5" />
-                            </button>
-                            <button
-                              onClick={() =>
-                                handleVendorStatusChange(vendor.$id, "rejected")
-                              }
-                              className="p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-                              title="Reject"
-                            >
-                              <XCircle className="w-5 h-5" />
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-gray-500">-</span>
-                        )}
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={vendor.status}
+                            onChange={(e) => handleStatusChange(vendor.$id, e)}
+                            className="px-3 py-1 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="approved">Approved</option>
+                            <option value="rejected">Rejected</option>
+                          </select>
+                          <button
+                            onClick={() => handleDelete(vendor.$id)}
+                            className="p-2 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -307,26 +334,23 @@ export default function VendorsTab({
                           vendor.status.slice(1)}
                       </span>
                     </div>
-                    {vendor.status === "pending" && (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() =>
-                            handleVendorStatusChange(vendor.$id, "approved")
-                          }
-                          className="w-full p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleVendorStatusChange(vendor.$id, "rejected")
-                          }
-                          className="w-full p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <select
+                        value={vendor.status}
+                        onChange={(e) => handleStatusChange(vendor.$id, e)}
+                        className="flex-1 px-3 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-400 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm"
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                      </select>
+                      <button
+                        onClick={() => handleDelete(vendor.$id)}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))
@@ -369,6 +393,46 @@ export default function VendorsTab({
                 Next
               </button>
             </div>
+          )}
+
+          {/* Delete Confirmation Modal */}
+          {showDeleteModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              onClick={cancelDelete}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="bg-white dark:bg-gray-900 rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                  Confirm Delete
+                </h3>
+                <p className="text-gray-700 dark:text-gray-300 mb-6 text-sm leading-relaxed">
+                  Are you sure you want to delete this vendor? This action cannot be undone.
+                </p>
+                <div className="flex gap-3 justify-end">
+                  <Button
+                    onClick={cancelDelete}
+                    className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors duration-200"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={confirmDelete}
+                    className="flex justify-center items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors duration-200"
+                  >
+                   {isDeletingVendor ? <Loader2 className="animate-spin"/>: " Delete"}
+                  </Button>
+                </div>
+              </motion.div>
+            </motion.div>
           )}
         </>
       )}

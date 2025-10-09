@@ -29,7 +29,7 @@ export const createAsyncPopularItem = createAsyncThunk<
     const imageFile = await storage.createFile(
       popularBucketId,
       ID.unique(),
-      data.image[0]
+      data.image[0] as File
     );
     const createdDocument = await databases.createDocument(
       databaseId,
@@ -48,7 +48,7 @@ export const createAsyncPopularItem = createAsyncThunk<
         isPopular: data.isPopular,
         discount: data.discount,
         restaurantId: data.restaurantId,
-        createdAt: new Date().toISOString(),
+        isApproved: false, 
       }
     );
     return createdDocument as IPopularItemFetched;
@@ -74,7 +74,7 @@ export const listAsyncPopularItems = createAsyncThunk<
     const response = await databases.listDocuments(
       databaseId,
       popularItemsCollectionId,
-      [Query.orderDesc("createdAt")]
+      [Query.orderDesc("$createdAt")]
     );
     return response.documents as IPopularItemFetched[];
   } catch (error) {
@@ -85,6 +85,77 @@ export const listAsyncPopularItems = createAsyncThunk<
     );
     return rejectWithValue(
       error instanceof Error ? error.message : "Failed to fetch popular items"
+    );
+  }
+});
+
+// Function to update a popular item
+export const updateAsyncPopularItem = createAsyncThunk<
+  IPopularItemFetched,
+  { itemId: string; data: Partial<PopularItemFormData>; newImage?: File | null },
+  { rejectValue: string }
+>("popularItem/updatePopularItem", async ({ itemId, data, newImage }, { rejectWithValue }) => {
+  try {
+    const { databaseId, popularItemsCollectionId, popularBucketId } = validateEnv();
+
+    let updateData = { ...data };
+
+    if (newImage) {
+      // Upload new image
+      const imageFile = await storage.createFile(
+        popularBucketId,
+        ID.unique(),
+        newImage
+      );
+      updateData.image = imageFile.$id;
+    }
+
+    const updatedDocument = await databases.updateDocument(
+      databaseId,
+      popularItemsCollectionId,
+      itemId,
+      updateData
+    );
+
+    return updatedDocument as IPopularItemFetched;
+  } catch (error) {
+    toast.error(
+      `Failed to update popular item: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
+    return rejectWithValue(
+      error instanceof Error ? error.message : "Unknown error"
+    );
+  }
+});
+
+// Function to delete a popular item
+export const deleteAsyncPopularItem = createAsyncThunk<
+  string,
+  { itemId: string; imageId: string },
+  { rejectValue: string }
+>("popularItem/deletePopularItem", async ({ itemId, imageId }, { rejectWithValue }) => {
+  try {
+    const { databaseId, popularItemsCollectionId, popularBucketId } = validateEnv();
+
+    // Delete image if exists
+    if (imageId) {
+      await storage.deleteFile(popularBucketId, imageId);
+    }
+
+    // Delete document
+    await databases.deleteDocument(databaseId, popularItemsCollectionId, itemId);
+
+    return itemId;
+  } catch (error) {
+    toast.error(
+      `Failed to delete popular item: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
+    return rejectWithValue(
+      error instanceof Error ? error.message : "Unknown error"
     );
   }
 });
@@ -132,8 +203,51 @@ export const popularSlice = createSlice({
           state.loading = "failed";
           state.error = action.payload || "Failed to fetch popular items";
         }
+      )
+      // Update
+      .addCase(updateAsyncPopularItem.pending, (state) => {
+        state.loading = "pending";
+        state.error = null;
+      })
+      .addCase(
+        updateAsyncPopularItem.fulfilled,
+        (state, action: PayloadAction<IPopularItemFetched>) => {
+          state.loading = "succeeded";
+          const index = state.popularItems.findIndex((item) => item.$id === action.payload.$id);
+          if (index !== -1) {
+            state.popularItems[index] = action.payload;
+          }
+          state.error = null;
+        }
+      )
+      .addCase(
+        updateAsyncPopularItem.rejected,
+        (state, action: PayloadAction<string | undefined>) => {
+          state.loading = "failed";
+          state.error = action.payload || "Failed to update popular item";
+        }
+      )
+      // Delete
+      .addCase(deleteAsyncPopularItem.pending, (state) => {
+        state.loading = "pending";
+        state.error = null;
+      })
+      .addCase(
+        deleteAsyncPopularItem.fulfilled,
+        (state, action: PayloadAction<string>) => {
+          state.loading = "succeeded";
+          state.popularItems = state.popularItems.filter((item) => item.$id !== action.payload);
+          state.error = null;
+        }
+      )
+      .addCase(
+        deleteAsyncPopularItem.rejected,
+        (state, action: PayloadAction<string | undefined>) => {
+          state.loading = "failed";
+          state.error = action.payload || "Failed to delete popular item";
+        }
       );
   },
 });
 
-export default popularSlice.reducer; 
+export default popularSlice.reducer;

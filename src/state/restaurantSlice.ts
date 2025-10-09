@@ -7,12 +7,14 @@ import { IRestaurant, IRestaurantFetched } from "../../types/types";
 
 interface IResProp {
   restaurants: IRestaurantFetched[];
+  selectedRestaurant: IRestaurantFetched | null;
   loading: "idle" | "pending" | "succeeded" | "failed";
   error: string | null;
 }
 
 const initialState: IResProp = {
   restaurants: [],
+  selectedRestaurant: null,
   loading: "idle",
   error: null,
 };
@@ -36,7 +38,7 @@ export const createAsyncRestaurant = createAsyncThunk<
     const logoFile = await storage.createFile(
       restaurantBucketId,
       ID.unique(),
-      data.logo[0]
+      data.logo[0] as File
     );
 
     // Create restaurant document
@@ -51,6 +53,7 @@ export const createAsyncRestaurant = createAsyncThunk<
         deliveryTime: data.deliveryTime,
         category: data.category,
         distance: data.distance,
+        vendorId:data.vendorId,
         createdAt: new Date().toISOString(),
       }
     );
@@ -82,13 +85,41 @@ export const listAsyncRestaurants = createAsyncThunk<
     const response = await databases.listDocuments(
       databaseId,
       restaurantsCollectionId,
-      [Query.orderDesc("createdAt")] 
+      [Query.orderDesc("$createdAt")] 
     );
     return response.documents as IRestaurantFetched[];
   } catch (error) {
     toast.error(`Failed to fetch restaurants: ${error instanceof Error ? error.message : "Failed to load resturant"}`);
     return rejectWithValue(
       error instanceof Error ? error.message : "Failed to load resturant"
+    );
+  }
+});
+
+// Async thunk for getting a restaurant by ID
+export const getAsyncRestaurantById = createAsyncThunk<
+  IRestaurantFetched,
+  string,
+  { rejectValue: string }
+>("restaurant/getRestaurantById", async (id, { rejectWithValue }) => {
+  try {
+    const { databaseId, restaurantsCollectionId } = validateEnv();
+
+    const response = await databases.getDocument(
+      databaseId,
+      restaurantsCollectionId,
+      id
+    );
+
+    return response as IRestaurantFetched;
+  } catch (error) {
+    toast.error(
+      `Failed to fetch restaurant: ${
+        error instanceof Error ? error.message : "Failed to fetch restaurant"
+      }`
+    );
+    return rejectWithValue(
+      error instanceof Error ? error.message : "Failed to fetch restaurant"
     );
   }
 });
@@ -195,6 +226,26 @@ export const restaurantSlice = createSlice({
           state.error = action.payload || "Failed to fetch restaurants";
         }
       )
+      // Handle getAsyncRestaurantById
+      .addCase(getAsyncRestaurantById.pending, (state) => {
+        state.loading = "pending";
+        state.error = null;
+      })
+      .addCase(
+        getAsyncRestaurantById.fulfilled,
+        (state, action: PayloadAction<IRestaurantFetched>) => {
+          state.loading = "succeeded";
+          state.selectedRestaurant = action.payload;
+          state.error = null;
+        }
+      )
+      .addCase(
+        getAsyncRestaurantById.rejected,
+        (state, action: PayloadAction<string | undefined>) => {
+          state.loading = "failed";
+          state.error = action.payload || "Failed to fetch restaurant";
+        }
+      )
       // Handle updateAsyncRestaurant
       .addCase(updateAsyncRestaurant.pending, (state) => {
         state.loading = "pending";
@@ -207,6 +258,9 @@ export const restaurantSlice = createSlice({
           state.restaurants = state.restaurants.map((r) =>
             r.$id === action.payload.$id ? action.payload : r
           );
+          if (state.selectedRestaurant?.$id === action.payload.$id) {
+            state.selectedRestaurant = action.payload;
+          }
           state.error = null;
         }
       )
@@ -227,6 +281,9 @@ export const restaurantSlice = createSlice({
         (state, action: PayloadAction<string>) => {
           state.loading = "succeeded";
           state.restaurants = state.restaurants.filter((r) => r.$id !== action.payload);
+          if (state.selectedRestaurant?.$id === action.payload) {
+            state.selectedRestaurant = null;
+          }
           state.error = null;
         }
       )

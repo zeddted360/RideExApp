@@ -9,6 +9,9 @@ import authSlice from "./authSlice";
 import notificationSlice from "./notificationSlice";
 import bookedOrdersReducer from "./bookedOrdersSlice";
 import discountSlice from "./discountSlice";
+import vendorSlice from "./vendorSlice";
+import riderSlice from "./riderSlice";
+
 
 export const store = configureStore({
   reducer: {
@@ -21,6 +24,8 @@ export const store = configureStore({
     notifications: notificationSlice,
     bookedOrders: bookedOrdersReducer,
     discounts:discountSlice,
+    vendors:vendorSlice,
+    riders:riderSlice,
   },
 });
 

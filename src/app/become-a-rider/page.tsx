@@ -1,11 +1,13 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import { useDispatch } from "react-redux";
 import { useRouter } from "next/navigation";
-import { databases, storage, validateEnv } from "@/utils/appwrite";
-import { ID } from "appwrite";
+import { createRiderAsync } from "@/state/riderSlice";
+import { AppDispatch } from "@/state/store";
 import { IRiders } from "../../../types/types";
 
 const BecomeARiderPage = () => {
+  const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<IRiders>({
@@ -71,80 +73,41 @@ const BecomeARiderPage = () => {
     setMessage({ text: "", type: "" });
 
     try {
-      const { databaseId, ridersCollectionId, driversLicenceBucketId } = validateEnv(); 
+      await dispatch(
+        createRiderAsync({ formData, driversLicensePicture })
+      ).unwrap();
 
-      let driversLicensePictureId = null;
-      if (driversLicensePicture) {
-        const uploadedFile = await storage.createFile(
-          driversLicenceBucketId,
-          ID.unique(),
-          driversLicensePicture
-        );
-        driversLicensePictureId = uploadedFile.$id;
-      }
-      const riderId = ID.unique()
-
-      const documentData = {
-        ...formData,
-        driversLicensePicture: driversLicensePictureId || "",
-        referralCode:riderId,
-        status: "pending",
-        refferedBy:formData.referralCode
-      };
-
-      await databases.createDocument(
-        databaseId,
-        ridersCollectionId,
-       riderId,
-        documentData
-      );
-
-      // Notify server to send emails
-      const response = await fetch("/api/become-a-rider", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(documentData),
+      setMessage({
+        text: "Application submitted successfully! Check your email for confirmation.",
+        type: "success",
       });
-
-      const result = await response.json();
-      if (response.ok) {
-        setMessage({
-          text: "Application submitted successfully! Check your email for confirmation.",
-          type: "success",
-        });
-        setFormData({
-          fullName: "",
-          email: "",
-          phone: "",
-          address: "",
-          gender: "",
-          dateOfBirth: "",
-          nin: "",
-          bvn: "",
-          vehicleType: "",
-          previousWorkPlace: "",
-          workDuration: "",
-          guarantor1Name: "",
-          guarantor1Phone: "",
-          guarantor1Relationship: "",
-          guarantor2Name: "",
-          guarantor2Phone: "",
-          guarantor2Relationship: "",
-          referralCode: "",
-          status: "pending",
-        });
-        setDriversLicensePicture(null);
-        setStep(1);
-      } else {
-        setMessage({
-          text: result.error || "Failed to notify. Please contact support.",
-          type: "error",
-        });
-      }
-    } catch (error) {
+      setFormData({
+        fullName: "",
+        email: "",
+        phone: "",
+        address: "",
+        gender: "",
+        dateOfBirth: "",
+        nin: "",
+        bvn: "",
+        vehicleType: "",
+        previousWorkPlace: "",
+        workDuration: "",
+        guarantor1Name: "",
+        guarantor1Phone: "",
+        guarantor1Relationship: "",
+        guarantor2Name: "",
+        guarantor2Phone: "",
+        guarantor2Relationship: "",
+        referralCode: "",
+        status: "pending",
+      });
+      setDriversLicensePicture(null);
+      setStep(1);
+    } catch (error: any) {
       console.error("Error:", error);
       setMessage({
-        text: "An error occurred. Please try again later.",
+        text: error.message || "An error occurred. Please try again later.",
         type: "error",
       });
     } finally {

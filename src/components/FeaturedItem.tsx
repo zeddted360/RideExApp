@@ -56,7 +56,7 @@ const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
   useEffect(() => {
     if (featuredItems.length > 0) {
       const restaurantIds = [
-        ...new Set(featuredItems.map((item) => item.restaurant)),
+        ...new Set(featuredItems.map((item) => item.restaurantId)),
       ];
       getRestaurantNamesByIds(restaurantIds)
         .then((names) => {
@@ -195,8 +195,8 @@ const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
                         {item.name}
                       </h3>
                       <p className="text-xs text-gray-400 dark:text-gray-500 font-medium tracking-wide mb-1 line-clamp-1">
-                        {restaurantNames.get(item.restaurant) ||
-                          `Restaurant ${item.restaurant.slice(-4)}`}
+                        {restaurantNames.get(item.restaurantId) ||
+                          `Restaurant ${item.restaurantId.slice(-4)}`}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 line-clamp-2">
                         {item.description}

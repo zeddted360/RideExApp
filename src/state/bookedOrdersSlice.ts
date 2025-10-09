@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { databases, validateEnv } from "@/utils/appwrite";
-import { ID, Query } from "appwrite";
+import { Query } from "appwrite";
 import { IBookedOrderFetched } from "../../types/types";
 
 

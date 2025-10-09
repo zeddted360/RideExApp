@@ -10,16 +10,6 @@ interface PaymentMethodSelectorProps {
   setPaymentMethod: (method: PaymentMethod) => void;
 }
 
-const BANK_DETAILS = {
-  bank: "Zenith Bank",
-  accountName: "Food Ordering App Ltd",
-  accountNumber: "1234567890",
-};
-
-const USSD_DETAILS = {
-  code: "*966*000*1234567890#",
-  instructions: "Dial the code above on your mobile phone to pay via USSD."
-};
 
 const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   paymentMethod,
@@ -45,7 +35,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
         <label className="flex items-center space-x-3 cursor-pointer p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:bg-orange-50 dark:hover:bg-gray-800 font-medium text-base transition-all duration-150">
           <RadioGroupItem value="cash" />
           <Truck className="w-6 h-6 text-orange-500" />
-          <span>Cash on Delivery</span>
+          <span>Cash on Delivery - Items paid now, delivery fee on arrival</span>
         </label>
         <label className="flex items-center space-x-3 cursor-pointer p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:bg-orange-50 dark:hover:bg-gray-800 font-medium text-base transition-all duration-150">
           <RadioGroupItem value="bank" />

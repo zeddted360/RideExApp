@@ -3,7 +3,7 @@ import { z } from "zod";
 
 // Custom refinement to validate FileList and extract the first File
 const fileListSchema = z
-  .custom<FileList | undefined>((value) => {
+  .custom<FileList | string | undefined>((value) => {
     // Check if we're in a browser environment and if the value is a FileList
     if (typeof window !== "undefined" && value instanceof FileList) {
       return value.length > 0;
@@ -49,6 +49,7 @@ export const restaurantSchema = z.object({
     .string()
     .min(1, "Distance is required")
     .max(100, "Distance is too long"),
+    vendorId:z.string().optional()
 });
 
 export const menuItemSchema = z.object({
@@ -78,6 +79,7 @@ export const menuItemSchema = z.object({
     .string()
     .min(1, "Restaurant is required")
     .max(36, "Restaurant ID is too long"),
+    isApproved:z.boolean().optional().default(true)
 });
 
 export const featuredItemSchema = z.object({
@@ -102,6 +104,7 @@ export const featuredItemSchema = z.object({
   category: z.enum(["veg", "non-veg"], {
     required_error: "Category is required",
   }),
+   isApproved:z.boolean().optional().default(true)
 });
 
 export const popularItemSchema = z.object({
@@ -138,6 +141,7 @@ export const popularItemSchema = z.object({
     .string()
     .min(1, "Restaurant is required")
     .max(36, "Restaurant ID is too long"),
+     isApproved:z.boolean().optional().default(true)
 });
 
 export const discountSchema = z.object({

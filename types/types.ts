@@ -49,21 +49,15 @@ export interface IMenuItemFetched extends Models.Document {
 // post Restaurant
 export interface IRestaurant {
   name: string;
-  logo: FileList;
+  logo: FileList | string;
   rating: number;
   deliveryTime: string;
   category: string;
   distance: string;
+  vendorId?:string;
 }
 // fetched IRestaurant
-export interface IRestaurantFetched extends Models.Document {
-  name: string;
-  logo: string;
-  rating: number;
-  deliveryTime: string;
-  category: string;
-  distance: string;
-}
+export interface IRestaurantFetched extends IRestaurant, Models.Document {}
 
 export interface IFeaturedItem {
   name: string;

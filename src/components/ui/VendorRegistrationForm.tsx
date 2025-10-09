@@ -110,22 +110,21 @@ const VendorRegistrationForm = () => {
       };
   
       // Save to Appwrite database
+     const vendorId = ID.unique();
       const { databaseId, vendorsCollectionId, userCollectionId } = validateEnv();
       await databases.createDocument(
         databaseId,
         vendorsCollectionId,
-        ID.unique(),
+        vendorId,
         vendorData
       );
-      
       // 1. Create the user account
       const user = await account.create(
-        "unique()",
+        vendorId,
         data.email,
         data.password,
         `${data.fullName}`
       );
-
       // 2. Create user profile in users collection
       await databases.createDocument(databaseId, userCollectionId, user.$id, {
         userId: user.$id,
@@ -142,7 +141,7 @@ const VendorRegistrationForm = () => {
           rememberMe: true,
         })
       );
-      
+console.log("user created")      
       //trying to update vendor
       dispatch(getCurrentUserAsync());
       
@@ -171,7 +170,7 @@ const VendorRegistrationForm = () => {
     } catch (error: any) {
       console.error('Registration failed:', error);
       if (error.code === 409) {
-        setSubmitError('Email already exists');
+        setSubmitError('A user with the same id, email, or phone already exists');
       } else {
         setSubmitError(error.message || 'Registration failed. Please try again.');
       }

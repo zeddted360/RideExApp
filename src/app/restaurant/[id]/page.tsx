@@ -129,7 +129,7 @@ export default function RestaurantPage({}: RestaurantPageProps) {
             <div className="relative">
               <div className="w-32 h-32 md:w-36 md:h-36 rounded-2xl overflow-hidden flex-shrink-0 shadow-2xl ring-4 ring-white/20">
                 <Image
-                  src={fileUrl(validateEnv().restaurantBucketId, restaurant.logo)}
+                  src={fileUrl(validateEnv().restaurantBucketId, restaurant.logo as string)}
                   alt={restaurant.name}
                   fill
                   className="object-cover"
