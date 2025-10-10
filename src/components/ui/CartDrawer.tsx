@@ -22,10 +22,13 @@ import {
   X,
   Plus,
   Minus,
-  ShoppingCart,
   Loader2,
   Trash2,
-  Eye,
+  ShoppingCart,
+  AlertCircle,
+  ShoppingBag,
+  ArrowRight,
+  Package,
 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -56,9 +59,9 @@ const CartDrawer = () => {
   const { user } = useAuth();
   const [showEmptyCartDialog, setShowEmptyCartDialog] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [deletingItems, setDeletingItems] = useState<Set<string>>(new Set());
   const router = useRouter();
 
-  // Fetch orders on mount or when userId changes
   useEffect(() => {
     if (user?.userId && !orders && !loading) {
       dispatch(fetchOrdersByUserIdAsync(user.userId))
@@ -72,7 +75,6 @@ const CartDrawer = () => {
     }
   }, [dispatch, user, orders, loading]);
 
-  // Show dialog when cart is empty after fetching
   useEffect(() => {
     if (!loading && (!orders || orders.length === 0) && activeCart) {
       setShowEmptyCartDialog(true);
@@ -81,32 +83,30 @@ const CartDrawer = () => {
     }
   }, [orders, loading, activeCart]);
 
-  // Memoized update quantity handler with debounced optimistic update
   const handleUpdateQuantity = useCallback(
     debounce(async (order: ICartItemFetched, change: number) => {
       const newQuantity = Math.max(0, order.quantity + change);
-      const newTotalPrice =
-        (typeof order.price === "string"
-          ? Number(order.price.replace(/[₦,]/g, ""))
-          : order.price) * newQuantity;
+      const effectivePricePerUnit = order.totalPrice / order.quantity;
+      const newTotalPrice = effectivePricePerUnit * newQuantity;
 
-      // Optimistic update
       dispatch(updateQuantity({ orderId: order.$id, change }));
 
       if (newQuantity === 0) {
-        // Delete order if quantity reaches 0
+        setDeletingItems((prev) => new Set(prev).add(order.$id));
         try {
           await dispatch(deleteOrderAsync(order.$id)).unwrap();
+          toast.success("Item removed from cart");
         } catch (err) {
-          toast.error("Failed to remove item", {
-            duration: 4000,
-            position: "top-right",
-          });
-          // Revert optimistic update
+          toast.error("Failed to remove item");
           dispatch(updateQuantity({ orderId: order.$id, change: -change }));
+        } finally {
+          setDeletingItems((prev) => {
+            const next = new Set(prev);
+            next.delete(order.$id);
+            return next;
+          });
         }
       } else {
-        // Update order quantity and totalPrice
         try {
           await dispatch(
             updateOrderAsync({
@@ -115,11 +115,7 @@ const CartDrawer = () => {
             })
           ).unwrap();
         } catch (err) {
-          toast.error("Failed to update quantity", {
-            duration: 4000,
-            position: "top-right",
-          });
-          // Revert optimistic update
+          toast.error("Failed to update quantity");
           dispatch(updateQuantity({ orderId: order.$id, change: -change }));
         }
       }
@@ -127,237 +123,231 @@ const CartDrawer = () => {
     [dispatch]
   );
 
-  // Memoized delete handler with debounced optimistic update
   const handleDeleteOrder = useCallback(
-    debounce(async (order: ICartItemFetched) => {
-      // Optimistic delete
+    async (order: ICartItemFetched) => {
+      setDeletingItems((prev) => new Set(prev).add(order.$id));
       dispatch(deleteOrder(order.$id));
 
       try {
         await dispatch(deleteOrderAsync(order.$id)).unwrap();
+        toast.success("Item removed from cart");
       } catch (err) {
-        toast.error("Failed to delete item", {
-          duration: 4000,
-          position: "top-right",
-        });
-        // Revert optimistic delete
+        toast.error("Failed to delete item");
         dispatch(addOrder(order));
+      } finally {
+        setDeletingItems((prev) => {
+          const next = new Set(prev);
+          next.delete(order.$id);
+          return next;
+        });
       }
-    }, 300),
+    },
     [dispatch]
   );
 
-  // Memoized checkout handler
-  const handleCheckout = useCallback(async () => {
-    setIsCheckingOut(true);
-    try {
-      // Placeholder: Simulate async checkout
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      // Clear orders
-      await Promise.all(
-        orders?.map((order) =>
-          dispatch(deleteOrderAsync(order.$id)).unwrap()
-        ) || []
-      );
-      toast.success("Checkout successful!", {
-        duration: 3000,
-        position: "top-right",
-      });
-      setActiveCart(false);
-      // Refetch orders to ensure state is in sync
-      await dispatch(fetchOrdersByUserIdAsync(user?.userId as string)).unwrap();
-    } catch (err) {
-      toast.error("Checkout failed", {
-        duration: 4000,
-        position: "top-right",
-      });
-    } finally {
-      setIsCheckingOut(false);
-    }
-  }, [dispatch, orders, setActiveCart, user]);
-
-  // Memoized subtotal calculation using totalPrice
   const subtotal = useMemo(
     () => orders?.reduce((sum, item) => sum + (item.totalPrice || 0), 0) || 0,
     [orders]
   );
 
-  // Check if there are active orders in cart
   const hasActiveOrder =
     Array.isArray(orders) &&
     orders.some((order) => ["pending", "processing"].includes(order.status));
 
+  const itemCount = orders?.length || 0;
+
   return (
-    <div className="p-4">
-      {/* Floating View Cart Button - Show on all devices when there are active orders */}
+    <>
       {hasActiveOrder && (
-        <div className="fixed bottom-6 right-6 z-40">
-          <Button
-            onClick={() => setActiveCart(true)}
-            className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-full px-4 py-3 lg:px-6 shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2"
-            aria-label="View cart items"
-          >
-            <Eye className="w-4 h-4 lg:w-5 lg:h-5" />
-            <span className="font-medium hidden sm:inline">
-              View Cart Items
-            </span>
-            <span className="bg-white/20 rounded-full px-2 py-1 text-xs font-bold">
-              {orders?.length || 0}
-            </span>
-          </Button>
-        </div>
+        <button
+          onClick={() => setActiveCart(true)}
+          className="fixed bottom-6 right-6 z-50 group"
+          aria-label="View cart"
+        >
+          <div className="relative bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-full p-4 shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-110">
+            <ShoppingCart className="w-6 h-6" />
+            {itemCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center border-2 border-white animate-pulse">
+                {itemCount}
+              </span>
+            )}
+          </div>
+          <span className="absolute bottom-full right-0 mb-2 bg-gray-900 text-white text-xs px-3 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+            View Cart ({itemCount})
+          </span>
+        </button>
       )}
 
       <Drawer open={activeCart} onOpenChange={setActiveCart}>
-        <DrawerContent className="bg-gray-50 dark:bg-gray-900 rounded-t-3xl max-w-md mx-auto h-[80vh] flex flex-col">
-          <DrawerHeader className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
-            <DrawerTitle className="text-2xl font-bold text-gray-800 dark:text-gray-100">
-              My Cart
-            </DrawerTitle>
-            <DrawerDescription className="sr-only">
-              View and manage items in your cart
+        <DrawerContent className="bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 rounded-t-3xl max-w-md mx-auto h-[85vh] flex flex-col border-t-4 border-orange-500">
+          <DrawerHeader className="relative border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm p-6">
+            <div className="flex items-center gap-3 mb-1">
+              <div className="bg-gradient-to-r from-orange-500 to-pink-500 p-2 rounded-xl">
+                <ShoppingBag className="w-5 h-5 text-white" />
+              </div>
+              <DrawerTitle className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
+                My Cart
+              </DrawerTitle>
+            </div>
+            <DrawerDescription className="text-sm text-gray-600 dark:text-gray-400">
+              {itemCount} {itemCount === 1 ? "item" : "items"} ready for checkout
             </DrawerDescription>
             <DrawerClose asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute top-4 right-4 w-8 h-8 bg-orange-500 rounded-full text-white hover:bg-orange-600"
+                className="absolute top-4 right-4 w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                 aria-label="Close cart"
               >
-                <X size={18} />
+                <X className="w-5 h-5" />
               </Button>
             </DrawerClose>
           </DrawerHeader>
 
-          <div className="px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-            <span className="bg-blue-500 text-white px-4 py-2 rounded-full text-center font-medium inline-block">
-              Delivery
-            </span>
+          <div className="px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b border-gray-200 dark:border-gray-700">
+            <div className="inline-flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-medium shadow-sm">
+              <span className="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+              Delivery Available
+            </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {loading && !orders?.length && (
-              <div className="text-center">
-                <Loader2 className="animate-spin h-8 w-8 text-orange-500 mx-auto" />
-                <p className="text-gray-600 dark:text-gray-400 mt-2">
-                  Loading cart...
+          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+            {loading && !orders?.length ? (
+              <div className="flex flex-col items-center justify-center h-full">
+                <Loader2 className="animate-spin h-10 w-10 text-orange-500 mb-4" />
+                <p className="text-gray-600 dark:text-gray-400 font-medium">
+                  Loading your cart...
                 </p>
               </div>
-            )}
-            {error && (
-              <p
-                className="text-red-500 text-center animate-shake"
-                role="alert"
-              >
-                {error}
-              </p>
-            )}
-            {orders?.map((item) => (
-              <div
-                key={item.$id}
-                className={cn(
-                  "bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm transition-all duration-200 border border-gray-200 dark:border-gray-700",
-                  loading && "opacity-50"
-                )}
-              >
-                <div className="flex items-start gap-4">
-                  {/* Larger Image Container */}
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 bg-orange-100 dark:bg-orange-900/20 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
-                    <Image
-                      src={fileUrl(
-                        item.source === "featured"
-                          ? validateEnv().featuredBucketId
-                          : item.source === "popular"
-                          ? validateEnv().popularBucketId
-                          : validateEnv().menuBucketId,
-                        item.image
-                      )}
-                      alt={item.name || "Item"}
-                      className="w-full h-full object-cover"
-                      width={96}
-                      height={96}
-                      sizes="(max-width: 640px) 80px, 96px"
-                      quality={100}
-                      loading="lazy"
-                    />
-                  </div>
-
-                  {/* Item Details */}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-gray-800 dark:text-gray-100 mb-1 text-sm sm:text-base">
-                      {item.name || "Unknown Item"}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      <span className="font-medium">Price:</span> ₦
-                      {(typeof item.price === "string"
-                        ? Number(item.price.replace(/[₦,]/g, ""))
-                        : item.price
-                      ).toLocaleString()}{" "}
-                      x {item.quantity}
-                    </p>
-                    <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">
-                      Total: ₦{item.totalPrice.toLocaleString()}
-                    </p>
-                    {item.specialInstructions && (
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        <span className="font-medium">Instruction:</span>{" "}
-                        {item.specialInstructions}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Quantity Controls */}
-                  <div className="flex flex-col items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => handleUpdateQuantity(item, -1)}
-                      className="w-8 h-8 bg-gray-100 dark:bg-gray-700 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 border-gray-300 dark:border-gray-600"
-                      disabled={loading || item.quantity <= 0}
-                      aria-label={`Decrease quantity of ${item.name}`}
-                    >
-                      <Minus
-                        size={16}
-                        className="text-gray-600 dark:text-gray-300"
-                      />
-                    </Button>
-                    <span className="w-8 text-center font-medium text-gray-900 dark:text-gray-100 text-sm">
-                      {item.quantity || 0}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => handleUpdateQuantity(item, 1)}
-                      className="w-8 h-8 bg-orange-500 rounded-full text-white hover:bg-orange-600 border-orange-500"
-                      disabled={loading}
-                      aria-label={`Increase quantity of ${item.name}`}
-                    >
-                      <Plus size={16} className="text-white" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => handleDeleteOrder(item)}
-                      className="w-8 h-8 bg-red-500 rounded-full text-white hover:bg-red-600 border-red-500"
-                      disabled={loading}
-                      aria-label={`Delete ${item.name} from cart`}
-                    >
-                      <Trash2 size={16} className="text-white" />
-                    </Button>
-                  </div>
+            ) : error ? (
+              <div className="flex flex-col items-center justify-center h-full">
+                <div className="bg-red-100 dark:bg-red-900/20 p-4 rounded-full mb-4">
+                  <AlertCircle className="w-10 h-10 text-red-500" />
                 </div>
+                <p className="text-red-500 text-center font-medium" role="alert">
+                  {error}
+                </p>
               </div>
-            ))}
+            ) : orders && orders.length > 0 ? (
+              orders.map((item) => {
+                const isDeleting = deletingItems.has(item.$id);
+                return (
+                  <div
+                    key={item.$id}
+                    className={cn(
+                      "bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 dark:border-gray-700",
+                      isDeleting && "opacity-50 scale-95"
+                    )}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="relative w-24 h-24 bg-gradient-to-br from-orange-100 to-pink-100 dark:from-orange-900/30 dark:to-pink-900/30 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0 shadow-sm">
+                        <Image
+                          src={fileUrl(
+                            item.source === "featured"
+                              ? validateEnv().featuredBucketId
+                              : item.source === "popular"
+                              ? validateEnv().popularBucketId
+                              : validateEnv().menuBucketId,
+                            item.image
+                          )}
+                          alt={item.name || "Item"}
+                          className="w-full h-full object-cover"
+                          width={96}
+                          height={96}
+                          quality={90}
+                          loading="lazy"
+                        />
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2 text-base truncate">
+                          {item.name || "Unknown Item"}
+                        </h3>
+                        <div className="space-y-1">
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            <span className="font-medium">Unit Price:</span> ₦
+                            {(typeof item.price === "string"
+                              ? Number(item.price.replace(/[₦,]/g, ""))
+                              : item.price
+                            ).toLocaleString()}
+                          </p>
+                          <p className="text-lg font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
+                            ₦{item.totalPrice.toLocaleString()}
+                          </p>
+                        </div>
+                        {item.specialInstructions && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 italic line-clamp-2">
+                            "{item.specialInstructions}"
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-full p-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleUpdateQuantity(item, -1)}
+                            className="w-8 h-8 rounded-full hover:bg-white dark:hover:bg-gray-600"
+                            disabled={loading || item.quantity <= 1 || isDeleting}
+                            aria-label={`Decrease quantity of ${item.name}`}
+                          >
+                            <Minus className="w-4 h-4" />
+                          </Button>
+                          <span className="w-8 text-center font-bold text-gray-900 dark:text-gray-100 text-sm">
+                            {item.quantity}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleUpdateQuantity(item, 1)}
+                            className="w-8 h-8 rounded-full hover:bg-white dark:hover:bg-gray-600"
+                            disabled={loading || isDeleting}
+                            aria-label={`Increase quantity of ${item.name}`}
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteOrder(item)}
+                          className="w-full h-8 bg-red-50 dark:bg-red-900/20 rounded-full text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 border border-red-200 dark:border-red-800"
+                          disabled={loading || isDeleting}
+                          aria-label={`Delete ${item.name} from cart`}
+                        >
+                          {isDeleting ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : null}
           </div>
 
-          <DrawerFooter className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex justify-between items-center mb-4">
-              <span className="text-lg font-medium text-gray-700 dark:text-gray-300">
-                Subtotal
-              </span>
-              <span className="text-xl font-bold text-green-600 dark:text-green-400">
-                ₦{subtotal.toLocaleString()}
-              </span>
+          <DrawerFooter className="p-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-t border-gray-200 dark:border-gray-700 space-y-4">
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600 rounded-2xl p-4">
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  Subtotal ({itemCount} {itemCount === 1 ? "item" : "items"})
+                </span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  ₦{subtotal.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between items-center pt-3 border-t border-gray-300 dark:border-gray-500">
+                <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Total
+                </span>
+                <span className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
+                  ₦{subtotal.toLocaleString()}
+                </span>
+              </div>
             </div>
             <Button
               onClick={() => {
@@ -365,43 +355,67 @@ const CartDrawer = () => {
                 router.push("/checkout");
               }}
               className={cn(
-                "w-full py-4 text-lg font-medium rounded-lg transition-all duration-200",
+                "w-full h-14 text-lg font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl",
                 "bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white",
+                "flex items-center justify-center gap-3 group",
                 isCheckingOut && "opacity-50 cursor-not-allowed"
               )}
-              disabled={!orders || orders.length === 0}
+              disabled={!orders || orders.length === 0 || isCheckingOut}
               aria-label="Proceed to checkout"
             >
-              Proceed To Checkout
+              {isCheckingOut ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  Proceed to Checkout
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
             </Button>
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
 
       <Dialog open={showEmptyCartDialog} onOpenChange={setShowEmptyCartDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Your Cart is Empty</DialogTitle>
-            <DialogDescription>
-              It looks like you haven't added any items to your cart yet. Add
-              some delicious items to proceed!
+        <DialogContent className="sm:max-w-md rounded-2xl">
+          <DialogHeader className="text-center">
+            <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-br from-orange-100 to-pink-100 dark:from-orange-900/30 dark:to-pink-900/30 rounded-full flex items-center justify-center">
+              <Package className="w-8 h-8 text-orange-500" />
+            </div>
+            <DialogTitle className="text-2xl font-bold">Your Cart is Empty</DialogTitle>
+            <DialogDescription className="text-base pt-2">
+              Looks like you haven't added anything yet. Start exploring our delicious menu!
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="sm:justify-center gap-3 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowEmptyCartDialog(false);
+                setActiveCart(false);
+              }}
+              className="h-12 px-6 rounded-xl"
+            >
+              Close
+            </Button>
             <Button
               onClick={() => {
                 setShowEmptyCartDialog(false);
-                setActiveCart(!activeCart);
+                setActiveCart(false);
                 router.push("/menu");
               }}
-              className="bg-orange-500 text-white hover:bg-orange-600"
+              className="h-12 px-6 rounded-xl bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white"
             >
-              Browse Items
+              <ShoppingBag className="w-4 h-4 mr-2" />
+              Browse Menu
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 };
 

@@ -149,6 +149,7 @@ const PopularItem = ({ toggleFavorite, favorites }: IPopularItemProps) => {
                                 category: item.category,
                                 source: "popular",
                                 description: item.description,
+                                extras:item.extras
                               });
                               setIsOpen(true);
                             } else {

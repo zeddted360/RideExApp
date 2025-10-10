@@ -90,6 +90,7 @@ export interface ICartItem {
   category: string;
   source: "menu" | "featured" | "popular" | "";
   description?:string;
+   extras?: string[];
 }
 
 //  cart item order processed
@@ -97,6 +98,7 @@ export interface ICartItemOrder extends ICartItem {
   specialInstructions?: string;
   totalPrice: number;
   status: "pending" | "processing" | "success";
+  selectedExtras?: string[];
 }
 
 export interface ICartItemFetched extends ICartItemOrder, Models.Document {}

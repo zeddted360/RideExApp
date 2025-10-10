@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Dialog,
@@ -9,12 +9,12 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Minus, Plus, ShoppingCart, X } from "lucide-react";
+import { Minus, Plus, ShoppingCart, X, CheckCircle } from "lucide-react";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import { useShowCart } from "@/context/showCart";
-import { ICartItemOrder, ICartItemFetched } from "../../../types/types";
+import { ICartItemOrder, ICartItemFetched, IFetchedExtras } from "../../../types/types";
 import {
   createOrderAsync,
   resetOrders,
@@ -24,30 +24,82 @@ import {
 } from "@/state/orderSlice";
 import { AppDispatch, RootState } from "@/state/store";
 import { fileUrl, validateEnv } from "@/utils/appwrite";
+import { Label } from "@/components/ui/label";
+import { databases } from "@/utils/appwrite";
+import { Query } from "appwrite";
+import { useAuth } from "@/context/authContext";
 
 const AddToCartModal = () => {
   const { isOpen, setIsOpen, item } = useShowCart();
 
   const dispatch = useDispatch<AppDispatch>();
-  const { error, orders } = useSelector((state: RootState) => state.orders);
+  const { error, orders } = useSelector((state: RootState) => ({
+    error: state.orders.error,
+    orders: state.orders.orders,
+  }));
   const [quantity, setQuantity] = useState(item.quantity || 1);
   const [specialInstructions, setSpecialInstructions] = useState("");
+  const [selectedExtraIds, setSelectedExtraIds] = useState<string[]>([]);
+  const [itemExtras, setItemExtras] = useState<IFetchedExtras[]>([]);
+  const [extrasLoading, setExtrasLoading] = useState<"idle" | "pending" | "succeeded" | "failed">("idle");
+  const [extrasError, setExtrasError] = useState<string | null>(null);
   const maxInstructionsLength = 200;
 
   // Get user from Redux
-  const {user} = useSelector((state: RootState) => state.auth);
+  const { user } = useAuth();
   const userId = user?.userId;
+
+  // Fetch specific extras by IDs when modal opens if item has extras
+  useEffect(() => {
+    if (isOpen && Array.isArray(item.extras) && item?.extras?.length > 0) {
+      const fetchSpecificExtras = async () => {
+        setExtrasLoading("pending");
+        setExtrasError(null);
+        try {
+          const { databaseId, extrasCollectionId } = validateEnv();
+          const response = await databases.listDocuments(
+            databaseId,
+            extrasCollectionId,
+            [Query.equal("$id", item.extras as string[])]
+          );
+          const fetchedExtras = response.documents as IFetchedExtras[];
+          setItemExtras(fetchedExtras);
+          setSelectedExtraIds(fetchedExtras.map((extra) => extra.$id)); 
+          setExtrasLoading("succeeded");
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : "Failed to fetch extras";
+          setExtrasError(errorMsg);
+          setExtrasLoading("failed");
+          toast.error(errorMsg);
+        }
+      };
+      fetchSpecificExtras();
+    } else {
+      setItemExtras([]);
+      setSelectedExtraIds([]);
+    }
+  }, [isOpen, item.extras]);
 
   // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
       setQuantity(item.quantity || 1);
       setSpecialInstructions("");
+      setSelectedExtraIds([]);
+      setItemExtras([]);
+      setExtrasLoading("idle");
+      setExtrasError(null);
       if (error) {
         dispatch(resetOrders());
       }
     }
   }, [isOpen, item.quantity, dispatch, error]);
+
+  // Calculate extras total (scaled by quantity since mandatory for each item unit)
+  const extrasTotal = useMemo(() => {
+    const singleItemExtrasTotal = itemExtras.reduce((sum, extra) => sum + parseFloat(extra.price), 0);
+    return singleItemExtrasTotal * quantity;
+  }, [itemExtras, quantity]);
 
   const parsePrice = (priceString: string | number): number => {
     return typeof priceString === "string"
@@ -56,7 +108,8 @@ const AddToCartModal = () => {
   };
 
   const itemPrice = parsePrice(item.price);
-  const totalPrice = itemPrice * quantity;
+  const subtotal = itemPrice * quantity;
+  const totalPrice = subtotal + extrasTotal;
 
   const handleAddToCart = async () => {
     // Check if the item already exists in the cart
@@ -67,7 +120,9 @@ const AddToCartModal = () => {
     if (existingOrder) {
       // Update existing order
       const newQuantity = existingOrder.quantity + quantity;
-      const newTotalPrice = itemPrice * newQuantity;
+      const newSubtotal = itemPrice * newQuantity;
+      const singleItemExtrasTotal = itemExtras.reduce((sum, extra) => sum + parseFloat(extra.price), 0);
+      const newTotalPrice = newSubtotal + singleItemExtrasTotal * newQuantity; // Scale extras by new quantity
 
       // Optimistic update
       dispatch(
@@ -77,6 +132,7 @@ const AddToCartModal = () => {
           totalPrice: newTotalPrice,
           specialInstructions:
             specialInstructions || existingOrder.specialInstructions,
+          selectedExtras: selectedExtraIds,
         })
       );
       toast.success(`${item.name} quantity updated in cart!`, {
@@ -93,6 +149,7 @@ const AddToCartModal = () => {
               totalPrice: newTotalPrice,
               specialInstructions:
                 specialInstructions || existingOrder.specialInstructions,
+              selectedExtras: selectedExtraIds,
             },
           })
         ).unwrap();
@@ -109,6 +166,7 @@ const AddToCartModal = () => {
             quantity: existingOrder.quantity,
             totalPrice: existingOrder.totalPrice,
             specialInstructions: existingOrder.specialInstructions,
+            selectedExtras: existingOrder.selectedExtras || [],
           })
         );
       }
@@ -129,6 +187,7 @@ const AddToCartModal = () => {
         specialInstructions,
         status: "pending",
         source: item.source,
+        selectedExtras: selectedExtraIds, 
       } as unknown as ICartItemFetched;
 
       // Optimistic update
@@ -181,8 +240,7 @@ const AddToCartModal = () => {
         <DialogHeader className="sr-only">
           <DialogTitle>Add {item.name} to Cart</DialogTitle>
           <DialogDescription id="dialog-description">
-            Customize your order for {item.name}. Adjust quantity and add
-            special instructions.
+            Customize your order for {item.name}. Adjust quantity and add special instructions.
           </DialogDescription>
         </DialogHeader>
 
@@ -204,23 +262,22 @@ const AddToCartModal = () => {
             quality={90}
             priority
           />
-          
           {/* Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-          
           {/* Category Badge */}
           <div className="absolute top-3 left-3 z-10">
-            <span className={cn(
-              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg backdrop-blur-sm border",
-              item.category === "veg"
-                ? "bg-green-500/90 text-white border-green-400"
-                : "bg-orange-500/90 text-white border-orange-400"
-            )}>
+            <span
+              className={cn(
+                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg backdrop-blur-sm border",
+                item.category === "veg"
+                  ? "bg-green-500/90 text-white border-green-400"
+                  : "bg-orange-500/90 text-white border-orange-400"
+              )}
+            >
               <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
               {item.category === "veg" ? "Vegetarian" : "Non-Veg"}
             </span>
           </div>
-
           {/* Item Info Overlay */}
           <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
             <h2 className="text-xl sm:text-2xl font-bold mb-1 drop-shadow-lg line-clamp-1">
@@ -264,7 +321,6 @@ const AddToCartModal = () => {
               >
                 <Minus className="w-5 h-5" />
               </button>
-              
               <div className="flex flex-col items-center min-w-[60px]">
                 <span className="text-3xl font-bold text-gray-900 dark:text-gray-100">
                   {quantity}
@@ -273,7 +329,6 @@ const AddToCartModal = () => {
                   {quantity === 1 ? "item" : "items"}
                 </span>
               </div>
-              
               <button
                 onClick={() => setQuantity(quantity + 1)}
                 className="w-12 h-12 flex items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95 touch-manipulation"
@@ -282,6 +337,79 @@ const AddToCartModal = () => {
               </button>
             </div>
           </div>
+
+          {/* Extras Section - Only if item has extras */}
+          {Array.isArray(item.extras) && item.extras?.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">
+                  Included Extras (Required)
+                </h3>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  Automatically added
+                </span>
+              </div>
+              {extrasLoading === "pending" ? (
+                <div className="flex items-center justify-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div>
+                  <span className="ml-2 text-sm text-gray-500">Loading extras...</span>
+                </div>
+              ) : extrasError ? (
+                <div className="text-center py-4 text-red-500 dark:text-red-400 text-sm">
+                  {extrasError}
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-48 overflow-y-auto">
+                  {itemExtras.map((extra) => {
+                    const extraPrice = parseFloat(extra.price);
+                    return (
+                      <div
+                        key={extra.$id}
+                        className="flex items-center gap-3 p-3 rounded-xl border-2 border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/10"
+                      >
+                        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                        <div className="relative w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                          {extra.image ? (
+                            <Image
+                              src={fileUrl(validateEnv().extrasBucketId, extra.image)}
+                              fill
+                              alt={extra.name}
+                              className="object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-700">
+                              <span className="text-xs text-gray-500">?</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <Label className="text-sm font-medium text-gray-900 dark:text-gray-100 block mb-1">
+                            {extra.name}
+                          </Label>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                            {extra.description || "Popular add-on"}
+                          </p>
+                          <p className="text-sm font-semibold text-green-600 dark:text-green-400">
+                            +₦{extraPrice.toLocaleString()} {quantity > 1 ? `x ${quantity}` : ""}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 border border-green-200 dark:border-green-800">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Extras Total ({selectedExtraIds.length} x {quantity})
+                  </span>
+                  <span className="text-sm font-bold text-green-600 dark:text-green-400">
+                    ₦{extrasTotal.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Special Instructions */}
           <div>
@@ -302,12 +430,14 @@ const AddToCartModal = () => {
                 className="w-full min-h-[80px] resize-none bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 focus:border-orange-500 dark:focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 placeholder:text-gray-400 dark:placeholder:text-gray-500 rounded-xl p-3 text-gray-900 dark:text-gray-100 text-sm transition-all duration-200"
               />
               <div className="absolute bottom-2 right-2">
-                <span className={cn(
-                  "text-xs font-medium px-2 py-1 rounded-full transition-colors",
-                  specialInstructions.length > maxInstructionsLength * 0.8
-                    ? "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
-                    : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
-                )}>
+                <span
+                  className={cn(
+                    "text-xs font-medium px-2 py-1 rounded-full transition-colors",
+                    specialInstructions.length > maxInstructionsLength * 0.8
+                      ? "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
+                      : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+                  )}
+                >
                   {specialInstructions.length}/{maxInstructionsLength}
                 </span>
               </div>
@@ -318,20 +448,22 @@ const AddToCartModal = () => {
           <div className="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-xl p-3 border-2 border-orange-200 dark:border-orange-800">
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs text-gray-600 dark:text-gray-400">
-                Item Price
+                Subtotal ({quantity})
               </span>
               <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
-                ₦{itemPrice.toLocaleString()}
+                ₦{subtotal.toLocaleString()}
               </span>
             </div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-gray-600 dark:text-gray-400">
-                Quantity
-              </span>
-              <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
-                × {quantity}
-              </span>
-            </div>
+            {extrasTotal > 0 && (
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-gray-600 dark:text-gray-400">
+                  Extras (Required)
+                </span>
+                <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
+                  ₦{extrasTotal.toLocaleString()}
+                </span>
+              </div>
+            )}
             <div className="border-t border-orange-200 dark:border-orange-800 pt-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
@@ -369,13 +501,3 @@ const AddToCartModal = () => {
 };
 
 export default AddToCartModal;
-
-
-
-
-
-
-
-
-
-

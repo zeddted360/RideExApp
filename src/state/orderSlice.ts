@@ -22,8 +22,6 @@ export const createOrderAsync = createAsyncThunk<
   { rejectValue: { error: string; tempId: string } }
 >("orders/createOrder", async (orderData, { rejectWithValue }) => {
   try {
-
-    console.log("The data to add is :", orderData);
     const { databaseId, orderId } = validateEnv();
     const { $id, ...data } = orderData as ICartItemOrder & { $id?: string }; 
     const response = await databases.createDocument(

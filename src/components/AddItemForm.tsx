@@ -716,7 +716,6 @@ const AddFoodItemForm = () => {
           <AddExtrasModal 
             onAddExtras={(selectedExtras) => {
               setFeaturedSelectedExtras(selectedExtras);
-              console.log("Selected extras for featured item:", selectedExtras);
               toast.success(`${selectedExtras.length} extras added!`);
             }} 
           />
@@ -728,7 +727,6 @@ const AddFoodItemForm = () => {
           <AddExtrasModal 
             onAddExtras={(selectedExtras) => {
               setPopularSelectedExtras(selectedExtras);
-              console.log("Selected extras for popular item:", selectedExtras);
               toast.success(`${selectedExtras.length} extras added!`);
             }} 
           />
@@ -740,7 +738,6 @@ const AddFoodItemForm = () => {
           <DiscountForm form={discountForm} targetOptions={targetOptions} onSubmit={handleDiscountSubmit} loading={loading} />
           <AddExtrasModal 
             onAddExtras={(selectedExtras) => {
-              console.log("Selected extras for discount:", selectedExtras);
               toast.success(`${selectedExtras.length} extras added!`);
             }} 
           />
