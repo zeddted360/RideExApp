@@ -1,4 +1,3 @@
-// components/Header/index.tsx
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";

@@ -1,4 +1,3 @@
-// lib/schemas.ts
 import { z } from "zod";
 
 // Custom refinement to validate FileList and extract the first File
@@ -79,7 +78,6 @@ export const menuItemSchema = z.object({
     .string()
     .min(1, "Restaurant is required")
     .max(36, "Restaurant ID is too long"),
-    isApproved:z.boolean().optional().default(true)
 });
 
 export const featuredItemSchema = z.object({
@@ -104,7 +102,6 @@ export const featuredItemSchema = z.object({
   category: z.enum(["veg", "non-veg"], {
     required_error: "Category is required",
   }),
-   isApproved:z.boolean().optional().default(true)
 });
 
 export const popularItemSchema = z.object({
@@ -141,7 +138,6 @@ export const popularItemSchema = z.object({
     .string()
     .min(1, "Restaurant is required")
     .max(36, "Restaurant ID is too long"),
-     isApproved:z.boolean().optional().default(true)
 });
 
 export const discountSchema = z.object({
@@ -211,7 +207,7 @@ export const vendorRegistrationSchema = z
     password: z.string().min(6, "Password must be at least 6 characters"),
     confirmPassword: z.string(),
     agreeTerms: z.boolean().refine((val) => val === true, "You must agree to the terms and conditions"),
-    whatsappUpdates: z.boolean().optional(), // Optional field for WhatsApp toggle
+    whatsappUpdates: z.boolean().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords don't match",

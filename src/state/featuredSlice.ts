@@ -20,7 +20,7 @@ const initialState: IFeaturedItemProp = {
 // Function to create a featured item
 export const createAsyncFeaturedItem = createAsyncThunk<
   IFeaturedItemFetched,
-  FeaturedItemFormData,
+  Partial<FeaturedItemFormData & { extras?: string[] }>,
   { rejectValue: string }
 >("featuredItem/createFeaturedItem", async (data, { rejectWithValue }) => {
   try {
@@ -33,6 +33,7 @@ export const createAsyncFeaturedItem = createAsyncThunk<
       ID.unique(),
       data.image[0] as File
     );
+
     const createdDocument = await databases.createDocument(
       databaseId,
       featuredId,
@@ -42,23 +43,20 @@ export const createAsyncFeaturedItem = createAsyncThunk<
         price: data.price,
         image: imageFile.$id,
         rating: data.rating,
-        restaurant: data.restaurantId,
+        restaurantId: data.restaurantId,
         description: data.description,
         category: data.category,
         isApproved: false, 
+        extras: data.extras || [],  // Append extras as array of IDs
       }
     );
 
+    toast.success("Featured item created successfully!");
     return createdDocument as IFeaturedItemFetched;
   } catch (error) {
-    toast.error(
-      `Failed to create featured item: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
-    );
-    return rejectWithValue(
-      error instanceof Error ? error.message : "Unknown error"
-    );
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    toast.error(`Failed to create featured item: ${errorMsg}. Check extras IDs if provided.`);
+    return rejectWithValue(errorMsg);
   }
 });
 
@@ -79,28 +77,25 @@ export const listAsyncFeaturedItems = createAsyncThunk<
     );
     return response.documents as IFeaturedItemFetched[];
   } catch (error) {
-    toast.error(
-      `Failed to fetch featured items: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
-    );
-    return rejectWithValue(
-      error instanceof Error ? error.message : "Unknown error"
-    );
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    toast.error(`Failed to fetch featured items: ${errorMsg}`);
+    return rejectWithValue(errorMsg);
   }
 });
 
 // Function to update a featured item
 export const updateAsyncFeaturedItem = createAsyncThunk<
   IFeaturedItemFetched,
-  { itemId: string; data: Partial<FeaturedItemFormData>; newImage?: File | null },
+  { itemId: string; data: Partial<FeaturedItemFormData & { extras?: string[] }>; newImage?: File | null },
   { rejectValue: string }
 >("featuredItem/updateFeaturedItem", async ({ itemId, data, newImage }, { rejectWithValue }) => {
   try {
     const { databaseId, featuredId, featuredBucketId } = validateEnv();
 
-    let updateData = { ...data };
-
+    let updateData = { 
+      ...data,
+      extras: data.extras !== undefined ? data.extras : undefined,  // Ensure it's an array or undefined
+    };
 
     if (newImage) {
       // Upload new image
@@ -119,16 +114,12 @@ export const updateAsyncFeaturedItem = createAsyncThunk<
       updateData
     );
 
+    toast.success("Featured item updated successfully!");
     return updatedDocument as IFeaturedItemFetched;
   } catch (error) {
-    toast.error(
-      `Failed to update featured item: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
-    );
-    return rejectWithValue(
-      error instanceof Error ? error.message : "Unknown error"
-    );
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    toast.error(`Failed to update featured item: ${errorMsg}. Check extras IDs if provided.`);
+    return rejectWithValue(errorMsg);
   }
 });
 
@@ -149,16 +140,12 @@ export const deleteAsyncFeaturedItem = createAsyncThunk<
     // Delete document
     await databases.deleteDocument(databaseId, featuredId, itemId);
 
+    toast.success("Featured item deleted successfully!");
     return itemId;
   } catch (error) {
-    toast.error(
-      `Failed to delete featured item: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
-    );
-    return rejectWithValue(
-      error instanceof Error ? error.message : "Unknown error"
-    );
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    toast.error(`Failed to delete featured item: ${errorMsg}`);
+    return rejectWithValue(errorMsg);
   }
 });
 

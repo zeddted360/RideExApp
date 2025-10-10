@@ -1,48 +1,183 @@
-// components/AddItemSidebar.tsx
 "use client";
 import React from "react";
 import {
+  Building,
   Utensils,
   Star,
   Flame,
   Percent,
+  Edit,
+  ChevronRight,
+  PlusCircle,
 } from "lucide-react";
 
 interface AddItemSidebarProps {
-  activeTab: "discount" | "menu-item" | "featured-item" | "popular-item";
-  setActiveTab: (tab: "discount" | "menu-item" | "featured-item" | "popular-item") => void;
+  activeTab: "account" | "discount" | "menu-item" | "featured-item" | "popular-item" | "edit-menu" | "extras";
+  setActiveTab: (tab: "account" | "discount" | "menu-item" | "featured-item" | "popular-item" | "edit-menu" | "extras") => void;
 }
 
 const AddItemSidebar = ({ activeTab, setActiveTab }: AddItemSidebarProps) => {
   const tabs = [
-    { id: "menu-item", label: "Menu Item", icon: Utensils },
-    { id: "featured-item", label: "Featured Item", icon: Star },
-    { id: "popular-item", label: "Popular Item", icon: Flame },
-    { id: "discount", label: "Discount", icon: Percent },
+    { 
+      id: "account", 
+      label: "My Restaurants", 
+      icon: Building,
+      description: "Manage your restaurants"
+    },
+    { 
+      id: "edit-menu", 
+      label: "Edit Menu", 
+      icon: Edit,
+      description: "Update menu items"
+    },
+    { 
+      id: "menu-item", 
+      label: "Add Menu Item", 
+      icon: Utensils,
+      description: "Create new dishes"
+    },
+    { 
+      id: "featured-item", 
+      label: "Add Featured", 
+      icon: Star,
+      description: "Highlight best dishes"
+    },
+    { 
+      id: "popular-item", 
+      label: "Add Popular", 
+      icon: Flame,
+      description: "Showcase favorites"
+    },
+    { 
+      id: "discount", 
+      label: "Add Discount", 
+      icon: Percent,
+      description: "Create promotions"
+    },
+     { id: "extras", label: "Manage Extras", icon: PlusCircle, description: "Add extract" }
   ];
 
   return (
-    <aside className="w-full lg:w-64 bg-white dark:bg-gray-800 border-b lg:border-r border-gray-200 dark:border-gray-700 p-4 lg:p-6 fixed lg:sticky top-0 z-10 lg:z-auto">
-      <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6 hidden lg:block">Add New</h2>
-      <nav className="flex lg:flex-col overflow-x-auto lg:overflow-visible gap-2 lg:space-y-2 pb-2 lg:pb-0">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as  | "discount" | "menu-item" | "featured-item" | "popular-item")}
-              className={`flex items-center gap-3 p-3 rounded-lg font-medium transition-all duration-200 whitespace-nowrap ${
-                activeTab === tab.id
-                  ? "bg-orange-500 text-white shadow-md"
-                  : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-              }`}
-            >
-              <Icon className="w-5 h-5 flex-shrink-0" />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </nav>
+    <aside className="w-full lg:w-72 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-850 border-b lg:border-r border-gray-200 dark:border-gray-700 shadow-lg lg:shadow-none">
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:block sticky top-0 h-screen overflow-y-auto p-6">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+              <Building className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                Vendor Dashboard
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Manage your business</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <nav className="space-y-2">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                className={`group w-full flex items-center justify-between p-4 rounded-xl font-medium transition-all duration-200 ${
+                  isActive
+                    ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/30 scale-105"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-700 hover:shadow-md hover:scale-102"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg transition-colors ${
+                    isActive 
+                      ? "bg-white/20" 
+                      : "bg-gray-100 dark:bg-gray-600 group-hover:bg-orange-100 dark:group-hover:bg-orange-900/30"
+                  }`}>
+                    <Icon className={`w-5 h-5 ${
+                      isActive 
+                        ? "text-white" 
+                        : "text-orange-600 dark:text-orange-400"
+                    }`} />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-semibold text-sm">{tab.label}</div>
+                    <div className={`text-xs transition-colors ${
+                      isActive 
+                        ? "text-orange-100" 
+                        : "text-gray-500 dark:text-gray-400 group-hover:text-orange-600 dark:group-hover:text-orange-400"
+                    }`}>
+                      {tab.description}
+                    </div>
+                  </div>
+                </div>
+                {isActive && (
+                  <ChevronRight className="w-5 h-5 text-white animate-pulse" />
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Footer */}
+        <div className="mt-8 p-4 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-xl border border-orange-200 dark:border-orange-800">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Star className="w-4 h-4 text-white fill-white" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 mb-1">
+                Pro Tip
+              </h3>
+              <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                Feature your best dishes to boost visibility and sales!
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Sidebar */}
+      <div className="lg:hidden">
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Dashboard</h2>
+        </div>
+        <nav className="flex overflow-x-auto gap-2 p-4 scrollbar-hide">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                className={`flex flex-col items-center gap-2 p-3 rounded-xl font-medium transition-all duration-200 whitespace-nowrap min-w-[100px] ${
+                  isActive
+                    ? "bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/30"
+                    : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-orange-300 dark:hover:border-orange-600"
+                }`}
+              >
+                <div className={`p-2 rounded-lg ${
+                  isActive 
+                    ? "bg-white/20" 
+                    : "bg-orange-100 dark:bg-orange-900/30"
+                }`}>
+                  <Icon className={`w-5 h-5 ${
+                    isActive 
+                      ? "text-white" 
+                      : "text-orange-600 dark:text-orange-400"
+                  }`} />
+                </div>
+                <span className="text-xs font-semibold">{tab.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </div>
     </aside>
   );
 };

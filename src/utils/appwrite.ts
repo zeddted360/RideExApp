@@ -32,6 +32,8 @@ interface EnvConfig {
   discountBucketId:string;
   promoImagesBucketId:string;
   categoryLogosBucketId:string;
+  extrasCollectionId:string;
+  extrasBucketId:string;
 }
 
 // Validate environment variables
@@ -71,6 +73,8 @@ export function validateEnv(): EnvConfig {
     discountBucketId:process.env.NEXT_PUBLIC_APPWRITE_DISCOUNT_BUCKET_ID,
     promoImagesBucketId:process.env.NEXT_PUBLIC_APPWRITE_PROMO_IMAGES_BUCKET_ID,
     categoryLogosBucketId:process.env.NEXT_PUBLIC_APPWRITE_CATEGORY_LOGO_BUCKET_ID,
+    extrasCollectionId:process.env.NEXT_PUBLIC_EXTRAS_COLLECTION_ID,
+    extrasBucketId:process.env.NEXT_PUBLIC_EXTRAS_BUCKET_ID,
   };
 
   // Check for undefined environment variables
@@ -117,6 +121,8 @@ export function validateEnv(): EnvConfig {
     discountBucketId:requiredEnvVars.discountBucketId!,
     promoImagesBucketId:requiredEnvVars.promoImagesBucketId!,
     categoryLogosBucketId:requiredEnvVars.categoryLogosBucketId!,
+    extrasBucketId:requiredEnvVars.extrasBucketId!,
+    extrasCollectionId:requiredEnvVars.extrasCollectionId!,
   };
 }
 

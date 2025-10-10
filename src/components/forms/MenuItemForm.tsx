@@ -1,4 +1,3 @@
-// components/forms/MenuItemForm.tsx
 "use client";
 import React from "react";
 import { UseFormReturn } from "react-hook-form";
@@ -10,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, PlusCircle, Utensils } from "lucide-react";
 import FileInput from "@/components/FileInput";
 import { MenuItemFormData } from "@/utils/schema";
-import { IRestaurant, IRestaurantFetched } from "../../../types/types";
+import {IRestaurantFetched } from "../../../types/types";
+import { useSelector } from "react-redux";
 
 interface MenuItemFormProps {
   form: UseFormReturn<MenuItemFormData>;
@@ -19,7 +19,9 @@ interface MenuItemFormProps {
   loading: boolean;
 }
 
-const MenuItemForm = ({ form, restaurants, onSubmit, loading }: MenuItemFormProps) => (
+const MenuItemForm = ({ form, restaurants, onSubmit, loading }: MenuItemFormProps) => {
+  
+  return(
   <Card className="w-full bg-white/80 dark:bg-gray-900/80 shadow-2xl rounded-2xl border-0 py-4">
     <CardHeader className="flex flex-row items-center gap-3 pb-2">
       <span className="bg-orange-100 dark:bg-orange-900 p-2 rounded-full">
@@ -195,6 +197,6 @@ const MenuItemForm = ({ form, restaurants, onSubmit, loading }: MenuItemFormProp
       </form>
     </CardContent>
   </Card>
-);
+)};
 
 export default MenuItemForm;

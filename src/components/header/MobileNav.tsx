@@ -179,7 +179,7 @@ const MobileNav: React.FC<MobileNavProps> = ({
                     className="flex items-center gap-3 px-4 py-3 cursor-pointer text-orange-600 font-bold bg-orange-50 dark:bg-orange-900/20 rounded-lg mt-1"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>Add Item</span>
+                    <span>Vendor Dashboard</span>
                   </DropdownMenuItem>
                   {role === "admin" && (
                     <DropdownMenuItem

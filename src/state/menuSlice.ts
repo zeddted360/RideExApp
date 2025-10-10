@@ -20,7 +20,7 @@ const initialState: IMenuItemProp = {
 // Function to create a menu
 export const createAsyncMenuItem = createAsyncThunk<
   IMenuItemFetched,
-  MenuItemFormData,
+  Partial<MenuItemFormData & { extras?: string[] }>,  // Updated to accept extras
   { rejectValue: string }
 >("menuItem/createMenuItem", async (data, { rejectWithValue }) => {
   try {
@@ -47,19 +47,16 @@ export const createAsyncMenuItem = createAsyncThunk<
         category: data.category,
         restaurantId: data.restaurantId,
         isApproved: false,
+        extras: data.extras || [],  // Append extras as array of IDs
       }
     );
 
+    toast.success("Menu item created successfully!");  // Optional: Specific success toast
     return createdDocument as IMenuItemFetched;
   } catch (error) {
-    toast.error(
-      `Failed to create menu item: ${
-        error instanceof Error ? error.message : "Failed to load restaurant"
-      }`
-    );
-    return rejectWithValue(
-      error instanceof Error ? error.message : "Failed to load restaurant"
-    );
+    const errorMsg = error instanceof Error ? error.message : "Failed to create menu item";
+    toast.error(`Failed to create menu item: ${errorMsg}. Check extras IDs if provided.`);
+    return rejectWithValue(errorMsg);
   }
 });
 
@@ -80,26 +77,24 @@ export const listAsyncMenusItem = createAsyncThunk<
     );
     return response.documents as IMenuItemFetched[];
   } catch (error) {
-    toast.error(
-      `Failed to fetch restaurants: ${
-        error instanceof Error ? error.message : "Failed to load restaurant"
-      }`
-    );
-    return rejectWithValue(
-      error instanceof Error ? error.message : "Failed to load restaurant"
-    );
+    const errorMsg = error instanceof Error ? error.message : "Failed to load menu items";
+    toast.error(`Failed to fetch menu items: ${errorMsg}`);
+    return rejectWithValue(errorMsg);
   }
 });
 
 // Function to update a menu item
 export const updateAsyncMenuItem = createAsyncThunk<
   IMenuItemFetched,
-  { itemId: string; data: Partial<MenuItemFormData>; newImage?: File | null },
+  { itemId: string; data: Partial<MenuItemFormData & { extras?: string[] }>; newImage?: File | null },  // Updated to accept extras
   { rejectValue: string }
 >("menuItem/updateMenuItem", async ({ itemId, data, newImage }, { rejectWithValue }) => {
   try {
     const { databaseId, menuItemsCollectionId, menuBucketId } = validateEnv();
-    let updateData = { ...data };
+    let updateData = { 
+      ...data,
+      extras: data.extras !== undefined ? data.extras : undefined,  // Ensure it's an array or undefined (not null)
+    };
 
     if (newImage) {
       // Upload new image
@@ -118,16 +113,12 @@ export const updateAsyncMenuItem = createAsyncThunk<
       updateData
     );
 
+    toast.success("Menu item updated successfully!");  // Optional: Specific success toast
     return updatedDocument as IMenuItemFetched;
   } catch (error) {
-    toast.error(
-      `Failed to update menu item: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
-    );
-    return rejectWithValue(
-      error instanceof Error ? error.message : "Unknown error"
-    );
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    toast.error(`Failed to update menu item: ${errorMsg}. Check extras IDs if provided.`);
+    return rejectWithValue(errorMsg);
   }
 });
 
@@ -148,16 +139,12 @@ export const deleteAsyncMenuItem = createAsyncThunk<
     // Delete document
     await databases.deleteDocument(databaseId, menuItemsCollectionId, itemId);
 
+    toast.success("Menu item deleted successfully!");  // Optional: Specific success toast
     return itemId;
   } catch (error) {
-    toast.error(
-      `Failed to delete menu item: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
-    );
-    return rejectWithValue(
-      error instanceof Error ? error.message : "Unknown error"
-    );
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    toast.error(`Failed to delete menu item: ${errorMsg}`);
+    return rejectWithValue(errorMsg);
   }
 });
 

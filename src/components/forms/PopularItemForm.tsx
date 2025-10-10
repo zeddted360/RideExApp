@@ -1,4 +1,3 @@
-// components/forms/PopularItemForm.tsx
 "use client";
 import React from "react";
 import { UseFormReturn } from "react-hook-form";

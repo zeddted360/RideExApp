@@ -19,7 +19,7 @@ const initialState: IPopularItemProp = {
 
 export const createAsyncPopularItem = createAsyncThunk<
   IPopularItemFetched,
-  PopularItemFormData,
+  Partial<PopularItemFormData & { extras?: string[] }>,
   { rejectValue: string }
 >("popularItem/createPopularItem", async (data, { rejectWithValue }) => {
   try {
@@ -49,18 +49,15 @@ export const createAsyncPopularItem = createAsyncThunk<
         discount: data.discount,
         restaurantId: data.restaurantId,
         isApproved: false, 
+        extras: data.extras || [],  // Append extras as array of IDs
       }
     );
+    toast.success("Popular item created successfully!");
     return createdDocument as IPopularItemFetched;
   } catch (error) {
-    toast.error(
-      `Failed to create popular item: ${
-        error instanceof Error ? error.message : "Failed to create popular item"
-      }`
-    );
-    return rejectWithValue(
-      error instanceof Error ? error.message : "Failed to create popular item"
-    );
+    const errorMsg = error instanceof Error ? error.message : "Failed to create popular item";
+    toast.error(`Failed to create popular item: ${errorMsg}. Check extras IDs if provided.`);
+    return rejectWithValue(errorMsg);
   }
 });
 
@@ -78,27 +75,25 @@ export const listAsyncPopularItems = createAsyncThunk<
     );
     return response.documents as IPopularItemFetched[];
   } catch (error) {
-    toast.error(
-      `Failed to fetch popular items: ${
-        error instanceof Error ? error.message : "Failed to fetch popular items"
-      }`
-    );
-    return rejectWithValue(
-      error instanceof Error ? error.message : "Failed to fetch popular items"
-    );
+    const errorMsg = error instanceof Error ? error.message : "Failed to fetch popular items";
+    toast.error(`Failed to fetch popular items: ${errorMsg}`);
+    return rejectWithValue(errorMsg);
   }
 });
 
 // Function to update a popular item
 export const updateAsyncPopularItem = createAsyncThunk<
   IPopularItemFetched,
-  { itemId: string; data: Partial<PopularItemFormData>; newImage?: File | null },
+  { itemId: string; data: Partial<PopularItemFormData & { extras?: string[] }>; newImage?: File | null },
   { rejectValue: string }
 >("popularItem/updatePopularItem", async ({ itemId, data, newImage }, { rejectWithValue }) => {
   try {
     const { databaseId, popularItemsCollectionId, popularBucketId } = validateEnv();
 
-    let updateData = { ...data };
+    let updateData = { 
+      ...data,
+      extras: data.extras !== undefined ? data.extras : undefined,  // Ensure extras is array or undefined
+    };
 
     if (newImage) {
       // Upload new image
@@ -117,16 +112,12 @@ export const updateAsyncPopularItem = createAsyncThunk<
       updateData
     );
 
+    toast.success("Popular item updated successfully!");
     return updatedDocument as IPopularItemFetched;
   } catch (error) {
-    toast.error(
-      `Failed to update popular item: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
-    );
-    return rejectWithValue(
-      error instanceof Error ? error.message : "Unknown error"
-    );
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    toast.error(`Failed to update popular item: ${errorMsg}. Check extras IDs if provided.`);
+    return rejectWithValue(errorMsg);
   }
 });
 
@@ -147,16 +138,12 @@ export const deleteAsyncPopularItem = createAsyncThunk<
     // Delete document
     await databases.deleteDocument(databaseId, popularItemsCollectionId, itemId);
 
+    toast.success("Popular item deleted successfully!");
     return itemId;
   } catch (error) {
-    toast.error(
-      `Failed to delete popular item: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
-    );
-    return rejectWithValue(
-      error instanceof Error ? error.message : "Unknown error"
-    );
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    toast.error(`Failed to delete popular item: ${errorMsg}`);
+    return rejectWithValue(errorMsg);
   }
 });
 

@@ -12,7 +12,7 @@ import discountSlice from "./discountSlice";
 import vendorSlice from "./vendorSlice";
 import riderSlice from "./riderSlice";
 import{ categoryLogosReducer} from "./categoryLogosSlice";
-
+import extraReducer from "./extraSlice";
 
 export const store = configureStore({
   reducer: {
@@ -28,6 +28,7 @@ export const store = configureStore({
     vendors:vendorSlice,
     riders:riderSlice,
      categoryLogos: categoryLogosReducer,
+     extra: extraReducer,
   },
 });
 

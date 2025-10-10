@@ -32,6 +32,8 @@ export interface IMenuItem {
   rating: number;
   cookTime: string;
   isApproved?:boolean;
+  extras?:string[];
+
 }
 
 //fetched menu items
@@ -44,6 +46,7 @@ export interface IMenuItemFetched extends Models.Document {
   category: string;
   rating: number;
   cookTime: string;
+  extras?: string[];
 }
 
 // post Restaurant
@@ -68,6 +71,8 @@ export interface IFeaturedItem {
   description: string;
   category: string;
   isApproved?:boolean;
+  extras?:string[];
+
 
 }
 
@@ -124,6 +129,8 @@ export interface IPopularItem {
   isPopular: boolean;
   discount: string;
   isApproved?:boolean;
+  extras?:string[];
+
 
 }
 
@@ -144,6 +151,7 @@ export interface PopularItemFormData {
   isPopular: boolean;
   discount: string;
   restaurantId: string;
+
 }
 
 export type OrderStatus =
@@ -287,6 +295,17 @@ export interface IDiscount {
   image?: string | FileList; // Promo banner image ID from storage
   isActive: boolean; // For admin toggling
   usageCount?: number; // Track uses (for maxUses enforcement)
+  extras?:string[]
 }
 
-export interface IDiscountFetched extends IDiscount, Models.Document {}
+export interface IDiscountFetched extends IDiscount, Models.Document {};
+
+export interface IExtras {
+  name: string;
+  price: string;
+  description?: string;
+  image?: string;
+  vendorId: string;
+}
+
+export interface IFetchedExtras extends IExtras, Models.Document {}

@@ -35,33 +35,28 @@ export const listAsyncDiscounts = createAsyncThunk<
     );
     return response.documents as IDiscountFetched[];
   } catch (error) {
-    toast.error(
-      `Failed to fetch discounts: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
-    );
-    return rejectWithValue(
-      error instanceof Error ? error.message : "Failed to fetch discounts"
-    );
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    toast.error(`Failed to fetch discounts: ${errorMsg}`);
+    return rejectWithValue(errorMsg);
   }
 });
 
 // Async thunk for creating discount
 export const createAsyncDiscount = createAsyncThunk<
   IDiscountFetched,
-  IDiscount,
+  Partial<IDiscount>,
   { rejectValue: string }
 >("discount/createDiscount", async (data, { rejectWithValue }) => {
   try {
     const { databaseId, discountsCollectionId, discountBucketId } = validateEnv();
 
     let imageId: string | undefined;
-    if (data.image && data.image[0]) {
+    if (data.image && (data.image as FileList)[0]) {
       // Upload image if provided
       const uploadedFile = await storage.createFile(
         discountBucketId,
         ID.unique(),
-        data.image[0] as  unknown as File,
+        (data.image as FileList)[0] as File,
       );
       imageId = uploadedFile.$id;
     }
@@ -87,27 +82,23 @@ export const createAsyncDiscount = createAsyncThunk<
         image: imageId,
         isActive: data.isActive ?? true,
         usageCount: 0,
+        extras: data.extras || [],  // Append extras as array of IDs
       }
     );
 
     toast.success("Discount created successfully!");
     return createdDocument as IDiscountFetched;
   } catch (error) {
-    toast.error(
-      `Failed to create discount: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
-    );
-    return rejectWithValue(
-      error instanceof Error ? error.message : "Failed to create discount"
-    );
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    toast.error(`Failed to create discount: ${errorMsg}. Check extras IDs if provided.`);
+    return rejectWithValue(errorMsg);
   }
 });
 
 // Async thunk for updating discount
 export const updateAsyncDiscount = createAsyncThunk<
   IDiscountFetched,
-  { id: string; data: Partial<Omit<IDiscount, "image">>; imageFile?: FileList },
+  { id: string; data: Partial<Omit<IDiscount, "image"> & { extras?: string[] }>; imageFile?: FileList },
   { rejectValue: string }
 >("discount/updateDiscount", async ({ id, data, imageFile }, { rejectWithValue }) => {
   try {
@@ -129,6 +120,7 @@ export const updateAsyncDiscount = createAsyncThunk<
     const updatePayload = {
       ...data,
       ...(imageId !== undefined && { image: imageId }),
+      extras: data.extras !== undefined ? data.extras : undefined,  // Ensure extras is array or undefined
     };
 
     const updatedDocument = await databases.updateDocument(
@@ -141,14 +133,9 @@ export const updateAsyncDiscount = createAsyncThunk<
     toast.success("Discount updated successfully!");
     return updatedDocument as IDiscountFetched;
   } catch (error) {
-    toast.error(
-      `Failed to update discount: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
-    );
-    return rejectWithValue(
-      error instanceof Error ? error.message : "Failed to update discount"
-    );
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    toast.error(`Failed to update discount: ${errorMsg}. Check extras IDs if provided.`);
+    return rejectWithValue(errorMsg);
   }
 });
 
@@ -166,14 +153,9 @@ export const deleteAsyncDiscount = createAsyncThunk<
     toast.success("Discount deleted successfully!");
     return id;
   } catch (error) {
-    toast.error(
-      `Failed to delete discount: ${
-        error instanceof Error ? error.message : "Unknown error"
-      }`
-    );
-    return rejectWithValue(
-      error instanceof Error ? error.message : "Failed to delete discount"
-    );
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    toast.error(`Failed to delete discount: ${errorMsg}`);
+    return rejectWithValue(errorMsg);
   }
 });
 

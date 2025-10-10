@@ -1,4 +1,3 @@
-// app/add-item/page.tsx
 import AddFoodItemForm from "@/components/AddItemForm";
 import { cookies } from "next/headers";
 

@@ -69,8 +69,8 @@ const DesktopNav: React.FC<DesktopNavProps> = ({ pathname, t, user, role }) => {
         <>
           <Link href="/add-item" className="ml-2">
             <Button className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold px-4 py-2 cursor-pointer rounded-lg shadow-md flex items-center gap-2 transition-all border-0">
-              <Plus className="w-4 h-4" />
-              Add Item
+            <Plus className="w-4 h-4" />
+             Vendor dashboard
             </Button>
           </Link>
           {role === "admin" && (
