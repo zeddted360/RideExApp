@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from "@/components/ui/button";
-import { Package, XCircle, MapPin, Loader2, CreditCard, Clock, Truck, AlertCircle, CheckCircle, Filter } from "lucide-react";
+import { Package, XCircle, MapPin, Loader2, CreditCard, Clock, Truck, AlertCircle, CheckCircle, Filter, User } from "lucide-react";
 import { AppDispatch, RootState } from "@/state/store";
 import {
   fetchBookedOrdersByUserId,
@@ -312,6 +312,7 @@ const OrdersList = ({ orders, onCancel, onReorder }: OrdersListProps) => {
   const [updatingPayment, setUpdatingPayment] = React.useState(false);
   const [cancelling, setCancelling] = React.useState(false);
   const dispatch = useDispatch<AppDispatch>();
+const {user} = useAuth();
 
   const handleCancelClick = (order: IBookedOrderFetched) => {
     setOrderToCancel(order);
@@ -384,7 +385,7 @@ const OrdersList = ({ orders, onCancel, onReorder }: OrdersListProps) => {
   const handlePayNow = async () => {
     if (!orderToPay) return;
     payWithPaystack({
-      email: orderToPay.customerEmail || orderToPay.email || "user@example.com",
+      email: user?.email || "user@example.com",
       amount: orderToPay.total,
       reference: orderToPay.orderId || orderToPay.$id,
       orderId: orderToPay.$id,
@@ -434,7 +435,7 @@ const OrdersList = ({ orders, onCancel, onReorder }: OrdersListProps) => {
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <div className="flex-1">
                         <CardTitle className="text-lg font-bold text-orange-600 dark:text-orange-400 mb-1">
-                          Order #{order.orderId}
+                          Order: {order.riderCode?.toUpperCase()}
                         </CardTitle>
                         <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                           <Clock className="w-3.5 h-3.5" />
@@ -486,7 +487,7 @@ const OrdersList = ({ orders, onCancel, onReorder }: OrdersListProps) => {
                     <div className="flex flex-wrap gap-2 pt-2">
                       <Button asChild variant="outline" size="sm" className="flex-1 min-w-[120px] rounded-xl border-2 border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 font-semibold">
                         <Link href={`/myorders/${order.orderId}`}>
-                          View Details
+                         Track Order
                         </Link>
                       </Button>
                       {canPay && order.status !== "cancelled" && (

@@ -115,6 +115,28 @@ export const updateBookedOrderAsync = createAsyncThunk<
   }
 });
 
+// Update booked order rider code
+export const updateBookedOrderRiderCode = createAsyncThunk<
+  IBookedOrderFetched,
+  { id: string; riderCode: string },
+  { rejectValue: string }
+>("bookedOrders/updateRiderCode", async ({ id, riderCode }, { rejectWithValue }) => {
+  try {
+    const { databaseId, bookedOrdersCollectionId } = validateEnv();
+    const response = await databases.updateDocument(
+      databaseId,
+      bookedOrdersCollectionId,
+      id,
+      { riderCode }
+    );
+    return response as IBookedOrderFetched;
+  } catch (error) {
+    return rejectWithValue(
+      error instanceof Error ? error.message : "Failed to update rider code"
+    );
+  }
+});
+
 export const bookedOrdersSlice = createSlice({
   name: "bookedOrders",
   initialState,
@@ -206,9 +228,32 @@ export const bookedOrdersSlice = createSlice({
       .addCase(updateBookedOrderAsync.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || "Failed to update booked order";
+      })
+      .addCase(updateBookedOrderRiderCode.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateBookedOrderRiderCode.fulfilled, (state, action) => {
+        state.loading = false;
+        // Update the order in the orders array
+        state.orders = state.orders.map((order) =>
+          order.$id === action.payload.$id ? action.payload : order
+        );
+        // Update current order if it's the one being updated
+        if (
+          state.currentOrder &&
+          state.currentOrder.$id === action.payload.$id
+        ) {
+          state.currentOrder = action.payload;
+        }
+        state.error = null;
+      })
+      .addCase(updateBookedOrderRiderCode.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || "Failed to update rider code";
       });
   },
 });
 
 export const { clearCurrentOrder } = bookedOrdersSlice.actions;
-export default bookedOrdersSlice.reducer; 
+export default bookedOrdersSlice.reducer;

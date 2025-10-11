@@ -38,6 +38,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setIsMounted(true);
   }, []);
 
+  // console.log("the logged in user is :",user);
+
   // Fetch user data only once on mount, or when user is null and not loading
   useEffect(() => {
     if (!user) {

@@ -32,7 +32,7 @@ const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
   const { featuredItems, loading, error } = useSelector(
     (state: RootState) => state.featuredItem
   );
-  const { setIsOpen, setItem } = useShowCart();
+  const { setIsOpen, setItem,item } = useShowCart();
   const router = useRouter();
   const { user } = useAuth();
 
@@ -69,6 +69,7 @@ const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
 
   // Filter approved items
   const approvedItems = featuredItems.filter((item) => item.isApproved === true);
+
 
   // Calculate the items to display based on the current page
   const startIndex = currentPage * itemsPerPage;
@@ -205,7 +206,7 @@ const FeaturedItem = ({ toggleFavorite, favorites }: IFeaturedItemProps) => {
                                   name: item.name,
                                   image: item.image,
                                   price: item.price,
-                                  restaurantId: item.restaurant,
+                                  restaurantId: item.restaurantId,
                                   quantity: 1,
                                   category: item.category,
                                   source: "featured",

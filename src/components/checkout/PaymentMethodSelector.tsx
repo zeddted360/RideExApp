@@ -8,13 +8,20 @@ export type PaymentMethod = "card" | "cash" | "bank";
 interface PaymentMethodSelectorProps {
   paymentMethod: PaymentMethod;
   setPaymentMethod: (method: PaymentMethod) => void;
+
 }
 
 
 const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
   paymentMethod,
   setPaymentMethod,
-}) => (
+
+}) => { 
+
+
+  
+  
+  return(
   <Card className="bg-transparent border-0 p-0">
     <CardHeader className="pb-2 bg-transparent border-0">
       <CardTitle className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">
@@ -45,6 +52,6 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
       </RadioGroup>
     </CardContent>
   </Card>
-);
+)};
 
 export default PaymentMethodSelector; 

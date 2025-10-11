@@ -31,7 +31,7 @@ import {
   Package,
 } from "lucide-react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { debounce } from "lodash";
 import { cn } from "@/lib/utils";
@@ -46,9 +46,11 @@ import {
   deleteOrder,
   addOrder,
 } from "@/state/orderSlice";
-import { ICartItemFetched } from "../../../types/types";
+import { ICartItemFetched, IFetchedExtras } from "../../../types/types";
 import { fileUrl, validateEnv } from "@/utils/appwrite";
 import { useAuth } from "@/context/authContext";
+import { databases } from "@/utils/appwrite";
+import { Query } from "appwrite";
 
 const CartDrawer = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -60,7 +62,11 @@ const CartDrawer = () => {
   const [showEmptyCartDialog, setShowEmptyCartDialog] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [deletingItems, setDeletingItems] = useState<Set<string>>(new Set());
+  const [extrasCache, setExtrasCache] = useState<Record<string, IFetchedExtras>>({});
   const router = useRouter();
+  const pathname = usePathname();
+
+  const spoonRegex = /(rice|egg sauce|beans|porridge|pasta|spaghetti|macaroni|stew|pizza|jollof|fried rice|white rice|yam pottage|asaro)/i;
 
   useEffect(() => {
     if (user?.userId && !orders && !loading) {
@@ -76,6 +82,43 @@ const CartDrawer = () => {
   }, [dispatch, user, orders, loading]);
 
   useEffect(() => {
+    const fetchExtras = async () => {
+      if (!orders || orders.length === 0) return;
+
+      const allExtraIds = new Set<string>();
+      orders.forEach(order => {
+        if (order.selectedExtras && Array.isArray(order.selectedExtras)) {
+          order.selectedExtras.forEach(id => allExtraIds.add(id));
+        }
+      });
+
+      const extraIdsToFetch = Array.from(allExtraIds).filter(id => !extrasCache[id]);
+      
+      if (extraIdsToFetch.length === 0) return;
+
+      try {
+        const { databaseId, extrasCollectionId } = validateEnv();
+        const response = await databases.listDocuments(
+          databaseId,
+          extrasCollectionId,
+          [Query.equal("$id", extraIdsToFetch)]
+        );
+
+        const newExtras: Record<string, IFetchedExtras> = {};
+        response.documents.forEach((doc) => {
+          newExtras[doc.$id] = doc as IFetchedExtras;
+        });
+
+        setExtrasCache(prev => ({ ...prev, ...newExtras }));
+      } catch (error) {
+        console.error("Failed to fetch extras:", error);
+      }
+    };
+
+    fetchExtras();
+  }, [orders, extrasCache]);
+
+  useEffect(() => {
     if (!loading && (!orders || orders.length === 0) && activeCart) {
       setShowEmptyCartDialog(true);
     } else {
@@ -83,11 +126,52 @@ const CartDrawer = () => {
     }
   }, [orders, loading, activeCart]);
 
+  const calculatePlasticQty = (quantity: number) => {
+    if (quantity <= 2) return 1;
+    return 2;
+  };
+
+  const calculateNewTotalPrice = useCallback((
+    order: ICartItemFetched,
+    newQuantity: number
+  ): number => {
+    const parsePrice = (priceString: string | number): number => {
+      return typeof priceString === "string"
+        ? Number(priceString.replace(/[₦,]/g, ""))
+        : priceString;
+    };
+
+    const itemPrice = parsePrice(order.price);
+    const itemName = order.name || "";
+    const requiresPlastic = spoonRegex.test(itemName);
+
+    const newSubtotal = itemPrice * newQuantity;
+
+    let extrasTotal = 0;
+
+    if (order.selectedExtras && Array.isArray(order.selectedExtras)) {
+      order.selectedExtras.forEach((extraId) => {
+        const extra = extrasCache[extraId];
+        if (extra) {
+          const isPlastic = extra.name.toLowerCase().includes("plastic container");
+          
+          if (isPlastic && requiresPlastic) {
+            const plasticQty = calculatePlasticQty(newQuantity);
+            extrasTotal += parseFloat(extra.price) * plasticQty;
+          } else if (!isPlastic) {
+            extrasTotal += parseFloat(extra.price) * newQuantity;
+          }
+        }
+      });
+    }
+
+    return newSubtotal + extrasTotal;
+  }, [extrasCache, spoonRegex]);
+
   const handleUpdateQuantity = useCallback(
     debounce(async (order: ICartItemFetched, change: number) => {
       const newQuantity = Math.max(0, order.quantity + change);
-      const effectivePricePerUnit = order.totalPrice / order.quantity;
-      const newTotalPrice = effectivePricePerUnit * newQuantity;
+      const newTotalPrice = calculateNewTotalPrice(order, newQuantity);
 
       dispatch(updateQuantity({ orderId: order.$id, change }));
 
@@ -120,7 +204,7 @@ const CartDrawer = () => {
         }
       }
     }, 300),
-    [dispatch]
+    [dispatch, calculateNewTotalPrice]
   );
 
   const handleDeleteOrder = useCallback(
@@ -156,9 +240,18 @@ const CartDrawer = () => {
 
   const itemCount = orders?.length || 0;
 
+  const getItemExtras = (order: ICartItemFetched) => {
+    if (!order.selectedExtras || !Array.isArray(order.selectedExtras)) return [];
+    return order.selectedExtras
+      .map(id => extrasCache[id])
+      .filter(Boolean);
+  };
+
+  const restrictedPaths = ["/checkout"]
+
   return (
     <>
-      {hasActiveOrder && (
+      {hasActiveOrder && restrictedPaths.some(path=>!pathname.includes(path)) && (
         <button
           onClick={() => setActiveCart(true)}
           className="fixed bottom-6 right-6 z-50 group"
@@ -231,6 +324,9 @@ const CartDrawer = () => {
             ) : orders && orders.length > 0 ? (
               orders.map((item) => {
                 const isDeleting = deletingItems.has(item.$id);
+                const itemExtras = getItemExtras(item);
+                const hasExtras = itemExtras.length > 0;
+
                 return (
                   <div
                     key={item.$id}
@@ -271,6 +367,21 @@ const CartDrawer = () => {
                               : item.price
                             ).toLocaleString()}
                           </p>
+                          
+                          {hasExtras && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {itemExtras.map((extra) => (
+                                <span
+                                  key={extra.$id}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full text-xs font-medium"
+                                >
+                                  <Plus className="w-2.5 h-2.5" />
+                                  {extra.name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
                           <p className="text-lg font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
                             ₦{item.totalPrice.toLocaleString()}
                           </p>

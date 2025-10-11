@@ -1,5 +1,6 @@
 import React from "react";
 import { PaymentMethod } from "./PaymentMethodSelector";
+import { ICartItemFetched } from "../../../types/types";
 
 interface OrderItem {
   name: string;
@@ -9,7 +10,7 @@ interface OrderItem {
 }
 
 interface OrderSummaryProps {
-  orders: OrderItem[];
+  orders: ICartItemFetched[];
   subtotal: number;
   deliveryFee: number;
   isCalculatingFee: boolean;
@@ -28,7 +29,9 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
   deliveryDuration,
   paymentMethod,
   originalDeliveryFee
-}) => (
+}) =>{ 
+  
+  return(
   <div>
     <div className="pb-2">
       <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Order Summary</h2>
@@ -47,9 +50,19 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
               <p className="font-semibold text-gray-900 dark:text-gray-100">
                 {item.name}
               </p>
-              <p className="text-sm text-gray-700 dark:text-gray-300">
-                ₦{item.price} each
-              </p>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-700 dark:text-gray-300">
+                  ₦{item.price}
+                </span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  each
+                </span>
+                {Array.isArray(item.selectedExtras) && item.selectedExtras?.length > 0 && (
+                  <span className="px-2 py-1 bg-orange-200 dark:bg-orange-900 text-orange-800 dark:text-orange-200 text-xs font-medium rounded-full">
+                    + Extras
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <span className="font-bold text-gray-900 dark:text-gray-100 text-lg">
@@ -90,6 +103,6 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
       </div>
     </div>
   </div>
-);
+)};
 
-export default OrderSummary; 
+export default OrderSummary;

@@ -87,52 +87,54 @@ const PopularItem = ({ toggleFavorite, favorites }: IPopularItemProps) => {
                 return (
                   <div
                     key={item.$id}
-                    className="group flex bg-white dark:bg-gray-800 rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 w-full h-[240px] border border-gray-200 dark:border-gray-700"
+                    className="group flex bg-white dark:bg-gray-800 rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 w-full h-[160px] sm:h-[200px] border border-gray-200 dark:border-gray-700"
                   >
                     {/* Image on the left */}
-                    <div className="relative w-64 h-full overflow-hidden flex-shrink-0">
+                    <div className="relative w-1/3 h-full overflow-hidden flex-shrink-0">
                       <Image
                         src={fileUrl(validateEnv().popularBucketId, item.image)}
                         alt={item.name}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-300"
                         sizes="250px"
+                        quality={90}
+                        priority
                       />
                       <button
                         onClick={() => toggleFavorite(item.$id)}
-                        className="absolute top-3 right-3 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-1.5 rounded-full hover:bg-white dark:hover:bg-gray-700 transition-colors duration-200 z-10"
+                        className="absolute top-2 sm:top-3 right-2 sm:right-3 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-1 sm:p-1.5 rounded-full hover:bg-white dark:hover:bg-gray-700 transition-colors duration-200 z-10"
                       >
                         <Heart
-                          className={`w-4 h-4 ${
+                          className={`w-3 sm:w-4 h-3 sm:h-4 ${
                             favorites.has(item.$id)
                               ? "fill-red-500 text-red-500"
                               : "text-gray-600 dark:text-gray-300"
                           }`}
                         />
                       </button>
-                      <div className="absolute bottom-3 right-3 bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                        <div className="flex items-center gap-1">
-                          <ThumbsUp className="w-3 h-3 fill-current" />
+                      <div className="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 bg-orange-500 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-xs font-medium">
+                        <div className="flex items-center gap-0.5 sm:gap-1">
+                          <ThumbsUp className="w-2.5 sm:w-3 h-2.5 sm:h-3 fill-current" />
                           <span>{Math.round(ratingPercentage)}%</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Other contents on the right */}
-                    <div className="flex-1 p-4 flex flex-col justify-between">
-                      <div className="space-y-2">
-                        <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg line-clamp-1">
+                    <div className="flex-1 p-3 sm:p-4 flex flex-col justify-between">
+                      <div className="space-y-1 sm:space-y-2">
+                        <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base sm:text-lg line-clamp-1">
                           {item.name}
                         </h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-3">
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-2 sm:line-clamp-3">
                           {item.description}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                           {item.category}
                         </p>
                       </div>
-                      <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
-                        <span className="text-xl font-bold text-orange-600 dark:text-orange-400">
+                      <div className="flex items-center justify-between pt-1 sm:pt-2 border-t border-gray-200 dark:border-gray-700">
+                        <span className="text-lg sm:text-xl font-bold text-orange-600 dark:text-orange-400">
                           ₦{item.price}
                         </span>
                         <Button
@@ -157,9 +159,9 @@ const PopularItem = ({ toggleFavorite, favorites }: IPopularItemProps) => {
                             }
                           }}
                           aria-label={`Add ${item.name} to cart`}
-                          className="flex items-center justify-center bg-gradient-to-r from-orange-500 to-orange-600 text-white px-2 py-2 rounded-xl font-semibold text-sm hover:from-orange-600 hover:to-orange-700 transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-opacity-50 min-w-[120px]"
+                          className="flex items-center justify-center bg-gradient-to-r from-orange-500 to-orange-600 text-white px-1.5 sm:px-2 py-1.5 sm:py-2 rounded-xl font-semibold text-xs sm:text-sm hover:from-orange-600 hover:to-orange-700 transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-opacity-50 min-w-[100px] sm:min-w-[120px]"
                         >
-                          <ShoppingBag className="w-4 h-4" />
+                          <ShoppingBag className="w-3 sm:w-4 h-3 sm:h-4" />
                           Add
                         </Button>
                       </div>

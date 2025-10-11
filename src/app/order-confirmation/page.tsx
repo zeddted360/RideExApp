@@ -1,10 +1,11 @@
 "use client";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { CheckCircle, Truck, MapPin, CreditCard, X, Loader2, Clock, Package } from "lucide-react";
+import { CheckCircle, Truck, MapPin, CreditCard, X, Loader2, Clock, Package, ThumbsUp, Copy, Check } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "@/state/store";
 import { fetchBookedOrdersByUserId } from "@/state/bookedOrdersSlice";
+import { updateBookedOrderRiderCode } from "@/state/bookedOrdersSlice"; 
 import { branches } from "../../../data/branches";
 import { useRouter } from "next/navigation";
 import { usePayment } from "@/context/paymentContext";
@@ -32,6 +33,7 @@ export default function OrderConfirmation() {
   const { payWithPaystack, paying, paymentError } = usePayment();
   const [cancelDialogOpen, setCancelDialogOpen] = React.useState(false);
   const [cancelling, setCancelling] = React.useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
   useEffect(() => {
     if (user?.userId) {
@@ -44,18 +46,36 @@ export default function OrderConfirmation() {
     ? branches.find((b) => b.id === latestOrder.selectedBranchId)
     : null;
 
+  const riderCode = latestOrder?.orderId ? latestOrder.orderId.slice(-4).toUpperCase() : '';
+
+  // Update the booked order with riderCode if not already present
+  useEffect(() => {
+    if (latestOrder && !latestOrder.riderCode && riderCode) {
+      dispatch(updateBookedOrderRiderCode({ id: latestOrder.$id, riderCode }));
+    }
+  }, [latestOrder, riderCode, dispatch]);
+
   const canCancel =
     latestOrder &&
     ["pending", "confirmed", "preparing"].includes(latestOrder.status);
 
+  const handleCopyCode = async () => {
+    if (riderCode) {
+      try {
+        await navigator.clipboard.writeText(riderCode);
+        setIsCopied(true);
+        toast.success("Code copied to clipboard!");
+        setTimeout(() => setIsCopied(false), 2000);
+      } catch (err) {
+        toast.error("Failed to copy code");
+      }
+    }
+  };
+
   const handlePayNow = () => {
     if (!latestOrder) return;
     payWithPaystack({
-      email:
-        latestOrder.customerEmail ||
-        latestOrder.email ||
-        user?.email ||
-        "user@example.com",
+      email: user?.email ||"user@example.com",
       amount: latestOrder.total,
       reference: latestOrder.orderId || latestOrder.$id,
       orderId: latestOrder.$id,
@@ -221,11 +241,40 @@ export default function OrderConfirmation() {
               initial={{ y: 10, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.4, delay: 0.4 }}
-              className="inline-block bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full border border-white/30"
+              className="inline-flex flex-col items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-3 rounded-full border border-white/30"
             >
-              <p className="text-white font-bold text-lg">
-                #{latestOrder.orderId}
-              </p>
+              <p className="text-white/80 font-medium text-sm tracking-wide uppercase">Delivery Confirmation Code</p>
+              <div className="relative flex items-center gap-2">
+                <div className="flex items-center gap-1 bg-white/30 rounded-full px-3 py-2">
+                  <ThumbsUp className="w-4 h-4 text-white flex-shrink-0" />
+                  <span className="text-white font-bold text-sm tracking-wide">Show to Rider</span>
+                </div>
+                <div className="relative group">
+                  <div className="flex gap-1">
+                    {riderCode.split('').map((digit, index) => (
+                      <div
+                        key={index}
+                        className="w-10 h-10 bg-white/50 dark:bg-white/30 rounded-lg flex items-center justify-center text-xl font-extrabold text-gray-900 dark:text-white shadow-md"
+                      >
+                        {digit}
+                      </div>
+                    ))}
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleCopyCode}
+                    className="absolute -top-2 -right-2 bg-white/80 dark:bg-gray-800/80 rounded-full p-1.5 shadow-lg border border-white/50 dark:border-gray-700/50 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                    aria-label="Copy code"
+                  >
+                    {isCopied ? (
+                      <Check className="w-3 h-3 text-green-600" />
+                    ) : (
+                      <Copy className="w-3 h-3 text-gray-700 dark:text-gray-300" />
+                    )}
+                  </motion.button>
+                </div>
+              </div>
             </motion.div>
           </div>
 
@@ -323,7 +372,7 @@ export default function OrderConfirmation() {
               transition={{ duration: 0.4, delay: 0.8 }}
               className="space-y-3 pt-2"
             >
-              {latestOrder.paymentMethod !== "cash" && !latestOrder.paid && (
+              {!latestOrder.paid && (
                 <Button
                   className="w-full h-14 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold rounded-xl text-base shadow-lg hover:shadow-xl transition-all duration-300"
                   onClick={handlePayNow}
@@ -414,7 +463,7 @@ export default function OrderConfirmation() {
               </div>
             )}
             <p className="text-gray-600 dark:text-gray-400">
-              Are you sure you want to cancel order <span className="font-semibold">#{latestOrder?.orderId}</span>? This action cannot be undone.
+              Are you sure you want to cancel order <span className="font-semibold">{riderCode}</span>? This action cannot be undone.
             </p>
           </DialogDescription>
           <DialogFooter className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-2 mt-4">

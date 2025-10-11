@@ -9,12 +9,13 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Minus, Plus, ShoppingCart, X, CheckCircle } from "lucide-react";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import { useShowCart } from "@/context/showCart";
-import { ICartItemOrder, ICartItemFetched, IFetchedExtras } from "../../../types/types";
+import { ICartItemOrder, ICartItemFetched, IFetchedExtras, IRestaurantFetched } from "../../../types/types";
 import {
   createOrderAsync,
   resetOrders,
@@ -40,19 +41,18 @@ const AddToCartModal = () => {
   const [quantity, setQuantity] = useState(item.quantity || 1);
   const [specialInstructions, setSpecialInstructions] = useState("");
   const [selectedExtraIds, setSelectedExtraIds] = useState<string[]>([]);
-  const [itemExtras, setItemExtras] = useState<IFetchedExtras[]>([]);
+  const [allExtras, setAllExtras] = useState<IFetchedExtras[]>([]);
   const [extrasLoading, setExtrasLoading] = useState<"idle" | "pending" | "succeeded" | "failed">("idle");
   const [extrasError, setExtrasError] = useState<string | null>(null);
   const maxInstructionsLength = 200;
-
-  // Get user from Redux
+  // Get user from context
   const { user } = useAuth();
   const userId = user?.userId;
 
-  // Fetch specific extras by IDs when modal opens if item has extras
+  // Fetch all extras by vendorId when available
   useEffect(() => {
-    if (isOpen && Array.isArray(item.extras) && item?.extras?.length > 0) {
-      const fetchSpecificExtras = async () => {
+    if (isOpen && Array.isArray(item.extras) && item.extras.length > 0) {
+      const fetchAllExtras = async () => {
         setExtrasLoading("pending");
         setExtrasError(null);
         try {
@@ -63,8 +63,7 @@ const AddToCartModal = () => {
             [Query.equal("$id", item.extras as string[])]
           );
           const fetchedExtras = response.documents as IFetchedExtras[];
-          setItemExtras(fetchedExtras);
-          setSelectedExtraIds(fetchedExtras.map((extra) => extra.$id)); 
+          setAllExtras(fetchedExtras);
           setExtrasLoading("succeeded");
         } catch (error) {
           const errorMsg = error instanceof Error ? error.message : "Failed to fetch extras";
@@ -73,9 +72,9 @@ const AddToCartModal = () => {
           toast.error(errorMsg);
         }
       };
-      fetchSpecificExtras();
+      fetchAllExtras();
     } else {
-      setItemExtras([]);
+      setAllExtras([]);
       setSelectedExtraIds([]);
     }
   }, [isOpen, item.extras]);
@@ -86,7 +85,7 @@ const AddToCartModal = () => {
       setQuantity(item.quantity || 1);
       setSpecialInstructions("");
       setSelectedExtraIds([]);
-      setItemExtras([]);
+      setAllExtras([]);
       setExtrasLoading("idle");
       setExtrasError(null);
       if (error) {
@@ -95,11 +94,59 @@ const AddToCartModal = () => {
     }
   }, [isOpen, item.quantity, dispatch, error]);
 
-  // Calculate extras total (scaled by quantity since mandatory for each item unit)
+  // Regex for classifications (based on research)
+  const spoonRegex = /(rice|egg sauce|beans|porridge|pasta|spaghetti|macaroni|stew|pizza|jollof|fried rice|white rice|yam pottage|asaro)/i;
+  const soupRegex = /(soup|egusi|ogbono|okra|efo|ewedu|gbegiri|banga|afang|pepper soup)/i;
+
+  // Determine if item requires plastic container
+  const requiresPlastic = spoonRegex.test(item.name);
+
+  // Find plastic container extra
+  const plasticExtra = useMemo(() => {
+    return allExtras.find((extra) => extra.name.toLowerCase().includes("plastic container"));
+  }, [allExtras]);
+
+  // Auto-select mandatory plastic if required
+  useEffect(() => {
+    if (requiresPlastic && plasticExtra) {
+      setSelectedExtraIds((prev) => {
+        if (!prev.includes(plasticExtra.$id)) {
+          return [...prev, plasticExtra.$id];
+        }
+        return prev;
+      });
+    }
+  }, [requiresPlastic, plasticExtra]);
+
+  // Filter optional extras (item-specific or all others, excluding plastic)
+  const optionalExtras = useMemo(() => {
+    return allExtras.filter((extra) =>
+      item.extras?.includes(extra.$id) && extra.$id !== plasticExtra?.$id
+    );
+  }, [allExtras, item.extras, plasticExtra]);
+
+  // Calculate plastic quantity based on item quantity
+  const plasticQty = useMemo(() => {
+    if (quantity <= 2) return 1;
+    return 2; // For 3 or more, charge for 2
+  }, [quantity]);
+
+  // Calculate extras total
   const extrasTotal = useMemo(() => {
-    const singleItemExtrasTotal = itemExtras.reduce((sum, extra) => sum + parseFloat(extra.price), 0);
-    return singleItemExtrasTotal * quantity;
-  }, [itemExtras, quantity]);
+    let total = 0;
+    // Optional extras: per unit * quantity
+    selectedExtraIds.forEach((id) => {
+      const extra = optionalExtras.find((e) => e.$id === id);
+      if (extra) {
+        total += parseFloat(extra.price) * quantity;
+      }
+    });
+    // Plastic: price * plasticQty (capped, not per unit)
+    if (requiresPlastic && plasticExtra && selectedExtraIds.includes(plasticExtra.$id)) {
+      total += parseFloat(plasticExtra.price) * plasticQty;
+    }
+    return total;
+  }, [selectedExtraIds, optionalExtras, requiresPlastic, plasticExtra, quantity, plasticQty]);
 
   const parsePrice = (priceString: string | number): number => {
     return typeof priceString === "string"
@@ -111,6 +158,14 @@ const AddToCartModal = () => {
   const subtotal = itemPrice * quantity;
   const totalPrice = subtotal + extrasTotal;
 
+  const handleExtraToggle = (extraId: string) => {
+    setSelectedExtraIds((prev) =>
+      prev.includes(extraId)
+        ? prev.filter((id) => id !== extraId)
+        : [...prev, extraId]
+    );
+  };
+
   const handleAddToCart = async () => {
     // Check if the item already exists in the cart
     const existingOrder = orders?.find(
@@ -121,8 +176,20 @@ const AddToCartModal = () => {
       // Update existing order
       const newQuantity = existingOrder.quantity + quantity;
       const newSubtotal = itemPrice * newQuantity;
-      const singleItemExtrasTotal = itemExtras.reduce((sum, extra) => sum + parseFloat(extra.price), 0);
-      const newTotalPrice = newSubtotal + singleItemExtrasTotal * newQuantity; // Scale extras by new quantity
+      const newPlasticQty = newQuantity <= 2 ? 1 : 2;
+      const newOptionalExtrasTotal = selectedExtraIds.reduce((sum, id) => {
+        const extra = optionalExtras.find((e) => e.$id === id);
+        return sum + (extra ? parseFloat(extra.price) : 0);
+      }, 0) * newQuantity;
+      const newPlasticTotal = plasticExtra ? parseFloat(plasticExtra.price) * newPlasticQty : 0;
+      const newTotalPrice = newSubtotal + newOptionalExtrasTotal + newPlasticTotal;
+
+      // For selectedExtras, merge new optional + plastic if required
+      let newSelectedExtras = [...(existingOrder.selectedExtras || [])];
+      if (requiresPlastic && plasticExtra && !newSelectedExtras.includes(plasticExtra.$id)) {
+        newSelectedExtras.push(plasticExtra.$id);
+      }
+      newSelectedExtras = [...new Set([...newSelectedExtras, ...selectedExtraIds])];
 
       // Optimistic update
       dispatch(
@@ -132,7 +199,7 @@ const AddToCartModal = () => {
           totalPrice: newTotalPrice,
           specialInstructions:
             specialInstructions || existingOrder.specialInstructions,
-          selectedExtras: selectedExtraIds,
+          selectedExtras: newSelectedExtras,
         })
       );
       toast.success(`${item.name} quantity updated in cart!`, {
@@ -149,7 +216,7 @@ const AddToCartModal = () => {
               totalPrice: newTotalPrice,
               specialInstructions:
                 specialInstructions || existingOrder.specialInstructions,
-              selectedExtras: selectedExtraIds,
+              selectedExtras: newSelectedExtras,
             },
           })
         ).unwrap();
@@ -173,6 +240,10 @@ const AddToCartModal = () => {
     } else {
       // Add new order
       const tempId = `temp-${Date.now()}-${Math.random()}`;
+      const newSelectedExtras = [...selectedExtraIds];
+      if (requiresPlastic && plasticExtra && !newSelectedExtras.includes(plasticExtra.$id)) {
+        newSelectedExtras.push(plasticExtra.$id);
+      }
       const newItem: ICartItemFetched = {
         $id: tempId,
         userId: userId,
@@ -187,7 +258,7 @@ const AddToCartModal = () => {
         specialInstructions,
         status: "pending",
         source: item.source,
-        selectedExtras: selectedExtraIds, 
+        selectedExtras: newSelectedExtras,
       } as unknown as ICartItemFetched;
 
       // Optimistic update
@@ -338,74 +409,114 @@ const AddToCartModal = () => {
             </div>
           </div>
 
-          {/* Extras Section - Only if item has extras */}
-          {Array.isArray(item.extras) && item.extras?.length > 0 && (
+          {/* Optional Extras Section */}
+          {optionalExtras.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">
-                  Included Extras (Required)
+                  Add Optional Extras
+                </h3>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  Customize your order
+                </span>
+              </div>
+              <div className="space-y-3 max-h-48 overflow-y-auto">
+                {optionalExtras.map((extra) => {
+                  const isSelected = selectedExtraIds.includes(extra.$id);
+                  const extraPrice = parseFloat(extra.price);
+                  return (
+                    <div
+                      key={extra.$id}
+                      className={cn(
+                        "flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 cursor-pointer hover:shadow-md",
+                        isSelected
+                          ? "border-orange-500 bg-orange-50 dark:bg-orange-900/10"
+                          : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                      )}
+                      onClick={() => handleExtraToggle(extra.$id)}
+                    >
+                      <Checkbox
+                        id={`extra-${extra.$id}`}
+                        checked={isSelected}
+                        onCheckedChange={() => handleExtraToggle(extra.$id)}
+                        className="h-5 w-5 rounded"
+                      />
+                      <div className="relative w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                        {extra.image ? (
+                          <Image
+                            src={fileUrl(validateEnv().extrasBucketId, extra.image)}
+                            fill
+                            alt={extra.name}
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-700">
+                            <span className="text-xs text-gray-500">?</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <Label
+                          htmlFor={`extra-${extra.$id}`}
+                          className="text-sm font-medium text-gray-900 dark:text-gray-100 cursor-pointer block mb-1"
+                        >
+                          {extra.name}
+                        </Label>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                          {extra.description || "Popular add-on"}
+                        </p>
+                        <p className="text-sm font-semibold text-orange-600 dark:text-orange-400">
+                          +₦{extraPrice.toLocaleString()} {quantity > 1 ? `x ${quantity}` : ""}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Plastic Container Section (Mandatory if applicable) */}
+          {requiresPlastic && plasticExtra && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">
+                  Required Packaging
                 </h3>
                 <span className="text-xs text-gray-500 dark:text-gray-400">
                   Automatically added
                 </span>
               </div>
-              {extrasLoading === "pending" ? (
-                <div className="flex items-center justify-center py-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div>
-                  <span className="ml-2 text-sm text-gray-500">Loading extras...</span>
-                </div>
-              ) : extrasError ? (
-                <div className="text-center py-4 text-red-500 dark:text-red-400 text-sm">
-                  {extrasError}
-                </div>
-              ) : (
-                <div className="space-y-3 max-h-48 overflow-y-auto">
-                  {itemExtras.map((extra) => {
-                    const extraPrice = parseFloat(extra.price);
-                    return (
-                      <div
-                        key={extra.$id}
-                        className="flex items-center gap-3 p-3 rounded-xl border-2 border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/10"
-                      >
-                        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
-                        <div className="relative w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
-                          {extra.image ? (
-                            <Image
-                              src={fileUrl(validateEnv().extrasBucketId, extra.image)}
-                              fill
-                              alt={extra.name}
-                              className="object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-700">
-                              <span className="text-xs text-gray-500">?</span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <Label className="text-sm font-medium text-gray-900 dark:text-gray-100 block mb-1">
-                            {extra.name}
-                          </Label>
-                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                            {extra.description || "Popular add-on"}
-                          </p>
-                          <p className="text-sm font-semibold text-green-600 dark:text-green-400">
-                            +₦{extraPrice.toLocaleString()} {quantity > 1 ? `x ${quantity}` : ""}
-                          </p>
-                        </div>
+              <div className="space-y-3">
+                <div
+                  className="flex items-center gap-3 p-3 rounded-xl border-2 border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/10"
+                >
+                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                  <div className="relative w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                    {plasticExtra.image ? (
+                      <Image
+                        src={fileUrl(validateEnv().extrasBucketId, plasticExtra.image)}
+                        fill
+                        alt={plasticExtra.name}
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-700">
+                        <span className="text-xs text-gray-500">?</span>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-              <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 border border-green-200 dark:border-green-800">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Extras Total ({selectedExtraIds.length} x {quantity})
-                  </span>
-                  <span className="text-sm font-bold text-green-600 dark:text-green-400">
-                    ₦{extrasTotal.toLocaleString()}
-                  </span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100 block mb-1">
+                      {plasticExtra.name}
+                    </Label>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                      {plasticExtra.description || "Essential for safe delivery"}
+                    </p>
+                    <p className="text-sm font-semibold text-green-600 dark:text-green-400">
+                      +₦{parseFloat(plasticExtra.price).toLocaleString()} x {plasticQty}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -430,14 +541,12 @@ const AddToCartModal = () => {
                 className="w-full min-h-[80px] resize-none bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 focus:border-orange-500 dark:focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 placeholder:text-gray-400 dark:placeholder:text-gray-500 rounded-xl p-3 text-gray-900 dark:text-gray-100 text-sm transition-all duration-200"
               />
               <div className="absolute bottom-2 right-2">
-                <span
-                  className={cn(
-                    "text-xs font-medium px-2 py-1 rounded-full transition-colors",
-                    specialInstructions.length > maxInstructionsLength * 0.8
-                      ? "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
-                      : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
-                  )}
-                >
+                <span className={cn(
+                  "text-xs font-medium px-2 py-1 rounded-full transition-colors",
+                  specialInstructions.length > maxInstructionsLength * 0.8
+                    ? "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
+                    : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+                )}>
                   {specialInstructions.length}/{maxInstructionsLength}
                 </span>
               </div>
@@ -457,7 +566,7 @@ const AddToCartModal = () => {
             {extrasTotal > 0 && (
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs text-gray-600 dark:text-gray-400">
-                  Extras (Required)
+                  Extras & Packaging
                 </span>
                 <span className="text-xs font-medium text-gray-900 dark:text-gray-100">
                   ₦{extrasTotal.toLocaleString()}

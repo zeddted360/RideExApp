@@ -675,21 +675,21 @@ const AddFoodItemForm = () => {
             </div>
             <div className="grid grid-cols-1 gap-6">
               {subActiveTab === "menu" && filteredMenuItems.length > 0 ? (
-                filteredMenuItems.map((item: IMenuItemFetched) => renderItemCard(item, "menu"))
+                filteredMenuItems.map((item: IMenuItemFetched) =><div key={item.$id}>{renderItemCard(item, "menu")}</div> )
               ) : subActiveTab === "menu" ? (
                 <div className="col-span-full text-center py-12 text-gray-500 dark:text-gray-400">
                   No menu items available.
                 </div>
               ) : null}
               {subActiveTab === "featured" && filteredFeaturedItems.length > 0 ? (
-                filteredFeaturedItems.map((item: IFeaturedItemFetched) => renderItemCard(item, "featured"))
+                filteredFeaturedItems.map((item: IFeaturedItemFetched) =><div key={item.$id}>{renderItemCard(item, "featured")}</div> )
               ) : subActiveTab === "featured" ? (
                 <div className="col-span-full text-center py-12 text-gray-500 dark:text-gray-400">
                   No featured items available.
                 </div>
               ) : null}
               {subActiveTab === "popular" && filteredPopularItems.length > 0 ? (
-                filteredPopularItems.map((item: IPopularItemFetched) => renderItemCard(item, "popular"))
+                filteredPopularItems.map((item: IPopularItemFetched) =><div key={item.$id}>{renderItemCard(item, "popular")}</div> )
               ) : subActiveTab === "popular" ? (
                 <div className="col-span-full text-center py-12 text-gray-500 dark:text-gray-400">
                   No popular items available.

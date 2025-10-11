@@ -189,6 +189,11 @@ export const getCurrentUserAsync = createAsyncThunk<
     const { databaseId, userCollectionId } = validateEnv();
     let isAdmin = false;
     let role:"admin" | "user" | "vendor" = "user";
+    let phoneNumber: string | undefined;
+    let phoneVerified: boolean | undefined;
+    let fullName: string;
+
+
     try {
       const userDoc:IUserFectched = await databases.getDocument(
         databaseId,
@@ -197,22 +202,20 @@ export const getCurrentUserAsync = createAsyncThunk<
       );
       isAdmin = userDoc.isAdmin ?? false;
       role = isAdmin ? "admin" : userDoc.isVendor ? "vendor" :"user";
+      phoneNumber = userDoc.phone
+      fullName = userDoc.fullName
     } catch (err) {
       // If user doc not found or isAdmin missing, default to false
       isAdmin = false;
     }
 
-    // Get phone number from localStorage if available
-    let phoneNumber: string | undefined;
-    let phoneVerified: boolean | undefined;
-
     const phoneData = getLocalStorage("userPhoneData");
+
     if (phoneData) {
       const parsed = JSON.parse(phoneData);
       phoneNumber = parsed.phoneNumber;
       phoneVerified = parsed.verified;
     }
-
     return {
       userId: user.$id,
       username: user.name,
@@ -221,6 +224,7 @@ export const getCurrentUserAsync = createAsyncThunk<
       isAdmin,
       phoneNumber: user.phone || phoneNumber,
       phoneVerified,
+      // fullName:fullName
     };
   } catch (error) {
     // No user logged in, return null

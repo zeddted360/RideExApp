@@ -9,6 +9,7 @@ export interface IUser {
   phoneNumber?: string;
   phoneVerified?: boolean;
   isAdmin?: boolean;
+  fullName?:string;
 }
 
 export interface IUserFectched extends IUser, Models.Document {
@@ -84,7 +85,7 @@ export interface ICartItem {
   itemId: string;
   name: string;
   image: string;
-  price: string;
+  price: string | number;
   restaurantId: string;
   quantity: number;
   category: string;
@@ -220,7 +221,10 @@ export interface IBookedOrderFetched extends Models.Document {
   deliveryDuration?: string;
   selectedBranchId: number;
   apartmentFlat?: string;
-  paid?: boolean; // Added paid attribute
+  paid?: boolean; 
+  riderCode?:string;
+  feedbackRating?:number;
+  feedbackComment?:string;
 }
 
 export interface ISearchResult {

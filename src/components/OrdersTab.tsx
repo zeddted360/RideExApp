@@ -1,11 +1,12 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Search,
   Filter,
   ChevronDown,
   Eye,
 } from "lucide-react";
-import { IBookedOrderFetched, OrderStatus } from "../../types/types";
+import { IBookedOrderFetched, IUserFectched, OrderStatus } from "../../types/types";
+import { databases, validateEnv } from "@/utils/appwrite";
 
 interface OrdersTabProps {
   orders: IBookedOrderFetched[];
@@ -40,6 +41,41 @@ export default function OrdersTab({
   ORDER_STATUSES,
   branches,
 }: OrdersTabProps) {
+
+  const [customerNames, setCustomerNames] = useState<{[key: string]: string}>({});
+  const [fetchingNames, setFetchingNames] = useState(false);
+
+  const fetchCustomerName = async (customerId: string) => {
+    if (customerId && !customerNames[customerId]) {
+      try {
+        const response = await databases.getDocument(
+          validateEnv().databaseId,
+          validateEnv().userCollectionId,
+          customerId
+        ) as IUserFectched;
+        setCustomerNames(prev => ({ ...prev, [customerId]: response.fullName as string}));
+      } catch (err) {
+        console.error(err instanceof Error ? err.message : "Error fetching customer name");
+        setCustomerNames(prev => ({ ...prev, [customerId]: "Unknown Customer" }));
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (orders.length > 0 && !fetchingNames) {
+      setFetchingNames(true);
+      const uniqueCustomerIds = [...new Set(orders.map(order => order.customerId))];
+      uniqueCustomerIds.forEach(fetchCustomerName);
+      setFetchingNames(false);
+    }
+  }, [orders]);
+
+  // Paginated orders for consistent rendering
+  const paginatedOrders = filteredOrders.slice(
+    (currentPage - 1) * ordersPerPage,
+    currentPage * ordersPerPage
+  );
+
   return (
     <>
       {/* Orders Filters */}
@@ -137,23 +173,24 @@ export default function OrdersTab({
                 </tr>
               </thead>
               <tbody>
-                {orders.length > 0 ? (
-                  orders.map((order) => {
+                {paginatedOrders.length > 0 ? (
+                  paginatedOrders.map((order) => {
                     const branch = branches.find(
                       (b) => b.id === order.selectedBranchId
                     );
+                    const customerName = customerNames[order.customerId] || (fetchingNames ? "Loading..." : "Unknown Customer");
                     return (
                       <tr
                         key={order.$id}
                         className="border-b border-gray-100 dark:border-gray-700 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition"
                       >
                         <td className="py-4 px-6 font-mono text-blue-600 font-bold">
-                          #{order.orderId}
+                          {order.riderCode?.toUpperCase()}
                         </td>
                         <td className="py-4 px-6">
                           {branch ? branch.name : "-"}
                         </td>
-                        <td className="py-4 px-6">{order.customerId}</td>
+                        <td className="py-4 px-6">{customerName}</td>
                         <td className="py-4 px-6 text-xs text-gray-500">
                           {new Date(order.createdAt).toLocaleString()}
                         </td>
@@ -215,11 +252,12 @@ export default function OrdersTab({
 
           {/* Mobile Orders View */}
           <div className="lg:hidden space-y-4">
-            {orders.length > 0 ? (
-              orders.map((order) => {
+            {paginatedOrders.length > 0 ? (
+              paginatedOrders.map((order) => {
                 const branch = branches.find(
                   (b) => b.id === order.selectedBranchId
                 );
+                const customerName = customerNames[order.customerId] || (fetchingNames ? "Loading..." : "Unknown Customer");
                 return (
                   <div
                     key={order.$id}
@@ -245,7 +283,7 @@ export default function OrdersTab({
                       </p>
                       <p className="text-sm text-gray-500">
                         <span className="font-medium">User:</span>{" "}
-                        {order.customerId}
+                        {customerName}
                       </p>
                       <p className="text-sm text-gray-500">
                         <span className="font-medium">Created:</span>{" "}
