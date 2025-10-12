@@ -7,7 +7,7 @@ import { RootState, AppDispatch } from "@/state/store";
 import { createNotification } from "@/state/notificationSlice";
 import { account, databases, validateEnv } from "@/utils/appwrite";
 import { ID } from "appwrite";
-import { OrderStatus, INotification } from "../../../types/types";
+import { OrderStatus, INotification, ICartItemFetched, IExtras } from "../../../types/types";
 import { calculateDeliveryFee } from "@/utils/deliveryFeeCalculator";
 import { Loader } from "@googlemaps/js-api-loader";
 import { useRouter } from "next/navigation";
@@ -373,18 +373,23 @@ export default function CheckoutClient() {
     setIsOrderLoading(true);
     try {
       const orderId = ID.unique();
-      const deliveryTime = calculateDeliveryTime();
-      const total = paymentMethod === "cash" ? subtotal : subtotal + deliveryFee;
+      const structuredItems = orders.map((cartItem: ICartItemFetched) => (JSON.stringify({
+                itemId: cartItem.itemId,
+                quantity: cartItem.quantity || 1,  
+                extrasIds: cartItem.selectedExtras?.map((extra: string) => extra) || [],  
+                priceAtOrder: cartItem.price,  
+              })));
 
       const order = {
         orderId,
-        itemIds: orders.map((item: any) => item.itemId),
+        itemIds: orders.map((item: ICartItemFetched) => item.itemId),
+        items:structuredItems,
         paymentMethod,
         address,
         label,
-        deliveryTime: formatDeliveryTime(deliveryTime),
+        deliveryTime: formatDeliveryTime(calculateDeliveryTime()),
         createdAt: new Date().toISOString(),
-        total,
+        total:paymentMethod === "cash" ? subtotal : subtotal + deliveryFee,
         status: "pending" as OrderStatus,
         phone: phoneNumber,
         customerId: userId,
@@ -408,7 +413,7 @@ export default function CheckoutClient() {
       ]);
 
       await Promise.all(
-        orders.map((item: any) => dispatch(deleteOrderAsync(item.$id)))
+        orders.map((item: ICartItemFetched) => dispatch(deleteOrderAsync(item.$id)))
       );
       dispatch(resetOrders());
 

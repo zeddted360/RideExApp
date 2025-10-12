@@ -1,4 +1,5 @@
 import { Models } from "appwrite";
+import { string } from "zod";
 
 
 export interface IUser {
@@ -207,6 +208,8 @@ export interface INotificationState {
 
 export interface IBookedOrderFetched extends Models.Document {
   orderId: string;
+  itemIds?:string[];
+  items?: Array<string>;
   customerId: string;
   address: string;
   label?: "Home" | "Work" | "Other";

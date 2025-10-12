@@ -5,12 +5,14 @@ import { IExtras, IFetchedExtras } from "../../types/types";
 
 interface ExtraState {
   extras: IFetchedExtras[];
+  currentExtra: IFetchedExtras | null;
   loading: "idle" | "pending" | "succeeded" | "failed";
   error: string | null;
 }
 
 const initialState: ExtraState = {
   extras: [],
+  currentExtra: null,
   loading: "idle",
   error: null,
 };
@@ -33,6 +35,29 @@ export const listAsyncExtras = createAsyncThunk<
     } catch (error) {
       return rejectWithValue(
         error instanceof Error ? error.message : "Failed to fetch extras"
+      );
+    }
+  }
+);
+
+export const fetchExtraById = createAsyncThunk<
+  IFetchedExtras,
+  string, // extraId
+  { rejectValue: string }
+>(
+  "extra/fetchById",
+  async (extraId, { rejectWithValue }) => {
+    try {
+      const { databaseId, extrasCollectionId } = validateEnv();
+      const response = await databases.getDocument<IFetchedExtras>(
+        databaseId,
+        extrasCollectionId,
+        extraId
+      );
+      return response;
+    } catch (error) {
+      return rejectWithValue(
+        error instanceof Error ? error.message : "Failed to fetch extra"
       );
     }
   }
@@ -178,6 +203,9 @@ const extraSlice = createSlice({
   name: "extra",
   initialState,
   reducers: {
+    clearCurrentExtra: (state) => {
+      state.currentExtra = null;
+    },
     setExtras: (state, action: PayloadAction<IFetchedExtras[]>) => {
       state.extras = action.payload;
     },
@@ -200,6 +228,19 @@ const extraSlice = createSlice({
         state.extras = action.payload;
       })
       .addCase(listAsyncExtras.rejected, (state, action) => {
+        state.loading = "failed";
+        state.error = action.payload as string;
+      })
+      // Fetch by ID
+      .addCase(fetchExtraById.pending, (state) => {
+        state.loading = "pending";
+        state.error = null;
+      })
+      .addCase(fetchExtraById.fulfilled, (state, action) => {
+        state.loading = "succeeded";
+        state.currentExtra = action.payload;
+      })
+      .addCase(fetchExtraById.rejected, (state, action) => {
         state.loading = "failed";
         state.error = action.payload as string;
       })
@@ -227,6 +268,9 @@ const extraSlice = createSlice({
         if (index !== -1) {
           state.extras[index] = action.payload;
         }
+        if (state.currentExtra?.$id === action.payload.$id) {
+          state.currentExtra = action.payload;
+        }
       })
       .addCase(updateAsyncExtra.rejected, (state, action) => {
         state.loading = "failed";
@@ -239,7 +283,11 @@ const extraSlice = createSlice({
       })
       .addCase(deleteAsyncExtra.fulfilled, (state, action) => {
         state.loading = "succeeded";
-        state.extras = state.extras.filter((extra) => extra.$id !== action.meta.arg.extraId);
+        const { extraId } = action.meta.arg;
+        state.extras = state.extras.filter((extra) => extra.$id !== extraId);
+        if (state.currentExtra?.$id === extraId) {
+          state.currentExtra = null;
+        }
       })
       .addCase(deleteAsyncExtra.rejected, (state, action) => {
         state.loading = "failed";
@@ -248,5 +296,5 @@ const extraSlice = createSlice({
   },
 });
 
-export const { setExtras, setLoading, setError } = extraSlice.actions;
+export const { clearCurrentExtra, setExtras, setLoading, setError } = extraSlice.actions;
 export default extraSlice.reducer;
