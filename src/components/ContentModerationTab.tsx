@@ -25,9 +25,9 @@ import {
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/state/store";
-import { listAsyncFeaturedItems, updateAsyncFeaturedItem, deleteAsyncFeaturedItem } from "@/state/featuredSlice";
-import { listAsyncPopularItems, updateAsyncPopularItem, deleteAsyncPopularItem } from "@/state/popularSlice";
-import { listAsyncMenusItem, updateAsyncMenuItem, deleteAsyncMenuItem } from "@/state/menuSlice";
+import { listAsyncFeaturedItems, updateAsyncFeaturedItem, deleteAsyncFeaturedItem, updateApprovalAsyncFeaturedItem } from "@/state/featuredSlice";
+import { listAsyncPopularItems, updateAsyncPopularItem, deleteAsyncPopularItem, updateApprovalAsyncPopularItem } from "@/state/popularSlice";
+import { listAsyncMenusItem, updateAsyncMenuItem, deleteAsyncMenuItem, updateApprovalAsyncMenuItem } from "@/state/menuSlice";
 import { listAsyncDiscounts, updateAsyncDiscount, deleteAsyncDiscount } from "@/state/discountSlice";
 import Image from "next/image";
 import { motion } from "framer-motion";
@@ -118,76 +118,38 @@ export default function ContentModerationTab() {
   }, [activeContentTab, dispatch]);
 
   // Approval handler (updates isApproved)
-const handleApproval = async (itemId: string, isApproved: boolean) => {
-  try {
-    setIsUpdating(true);
+  const handleApproval = async (itemId: string, isApproved: boolean) => {
+    try {
+      setIsUpdating(true);
+      let updateData = { isApproved };
 
-    let action;
-    switch (activeContentTab) {
-      case "menu": {
-        const item = menuItems.find((i) => i.$id === itemId);
-        if (!item) return;
-        // Ensure category is "veg" or "non-veg"
-        let mappedCategory: "veg" | "non-veg" | undefined = undefined;
-        if (item.category === "veg" || item.category === "Vegetarian") mappedCategory = "veg";
-        else if (item.category === "non-veg" || item.category === "Non-Vegetarian") mappedCategory = "non-veg";
-        const updateData = {
-          ...item,
-          isApproved,
-          category: mappedCategory,
-        };
-        action = updateAsyncMenuItem({ itemId, data: updateData });
-        break;
+      let action;
+      switch (activeContentTab) {
+        case "menu":
+          action =updateApprovalAsyncMenuItem({ itemId, isApproved: updateData.isApproved });
+          break;
+        case "popular":
+          action = updateApprovalAsyncPopularItem({ itemId, isApproved: updateData.isApproved});
+          break;
+        case "featured":
+          action = updateApprovalAsyncFeaturedItem({ itemId, isApproved: updateData.isApproved });
+          break;
+        case "discount":
+          action = updateAsyncDiscount({ id: itemId, data: updateData });
+          break;
       }
-      // ...other cases unchanged...
-      case "popular": {
-        const item = popularItems.find((i) => i.$id === itemId);
-        if (!item) return;
-        let mappedCategory: "veg" | "non-veg" | undefined = undefined;
-        if (item.category === "veg" || item.category === "Vegetarian") mappedCategory = "veg";
-        else if (item.category === "non-veg" || item.category === "Non-Vegetarian") mappedCategory = "non-veg";
-        const updateData = {
-          ...item,
-          isApproved,
-          category: mappedCategory,
-        };
-        action = updateAsyncPopularItem({ itemId, data: updateData });
-        break;
-      }
-      case "featured": {
-        const item = featuredItems.find((i) => i.$id === itemId);
-        if (!item) return;
-        let mappedCategory: "veg" | "non-veg" | undefined = undefined;
-        if (item.category === "veg" || item.category === "Vegetarian") mappedCategory = "veg";
-        else if (item.category === "non-veg" || item.category === "Non-Vegetarian") mappedCategory = "non-veg";
-        const updateData = {
-          ...item,
-          isApproved,
-          category: mappedCategory,
-        };
-        action = updateAsyncFeaturedItem({ itemId, data: updateData });
-        break;
-      }
-      case "discount": {
-        const item = discounts.find((i) => i.$id === itemId);
-        if (!item) return;
-        const updateData = { ...item, isApproved };
-        action = updateAsyncDiscount({ id: itemId, data: updateData });
-        break;
-      }
-    }
 
-    if (action) {
-      await dispatch(action as any).unwrap();
-      toast.success(`Item ${isApproved ? "approved" : "rejected"} successfully`);
+      if (action) {
+        await dispatch(action as any).unwrap();
+        toast.success(`Item ${isApproved ? "approved" : "rejected"} successfully`);
+      }
+    } catch (error) {
+      console.error("Error updating approval status:", error);
+      toast.error("Failed to update approval status");
+    } finally {
+      setIsUpdating(false);
     }
-  } catch (error) {
-    console.error("Error updating approval status:", error);
-    toast.error("Failed to update approval status");
-  } finally {
-    setIsUpdating(false);
-  }
-};
+  };
 
   // Edit handler
   const handleEdit = (item: ContentItem) => {
@@ -415,6 +377,7 @@ const handleApproval = async (itemId: string, isApproved: boolean) => {
   };
   // Filter items
 const filteredItems = getCurrentItems().filter((item) => {
+  console.log("items to fileter are :",item);
   const itemName = activeContentTab === "discount" ? (item as IDiscountFetched).title : item.name;
   const matchesSearch = itemName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (item.description || "").toLowerCase().includes(searchTerm.toLowerCase());
@@ -742,7 +705,7 @@ const filteredItems = getCurrentItems().filter((item) => {
                         </td>
                         <td className="py-4 px-6">
                           <div className="flex gap-2">
-                            <button
+                            <Button
                               onClick={() => handleApproval(item.$id, true)}
                               disabled={item.isApproved}
                               className={`p-2 rounded-lg transition ${
@@ -753,8 +716,8 @@ const filteredItems = getCurrentItems().filter((item) => {
                               title="Approve"
                             >
                               <CheckCircle className="w-4 h-4" />
-                            </button>
-                            <button
+                            </Button>
+                            <Button
                               onClick={() => handleApproval(item.$id, false)}
                               disabled={!item.isApproved && item.isApproved !== undefined}
                               className={`p-2 rounded-lg transition ${
@@ -765,7 +728,7 @@ const filteredItems = getCurrentItems().filter((item) => {
                               title="Reject"
                             >
                               <XCircle className="w-4 h-4" />
-                            </button>
+                            </Button>
                             <button
                               onClick={() => handleEdit(item)}
                               className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
@@ -872,7 +835,7 @@ const filteredItems = getCurrentItems().filter((item) => {
                       </div>
                       
                       <div className="flex gap-2">
-                        <button
+                        <Button
                           onClick={() => handleApproval(item.$id, true)}
                           disabled={item.isApproved}
                           className={`flex-1 p-2 rounded-lg transition ${
@@ -883,8 +846,8 @@ const filteredItems = getCurrentItems().filter((item) => {
                         >
                           <CheckCircle className="w-4 h-4 mx-auto" />
                           <span className="text-xs mt-1 block">Approve</span>
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           onClick={() => handleApproval(item.$id, false)}
                           disabled={!item.isApproved && item.isApproved !== undefined}
                           className={`flex-1 p-2 rounded-lg transition ${
@@ -895,7 +858,7 @@ const filteredItems = getCurrentItems().filter((item) => {
                         >
                           <XCircle className="w-4 h-4 mx-auto" />
                           <span className="text-xs mt-1 block">Reject</span>
-                        </button>
+                        </Button>
                         <button
                           onClick={() => handleEdit(item)}
                           className="flex-1 p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"

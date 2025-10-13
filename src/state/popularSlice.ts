@@ -121,6 +121,32 @@ export const updateAsyncPopularItem = createAsyncThunk<
   }
 });
 
+// Function to approve/update approval status of a popular item
+export const updateApprovalAsyncPopularItem = createAsyncThunk<
+  IPopularItemFetched,
+  { itemId: string; isApproved: boolean },
+  { rejectValue: string }
+>("popularItem/updateApprovalPopularItem", async ({ itemId, isApproved }, { rejectWithValue }) => {
+  try {
+    const { databaseId, popularItemsCollectionId } = validateEnv();
+
+    const updatedDocument = await databases.updateDocument(
+      databaseId,
+      popularItemsCollectionId,
+      itemId,
+      { isApproved }
+    );
+
+    const status = isApproved ? "approved" : "rejected";
+    toast.success(`Popular item ${status} successfully!`);
+    return updatedDocument as IPopularItemFetched;
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    toast.error(`Failed to update popular item approval: ${errorMsg}`);
+    return rejectWithValue(errorMsg);
+  }
+});
+
 // Function to delete a popular item
 export const deleteAsyncPopularItem = createAsyncThunk<
   string,
@@ -212,6 +238,29 @@ export const popularSlice = createSlice({
         (state, action: PayloadAction<string | undefined>) => {
           state.loading = "failed";
           state.error = action.payload || "Failed to update popular item";
+        }
+      )
+      // Update Approval
+      .addCase(updateApprovalAsyncPopularItem.pending, (state) => {
+        state.loading = "pending";
+        state.error = null;
+      })
+      .addCase(
+        updateApprovalAsyncPopularItem.fulfilled,
+        (state, action: PayloadAction<IPopularItemFetched>) => {
+          state.loading = "succeeded";
+          const index = state.popularItems.findIndex((item) => item.$id === action.payload.$id);
+          if (index !== -1) {
+            state.popularItems[index] = action.payload;
+          }
+          state.error = null;
+        }
+      )
+      .addCase(
+        updateApprovalAsyncPopularItem.rejected,
+        (state, action: PayloadAction<string | undefined>) => {
+          state.loading = "failed";
+          state.error = action.payload || "Failed to update popular item approval";
         }
       )
       // Delete

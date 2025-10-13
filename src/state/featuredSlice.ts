@@ -123,6 +123,32 @@ export const updateAsyncFeaturedItem = createAsyncThunk<
   }
 });
 
+// Function to approve/update approval status of a featured item
+export const updateApprovalAsyncFeaturedItem = createAsyncThunk<
+  IFeaturedItemFetched,
+  { itemId: string; isApproved: boolean },
+  { rejectValue: string }
+>("featuredItem/updateApprovalFeaturedItem", async ({ itemId, isApproved }, { rejectWithValue }) => {
+  try {
+    const { databaseId, featuredId } = validateEnv();
+
+    const updatedDocument = await databases.updateDocument(
+      databaseId,
+      featuredId,
+      itemId,
+      { isApproved }
+    );
+
+    const status = isApproved ? "approved" : "rejected";
+    toast.success(`Featured item ${status} successfully!`);
+    return updatedDocument as IFeaturedItemFetched;
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    toast.error(`Failed to update featured item approval: ${errorMsg}`);
+    return rejectWithValue(errorMsg);
+  }
+});
+
 // Function to delete a featured item
 export const deleteAsyncFeaturedItem = createAsyncThunk<
   string,
@@ -215,6 +241,29 @@ export const featuredItemSlice = createSlice({
         (state, action: PayloadAction<string | undefined>) => {
           state.loading = "failed";
           state.error = action.payload || "Failed to update featured item";
+        }
+      )
+      // Update Approval
+      .addCase(updateApprovalAsyncFeaturedItem.pending, (state) => {
+        state.loading = "pending";
+        state.error = null;
+      })
+      .addCase(
+        updateApprovalAsyncFeaturedItem.fulfilled,
+        (state, action: PayloadAction<IFeaturedItemFetched>) => {
+          state.loading = "succeeded";
+          const index = state.featuredItems.findIndex((item) => item.$id === action.payload.$id);
+          if (index !== -1) {
+            state.featuredItems[index] = action.payload;
+          }
+          state.error = null;
+        }
+      )
+      .addCase(
+        updateApprovalAsyncFeaturedItem.rejected,
+        (state, action: PayloadAction<string | undefined>) => {
+          state.loading = "failed";
+          state.error = action.payload || "Failed to update featured item approval";
         }
       )
       // Delete

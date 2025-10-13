@@ -122,6 +122,32 @@ export const updateAsyncMenuItem = createAsyncThunk<
   }
 });
 
+// Function to approve/update approval status of a menu item
+export const updateApprovalAsyncMenuItem = createAsyncThunk<
+  IMenuItemFetched,
+  { itemId: string; isApproved: boolean },
+  { rejectValue: string }
+>("menuItem/updateApprovalMenuItem", async ({ itemId, isApproved }, { rejectWithValue }) => {
+  try {
+    const { databaseId, menuItemsCollectionId } = validateEnv();
+
+    const updatedDocument = await databases.updateDocument(
+      databaseId,
+      menuItemsCollectionId,
+      itemId,
+      { isApproved }
+    );
+
+    const status = isApproved ? "approved" : "rejected";
+    toast.success(`Menu item ${status} successfully!`);
+    return updatedDocument as IMenuItemFetched;
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    toast.error(`Failed to update menu item approval: ${errorMsg}`);
+    return rejectWithValue(errorMsg);
+  }
+});
+
 // Function to delete a menu item
 export const deleteAsyncMenuItem = createAsyncThunk<
   string,
@@ -214,6 +240,29 @@ export const menuSlice = createSlice({
         (state, action: PayloadAction<string | undefined>) => {
           state.loading = "failed";
           state.error = action.payload || "Failed to update menu item";
+        }
+      )
+      // Update Approval
+      .addCase(updateApprovalAsyncMenuItem.pending, (state) => {
+        state.loading = "pending";
+        state.error = null;
+      })
+      .addCase(
+        updateApprovalAsyncMenuItem.fulfilled,
+        (state, action: PayloadAction<IMenuItemFetched>) => {
+          state.loading = "succeeded";
+          const index = state.menuItems.findIndex((item) => item.$id === action.payload.$id);
+          if (index !== -1) {
+            state.menuItems[index] = action.payload;
+          }
+          state.error = null;
+        }
+      )
+      .addCase(
+        updateApprovalAsyncMenuItem.rejected,
+        (state, action: PayloadAction<string | undefined>) => {
+          state.loading = "failed";
+          state.error = action.payload || "Failed to update menu item approval";
         }
       )
       // Delete
