@@ -1,5 +1,4 @@
 import { Models } from "appwrite";
-import { string } from "zod";
 
 
 export interface IUser {
@@ -90,9 +89,11 @@ export interface ICartItem {
   restaurantId: string;
   quantity: number;
   category: string;
-  source: "menu" | "featured" | "popular" | "";
+  source: "menu" | "featured" | "popular" | "discount" | "";
   description?:string;
    extras?: string[];
+   discountType?: "percentage" | "fixed" ;
+   discountValue?:number;
 }
 
 //  cart item order processed
@@ -304,10 +305,13 @@ export interface IDiscount {
   image?: string | FileList; // Promo banner image ID from storage
   isActive: boolean; // For admin toggling
   usageCount?: number; // Track uses (for maxUses enforcement)
-  extras?:string[]
+  extras?:string[];
+  restaurantId?:string; 
+  isApproved?:boolean;
 }
-
 export interface IDiscountFetched extends IDiscount, Models.Document {};
+
+
 
 export interface IExtras {
   name: string;

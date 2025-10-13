@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 import React, { useRef } from "react";
 
 type PhoneVerificationProps = {
-  code: string;
+  code: string | null;
   setCode: (v: string) => void;
   codeError: string;
   setCodeError: (v: string) => void;

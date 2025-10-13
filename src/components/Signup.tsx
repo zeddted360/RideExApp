@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useDispatch, useSelector } from "react-redux";
@@ -9,10 +9,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { account, databases, validateEnv } from "@/utils/appwrite";
 import { getUserPhone, storeUserPhone } from "@/utils/phoneStorage";
-// LocalStorage keys for signup persistence
-const SIGNUP_STEP_KEY = "signupStep";
-const SIGNUP_PHONE_KEY = "signupPhone";
-const SIGNUP_CODE_KEY = "signupCode";
+import { generateUniqueEmail } from "@/utils/generateEmail";
 import Link from "next/link";
 import { SignupFormData, signupSchema } from "@/utils/authSchema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,42 +17,41 @@ import PhoneCollection from "./signup/PhoneCollection";
 import PhoneVerification from "./signup/PhoneVerification";
 import SignupForm from "./signup/SignupForm";
 import { useAuth } from "@/context/authContext";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+
+// Constants
+const TEMP_PASSWORD = "TempSignupPass123!"; // Strong temp password (generate dynamically in prod if needed)
+const LOCAL_STORAGE_KEYS = {
+  STEP: "signupStep",
+  PHONE: "signupPhone",
+  CODE: "signupCode",
+  TEMP_USER_ID: "signupTempUserId", // Persist temp user ID
+} as const;
+
+type Step = "phone" | "verify" | "form";
 
 const Signup = () => {
-  const { isAuthenticated } = useAuth();
-
-  useEffect(() => {
-    if (isAuthenticated) router.push("/");
-  }, [isAuthenticated]);
-
-  const [step, setStep] = useState<"phone" | "verify" | "form">(() => {
-    if (typeof window !== "undefined") {
-      const phoneData = getUserPhone();
-      if (phoneData && phoneData.verified) return "form";
-      return (
-        (localStorage.getItem(SIGNUP_STEP_KEY) as
-          | "phone"
-          | "verify"
-          | "form") || "phone"
-      );
+  const [step, setStep] = useState<Step>(() => {
+  if (typeof window !== "undefined") {
+    const phoneData = getUserPhone();
+    if (phoneData?.verified) {
+      return "form";
     }
-    return "phone";
-  });
+    return (localStorage.getItem(LOCAL_STORAGE_KEYS.STEP) as Step) || "phone";
+  }
+  return "phone";
+});
   const [phoneNumber, setPhoneNumber] = useState(() => {
     if (typeof window !== "undefined") {
       const phoneData = getUserPhone();
-      if (phoneData && phoneData.verified) return phoneData.phoneNumber;
-      return localStorage.getItem(SIGNUP_PHONE_KEY) || "";
+      if (phoneData?.verified) return phoneData.phoneNumber;
+      return localStorage.getItem(LOCAL_STORAGE_KEYS.PHONE) || "";
     }
     return "";
   });
   const [phoneError, setPhoneError] = useState("");
-  const [code, setCode] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem(SIGNUP_CODE_KEY) || "";
-    }
-    return "";
-  });
+  const [code, setCode] = useState(() => typeof window !== "undefined" ? localStorage.getItem(LOCAL_STORAGE_KEYS.CODE) : null);
   const [codeError, setCodeError] = useState("");
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [isSendingCode, setIsSendingCode] = useState(false);
@@ -63,118 +59,140 @@ const Signup = () => {
   const [resendCountdown, setResendCountdown] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [tempUserId, setTempUserId] = useState<string | null>(() => {
+    if (typeof window !== "undefined") return localStorage.getItem(LOCAL_STORAGE_KEYS.TEMP_USER_ID) || null;
+    return null;
+  });
   const dispatch = useDispatch<AppDispatch>();
-  const router = useRouter();
   const { loading, error } = useSelector((state: RootState) => state.auth);
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
 
-  // Persist step, phoneNumber, and code to localStorage
+  useEffect(() => {
+    if (isAuthenticated) router.push("/");
+  }, [isAuthenticated, router]);
+  // Persist state to localStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
       const phoneData = getUserPhone();
-      if (phoneData && phoneData.verified) {
+      if (phoneData?.verified) {
         setPhoneNumber(phoneData.phoneNumber);
         setStep("form");
-        localStorage.setItem(SIGNUP_STEP_KEY, "form");
-        localStorage.setItem(SIGNUP_PHONE_KEY, phoneData.phoneNumber);
-        localStorage.removeItem(SIGNUP_CODE_KEY);
+        localStorage.setItem(LOCAL_STORAGE_KEYS.STEP, "form");
+        localStorage.setItem(LOCAL_STORAGE_KEYS.PHONE, phoneData.phoneNumber);
+        localStorage.removeItem(LOCAL_STORAGE_KEYS.CODE);
+        localStorage.removeItem(LOCAL_STORAGE_KEYS.TEMP_USER_ID);
         return;
       }
-      localStorage.setItem(SIGNUP_STEP_KEY, step);
-      localStorage.setItem(SIGNUP_PHONE_KEY, phoneNumber);
-      localStorage.setItem(SIGNUP_CODE_KEY, code);
+      localStorage.setItem(LOCAL_STORAGE_KEYS.STEP, step);
+      localStorage.setItem(LOCAL_STORAGE_KEYS.PHONE, phoneNumber);
+      localStorage.setItem(LOCAL_STORAGE_KEYS.CODE, code || "");
+      if (tempUserId) {
+        localStorage.setItem(LOCAL_STORAGE_KEYS.TEMP_USER_ID, tempUserId);
+      } else {
+        localStorage.removeItem(LOCAL_STORAGE_KEYS.TEMP_USER_ID);
+      }
     }
-  }, [step, phoneNumber, code]);
+  }, [step, phoneNumber, code, tempUserId]);
 
-  // Handle countdown for resend button
+  // Countdown timer
   useEffect(() => {
     if (resendCountdown > 0) {
-      const timer = setTimeout(
-        () => setResendCountdown(resendCountdown - 1),
-        1000
-      );
+      const timer = setTimeout(() => setResendCountdown(resendCountdown - 1), 1000);
       return () => clearTimeout(timer);
     }
   }, [resendCountdown]);
 
-  // Handle phone number submission
+  // Format phone number helper
+  const formatPhone = useCallback((input: string): string => {
+    let formatted = input.trim();
+    if (formatted.startsWith("0")) {
+      formatted = "+234" + formatted.slice(1);
+    } else if (formatted.startsWith("234")) {
+      formatted = "+" + formatted;
+    } else if (!formatted.startsWith("+234")) {
+      formatted = "+234" + formatted;
+    }
+    return formatted;
+  }, []);
+  // Validate phone helper
+  const isValidPhone = useCallback((phone: string): boolean => {
+    const formatted = formatPhone(phone);
+    const regex = /^\+234\d{10}$/;
+    return regex.test(formatted);
+  }, [formatPhone]);
+  // Handle phone submission: Create temp account
   const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setPhoneError("");
     setIsSendingCode(true);
 
-    // Validate phone number format
-    let formattedPhone = phoneNumber.trim();
-
-    // Handle different input formats
-    if (formattedPhone.startsWith("0")) {
-      formattedPhone = "+234" + formattedPhone.slice(1);
-    } else if (formattedPhone.startsWith("234")) {
-      formattedPhone = "+" + formattedPhone;
-    } else if (!formattedPhone.startsWith("+234")) {
-      formattedPhone = "+234" + formattedPhone;
-    }
-
-    const regex = /^\+234\d{10}$/;
-    if (!regex.test(formattedPhone)) {
-      setPhoneError(
-        "Please enter a valid Nigerian phone number (e.g., +2348012345678 or 08012345678)"
-      );
+    const formattedPhone = formatPhone(phoneNumber);
+    if (!isValidPhone(phoneNumber)) {
+      setPhoneError("Please enter a valid Nigerian phone number (e.g., +2348012345678 or 08012345678)");
       setIsSendingCode(false);
       return;
     }
 
-    // Update the phone number with the formatted version
     setPhoneNumber(formattedPhone);
-    if (typeof window !== "undefined") {
-      localStorage.setItem(SIGNUP_PHONE_KEY, formattedPhone);
-    }
+    localStorage.setItem(LOCAL_STORAGE_KEYS.PHONE, formattedPhone);
 
-    // Send verification code
     try {
-      const response = await fetch("/api/phone-verification", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          phoneNumber: formattedPhone,
-          action: "send",
-        }),
-      });
+      // 1. Generate temp email and create temp account
+      if (!tempUserId) {
+        const tempEmail = generateUniqueEmail();
+        const user = await account.create(
+          "unique()",
+          tempEmail,
+          TEMP_PASSWORD,
+          "Temp User" // Temp name
+        );
+        setTempUserId(user.$id);
+        localStorage.setItem(LOCAL_STORAGE_KEYS.TEMP_USER_ID, user.$id);
 
-      const result = await response.json();
-
-      if (result.success) {
-        toast.success(result.message);
-        setStep("verify");
-        if (typeof window !== "undefined") {
-          localStorage.setItem(SIGNUP_STEP_KEY, "verify");
-        }
-        setResendCountdown(60); // 60 seconds countdown
-      } else {
-        setPhoneError(result.message);
-        toast.error(result.message);
+        // 2. Create session for temp account
+        await account.createEmailPasswordSession(tempEmail, TEMP_PASSWORD);
       }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Failed to send verification code";
+
+      // 3. Update phone on temp account
+      await account.updatePhone(formattedPhone, TEMP_PASSWORD);
+
+      // 4. Send verification code
+      await account.createPhoneVerification();
+
+      toast.success("Verification code sent!");
+      setStep("verify");
+      localStorage.setItem(LOCAL_STORAGE_KEYS.STEP, "verify");
+      setResendCountdown(60);
+    } catch (error: any) {
+      let errorMessage = "Failed to send verification code";
+      if (error.code === 409) {
+        errorMessage = "This phone number is already registered. Please log in instead.";
+      } else if (error.code === 400) {
+        errorMessage = "Invalid phone number format. Please check and try again.";
+      }
       setPhoneError(errorMessage);
       toast.error(errorMessage);
+      // Cleanup on failure
+      if (tempUserId) {
+        try {
+          await account.deleteSession("current");
+          // Optionally delete the temp user via API if needed (requires server-side)
+        } catch {} // Ignore cleanup errors
+        setTempUserId(null);
+        localStorage.removeItem(LOCAL_STORAGE_KEYS.TEMP_USER_ID);
+      }
     } finally {
       setIsSendingCode(false);
     }
   };
 
-  // Handle verification code submission
+  // Handle code submission: Verify phone on temp account
   const handleCodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setCodeError("");
     setIsVerifyingCode(true);
-    if (typeof window !== "undefined") {
-      localStorage.setItem(SIGNUP_CODE_KEY, code);
-    }
+    localStorage.setItem(LOCAL_STORAGE_KEYS.CODE, code || "");
 
     if (!code || code.length !== 6) {
       setCodeError("Please enter a valid 6-digit code");
@@ -182,35 +200,21 @@ const Signup = () => {
       return;
     }
 
-    // Verify the code
     try {
-      const response = await fetch("/api/phone-verification", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          phoneNumber: phoneNumber,
-          action: "verify",
-          code: code,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        toast.success(result.message);
-        setStep("form");
-        if (typeof window !== "undefined") {
-          localStorage.setItem(SIGNUP_STEP_KEY, "form");
-        }
-      } else {
-        setCodeError(result.message);
-        toast.error(result.message);
+      if (!tempUserId) {
+        throw new Error("No active session. Please start over.");
       }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to verify code";
+      await account.updatePhoneVerification(tempUserId, code);
+
+      toast.success("Phone verified successfully!");
+      setStep("form");
+      localStorage.setItem(LOCAL_STORAGE_KEYS.STEP, "form");
+      storeUserPhone(phoneNumber, true); // Mark as verified locally
+    } catch (error: any) {
+      let errorMessage = "Failed to verify code";
+      if (error.code === 400) {
+        errorMessage = "Invalid or expired code. Please try again.";
+      }
       setCodeError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -218,42 +222,55 @@ const Signup = () => {
     }
   };
 
-  // Handle resend code
+  // Handle resend code: Resend on temp account
   const handleResendCode = async () => {
     if (resendCountdown > 0) return;
 
     setIsSendingCode(true);
     try {
-      const response = await fetch("/api/phone-verification", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          phoneNumber: phoneNumber,
-          action: "send",
-        }),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        toast.success("Verification code resent successfully!");
-        setResendCountdown(60);
-        if (typeof window !== "undefined") {
-          localStorage.setItem(SIGNUP_STEP_KEY, "verify");
-        }
-      } else {
-        toast.error(result.message);
+      if (!tempUserId) {
+        throw new Error("No active session. Please start over.");
       }
-    } catch (error) {
+      await account.createPhoneVerification();
+      toast.success("Verification code resent successfully!");
+      setResendCountdown(60);
+      localStorage.setItem(LOCAL_STORAGE_KEYS.STEP, "verify");
+    } catch (error: any) {
       toast.error("Failed to resend code. Please try again.");
     } finally {
       setIsSendingCode(false);
     }
   };
 
-  // Signup form
+  // Handle back to previous step
+  const handleBack = useCallback(() => {
+    if (step === "verify") {
+      setStep("phone");
+      localStorage.setItem(LOCAL_STORAGE_KEYS.STEP, "phone");
+    } else if (step === "form") {
+      setStep("verify");
+      localStorage.setItem(LOCAL_STORAGE_KEYS.STEP, "verify");
+    }
+  }, [step]);
+
+  // Handle abort/cancel: Cleanup temp account
+  const handleAbort = useCallback(async () => {
+    if (tempUserId) {
+      try {
+        await account.deleteSession("current");
+        // Note: Deleting the temp user requires server-side (Appwrite Function) or admin API; skip for now
+      } catch (error) {
+        console.warn("Cleanup failed:", error);
+      }
+      setTempUserId(null);
+      localStorage.removeItem(LOCAL_STORAGE_KEYS.TEMP_USER_ID);
+    }
+    // Clear all localStorage
+    Object.values(LOCAL_STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
+    router.push("/login");
+  }, [tempUserId, router]);
+
+  // Signup form: Update temp account with real details
   const signupForm = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
@@ -270,22 +287,28 @@ const Signup = () => {
     dispatch(clearError());
     setIsSigningUp(true);
     try {
-      // 1. Create the user account
-      const user = await account.create(
-        "unique()",
-        data.email,
-        data.password,
-        `${data.firstName} ${data.lastName}`
-      );
-
-      // 2. Create user profile in users collection
+      if (!tempUserId) {
+        throw new Error("No temporary account found. Please start over.");
+      }
+      // 1. Update name on temp account
+      await account.updateName(`${data.firstName} ${data.lastName}`);
+      // 2. Update email to real email (requires temp password)
+      await account.updateEmail(data.email, TEMP_PASSWORD);
+      // 3. Update password to new password
+      await account.updatePassword(data.password, TEMP_PASSWORD);
+      // 4. Create user profile in database
+      const currentUser = await account.get();
       const { databaseId, userCollectionId } = validateEnv();
-      await databases.createDocument(databaseId, userCollectionId, user.$id, {
-        userId: user.$id,
+      await databases.createDocument(databaseId, userCollectionId, currentUser.$id, {
+        userId: currentUser.$id,
         fullName: `${data.firstName} ${data.lastName}`,
         phone: phoneNumber,
+        email: data.email,
       });
-      // 3. Login the user to get the session
+
+      // delet session then log in again
+      await account.deleteSession("current");
+      // 6. Refresh Redux state with login
       const loginResult = await dispatch(
         loginAsync({
           email: data.email,
@@ -294,50 +317,27 @@ const Signup = () => {
         })
       );
       if (loginAsync.fulfilled.match(loginResult)) {
-        // 4. Update the phone number in Appwrite Auth
-        try {
-          await account.updatePhone(phoneNumber, data.password);
-        } catch (err: any) {
-          if (err?.code === 409) {
-            toast.error(
-              "This phone number is already in use. Please use a different number."
-            );
-          } else {
-            toast.error(
-              "Failed to update phone in Auth user, but continuing..."
-            );
-          }
-          console.error("Failed to update phone in Auth user:", err);
-        }
-
-        // 5. Store phone in localStorage (optional, for legacy reasons)
-        try {
-          storeUserPhone(phoneNumber, true); // Mark as verified since user just signed up
-        } catch (storageError) {
-          // If localStorage fails, still create account but warn user
-          console.warn("Failed to store phone number:", storageError);
-        }
-
-        toast.success("Account created successfully with phone number!");
-        // Clear signup persistence after successful signup
-        if (typeof window !== "undefined") {
-          localStorage.removeItem(SIGNUP_STEP_KEY);
-          localStorage.removeItem(SIGNUP_PHONE_KEY);
-          localStorage.removeItem(SIGNUP_CODE_KEY);
-        }
+        // Phone is already verified on the account
+        storeUserPhone(phoneNumber, true);
+        toast.success("Account created successfully!");
+        // Full cleanup
+        Object.values(LOCAL_STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
+        setTempUserId(null);
         router.push("/");
+      } else {
+        throw new Error("Failed to log in after account update");
       }
-    } catch (error) {
-      console.error(
-        `Signup failed: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`
-      );
-      toast.error(
-        `Signup failed: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`
-      );
+    } catch (error: any) {
+      let errorMessage = "Signup failed";
+      if (error.code === 409) {
+        errorMessage = "Email already in use. Please log in or use a different email.";
+      } else if (error.code === 400) {
+        errorMessage = "Invalid email or password format. Please check and try again.";
+      }
+      console.error("Signup failed:", error);
+      toast.error(errorMessage);
+      // On error, attempt cleanup
+      handleAbort();
     } finally {
       setIsSigningUp(false);
     }
@@ -355,6 +355,29 @@ const Signup = () => {
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Back Button for non-phone steps */}
+          {(step === "verify" || step === "form") && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBack}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </Button>
+          )}
+
+          {/* Abort Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleAbort}
+            className="w-full text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+          >
+            Cancel Signup
+          </Button>
+
           {step === "phone" && (
             <PhoneCollection
               phoneNumber={phoneNumber}

@@ -203,7 +203,7 @@ export const getCurrentUserAsync = createAsyncThunk<
       isAdmin = userDoc.isAdmin ?? false;
       role = isAdmin ? "admin" : userDoc.isVendor ? "vendor" :"user";
       phoneNumber = userDoc.phone
-      fullName = userDoc.fullName
+      fullName = userDoc.fullName || "";
     } catch (err) {
       // If user doc not found or isAdmin missing, default to false
       isAdmin = false;

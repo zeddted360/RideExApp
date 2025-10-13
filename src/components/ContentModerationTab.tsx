@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { 
   IMenuItemFetched, 
   IPopularItemFetched, 
-  IFeaturedItemFetched 
+  IFeaturedItemFetched,
+  IDiscountFetched
 } from "../../types/types";
 import { fileUrl, validateEnv } from "@/utils/appwrite";
 import toast from "react-hot-toast";
@@ -27,6 +28,7 @@ import { AppDispatch, RootState } from "@/state/store";
 import { listAsyncFeaturedItems, updateAsyncFeaturedItem, deleteAsyncFeaturedItem } from "@/state/featuredSlice";
 import { listAsyncPopularItems, updateAsyncPopularItem, deleteAsyncPopularItem } from "@/state/popularSlice";
 import { listAsyncMenusItem, updateAsyncMenuItem, deleteAsyncMenuItem } from "@/state/menuSlice";
+import { listAsyncDiscounts, updateAsyncDiscount, deleteAsyncDiscount } from "@/state/discountSlice";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Button } from "./ui/button"; 
@@ -34,8 +36,8 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { getAsyncRestaurantById } from "@/state/restaurantSlice";
 
-type ContentType = "menu" | "popular" | "featured";
-type ContentItem = IMenuItemFetched | IPopularItemFetched | IFeaturedItemFetched;
+type ContentType = "menu" | "popular" | "featured" | "discount";
+type ContentItem = IMenuItemFetched | IPopularItemFetched | IFeaturedItemFetched | IDiscountFetched;
 
 export default function ContentModerationTab() {
   // State management
@@ -50,6 +52,7 @@ export default function ContentModerationTab() {
   const { featuredItems } = useSelector((state: RootState) => state.featuredItem);
   const { menuItems } = useSelector((state: RootState) => state.menuItem);
   const { popularItems } = useSelector((state: RootState) => state.popularItem);
+  const { discounts } = useSelector((state: RootState) => state.discounts);
 
   // Edit/Delete states
   const [showEditModal, setShowEditModal] = useState(false);
@@ -59,28 +62,27 @@ export default function ContentModerationTab() {
   const [newImage, setNewImage] = useState<File | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-const [restaurantName, setRestaurantName] = useState<string>("");
+  const [restaurantName, setRestaurantName] = useState<string>("");
 
+  const getRestaurantName = async (restaurantId: string, dispatch: AppDispatch): Promise<string> => {
+    try {
+      const response = await dispatch(getAsyncRestaurantById(restaurantId)).unwrap();
+      return response.name || "Unknown restaurant";  
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : "Could not fetch restaurant");
+      return "Unknown restaurant";  
+    }
+  };
 
-const getRestaurantName = async (restaurantId: string, dispatch: AppDispatch): Promise<string> => {
-  try {
-    const response = await dispatch(getAsyncRestaurantById(restaurantId)).unwrap();
-    return response.name || "Unknown restaurant";  
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : "Could not fetch restaurant");
-    return "Unknown restaurant";  
-  }
-};
-
-useEffect(() => {
-  if (editFormData.restaurantId && showEditModal) {
-    const fetchName = async () => {
-      const name = await getRestaurantName(editFormData.restaurantId, dispatch);
-      setRestaurantName(name);
-    };
-    fetchName();
-  }
-}, [editFormData.restaurantId, showEditModal, dispatch]);
+  useEffect(() => {
+    if (editFormData.restaurantId && showEditModal) {
+      const fetchName = async () => {
+        const name = await getRestaurantName(editFormData.restaurantId, dispatch);
+        setRestaurantName(name);
+      };
+      fetchName();
+    }
+  }, [editFormData.restaurantId, showEditModal, dispatch]);
 
   // Effect to fetch data when tab changes
   useEffect(() => {
@@ -99,6 +101,9 @@ useEffect(() => {
       case "featured":
         action = listAsyncFeaturedItems();
         break;
+      case "discount":
+        action = listAsyncDiscounts();
+        break;
       default:
         setLoading(false);
         return;
@@ -113,35 +118,76 @@ useEffect(() => {
   }, [activeContentTab, dispatch]);
 
   // Approval handler (updates isApproved)
-  const handleApproval = async (itemId: string, isApproved: boolean) => {
-    try {
-      setIsUpdating(true);
-      let updateData = { isApproved };
+const handleApproval = async (itemId: string, isApproved: boolean) => {
+  try {
+    setIsUpdating(true);
 
-      let action;
-      switch (activeContentTab) {
-        case "menu":
-          action = updateAsyncMenuItem({ itemId, data: updateData });
-          break;
-        case "popular":
-          action = updateAsyncPopularItem({ itemId, data: updateData });
-          break;
-        case "featured":
-          action = updateAsyncFeaturedItem({ itemId, data: updateData });
-          break;
+    let action;
+    switch (activeContentTab) {
+      case "menu": {
+        const item = menuItems.find((i) => i.$id === itemId);
+        if (!item) return;
+        // Ensure category is "veg" or "non-veg"
+        let mappedCategory: "veg" | "non-veg" | undefined = undefined;
+        if (item.category === "veg" || item.category === "Vegetarian") mappedCategory = "veg";
+        else if (item.category === "non-veg" || item.category === "Non-Vegetarian") mappedCategory = "non-veg";
+        const updateData = {
+          ...item,
+          isApproved,
+          category: mappedCategory,
+        };
+        action = updateAsyncMenuItem({ itemId, data: updateData });
+        break;
       }
-
-      if (action) {
-        await dispatch(action as any).unwrap();
-        toast.success(`Item ${isApproved ? "approved" : "rejected"} successfully`);
+      // ...other cases unchanged...
+      case "popular": {
+        const item = popularItems.find((i) => i.$id === itemId);
+        if (!item) return;
+        let mappedCategory: "veg" | "non-veg" | undefined = undefined;
+        if (item.category === "veg" || item.category === "Vegetarian") mappedCategory = "veg";
+        else if (item.category === "non-veg" || item.category === "Non-Vegetarian") mappedCategory = "non-veg";
+        const updateData = {
+          ...item,
+          isApproved,
+          category: mappedCategory,
+        };
+        action = updateAsyncPopularItem({ itemId, data: updateData });
+        break;
       }
-    } catch (error) {
-      console.error("Error updating approval status:", error);
-      toast.error("Failed to update approval status");
-    } finally {
-      setIsUpdating(false);
+      case "featured": {
+        const item = featuredItems.find((i) => i.$id === itemId);
+        if (!item) return;
+        let mappedCategory: "veg" | "non-veg" | undefined = undefined;
+        if (item.category === "veg" || item.category === "Vegetarian") mappedCategory = "veg";
+        else if (item.category === "non-veg" || item.category === "Non-Vegetarian") mappedCategory = "non-veg";
+        const updateData = {
+          ...item,
+          isApproved,
+          category: mappedCategory,
+        };
+        action = updateAsyncFeaturedItem({ itemId, data: updateData });
+        break;
+      }
+      case "discount": {
+        const item = discounts.find((i) => i.$id === itemId);
+        if (!item) return;
+        const updateData = { ...item, isApproved };
+        action = updateAsyncDiscount({ id: itemId, data: updateData });
+        break;
+      }
     }
-  };
+
+    if (action) {
+      await dispatch(action as any).unwrap();
+      toast.success(`Item ${isApproved ? "approved" : "rejected"} successfully`);
+    }
+  } catch (error) {
+    console.error("Error updating approval status:", error);
+    toast.error("Failed to update approval status");
+  } finally {
+    setIsUpdating(false);
+  }
+};
 
   // Edit handler
   const handleEdit = (item: ContentItem) => {
@@ -176,6 +222,27 @@ useEffect(() => {
         break;
       case "featured":
         // Only common fields
+        break;
+      case "discount":
+        formData = {
+          title: (item as IDiscountFetched).title,
+          description: (item as IDiscountFetched).description,
+          discountType: (item as IDiscountFetched).discountType,
+          discountValue: (item as IDiscountFetched).discountValue,
+          originalPrice: (item as IDiscountFetched).originalPrice,
+          discountedPrice: (item as IDiscountFetched).discountedPrice,
+          validFrom: (item as IDiscountFetched).validFrom,
+          validTo: (item as IDiscountFetched).validTo,
+          minOrderValue: (item as IDiscountFetched).minOrderValue,
+          maxUses: (item as IDiscountFetched).maxUses,
+          code: (item as IDiscountFetched).code,
+          appliesTo: (item as IDiscountFetched).appliesTo,
+          targetId: (item as IDiscountFetched).targetId,
+          isActive: (item as IDiscountFetched).isActive,
+          isApproved: (item as IDiscountFetched).isApproved,
+          restaurantId: (item as IDiscountFetched).restaurantId,
+          extras: (item as IDiscountFetched).extras,
+        };
         break;
       default:
         break;
@@ -236,6 +303,28 @@ useEffect(() => {
           };
           action = updateAsyncFeaturedItem({ itemId, data: updateData, newImage });
           break;
+        case "discount":
+          updateData = {
+            title: editFormData.title,
+            description: editFormData.description,
+            discountType: editFormData.discountType,
+            discountValue: parseFloat(editFormData.discountValue?.toString() || "0"),
+            originalPrice: editFormData.originalPrice ? parseFloat(editFormData.originalPrice.toString()) : undefined,
+            discountedPrice: editFormData.discountedPrice ? parseFloat(editFormData.discountedPrice.toString()) : undefined,
+            validFrom: editFormData.validFrom,
+            validTo: editFormData.validTo,
+            minOrderValue: editFormData.minOrderValue ? parseFloat(editFormData.minOrderValue.toString()) : undefined,
+            maxUses: editFormData.maxUses ? parseInt(editFormData.maxUses.toString()) : undefined,
+            code: editFormData.code,
+            appliesTo: editFormData.appliesTo,
+            targetId: editFormData.targetId,
+            isActive: editFormData.isActive,
+            isApproved: editFormData.isApproved,
+            restaurantId: editFormData.restaurantId,
+            extras: editFormData.extras,
+          };
+          action = updateAsyncDiscount({ id: itemId, data: updateData, imageFile: newImage || null });
+          break;
       }
 
       if (action) {
@@ -248,7 +337,9 @@ useEffect(() => {
             ? listAsyncMenusItem()
             : activeContentTab === "popular"
             ? listAsyncPopularItems()
-            : listAsyncFeaturedItems()
+            : activeContentTab === "featured"
+            ? listAsyncFeaturedItems()
+            : listAsyncDiscounts()
         )as any);
       }
     } catch (error) {
@@ -272,18 +363,21 @@ useEffect(() => {
       let action;
       switch (activeContentTab) {
         case "menu":
-          action = deleteAsyncMenuItem({ itemId: selectedItem.$id, imageId: selectedItem.image });
+          action = deleteAsyncMenuItem({ itemId: selectedItem.$id, imageId: selectedItem.image as string });
           break;
         case "popular":
-          action = deleteAsyncPopularItem({ itemId: selectedItem.$id, imageId: selectedItem.image });
+          action = deleteAsyncPopularItem({ itemId: selectedItem.$id, imageId: selectedItem.image as string});
           break;
         case "featured":
-          action = deleteAsyncFeaturedItem({ itemId: selectedItem.$id, imageId: selectedItem.image });
+          action = deleteAsyncFeaturedItem({ itemId: selectedItem.$id, imageId: selectedItem.image as string });
+          break;
+        case "discount":
+          action = deleteAsyncDiscount(selectedItem.$id);
           break;
       }
 
       if (action) {
-        await dispatch(action).unwrap();
+        await dispatch(action as any).unwrap();
         toast.success("Item deleted successfully");
         setShowDeleteModal(false);
         // Refetch items
@@ -292,7 +386,9 @@ useEffect(() => {
             ? listAsyncMenusItem()
             : activeContentTab === "popular"
             ? listAsyncPopularItems()
-            : listAsyncFeaturedItems()
+            : activeContentTab === "featured"
+            ? listAsyncFeaturedItems()
+            : listAsyncDiscounts()
         ) as any);
       }
     } catch (error) {
@@ -311,23 +407,25 @@ useEffect(() => {
         return popularItems;
       case "featured":
         return featuredItems;
+      case "discount":
+        return discounts;
       default:
         return [];
     }
   };
-
   // Filter items
-  const filteredItems = getCurrentItems().filter((item) => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.description.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesApproval = 
-      approvalFilter === "all" ||
-      (approvalFilter === "approved" && item.isApproved) ||
-      (approvalFilter === "pending" && !item.isApproved);
+const filteredItems = getCurrentItems().filter((item) => {
+  const itemName = activeContentTab === "discount" ? (item as IDiscountFetched).title : item.name;
+  const matchesSearch = itemName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (item.description || "").toLowerCase().includes(searchTerm.toLowerCase());
+  
+  const matchesApproval = 
+    approvalFilter === "all" ||
+    (approvalFilter === "approved" && item.isApproved) ||
+    (approvalFilter === "pending" && !item.isApproved);
 
-    return matchesSearch && matchesApproval;
-  });
+  return matchesSearch && matchesApproval;
+});
 
   const paginatedItems = filteredItems.slice(
     (currentPage - 1) * itemsPerPage,
@@ -359,12 +457,14 @@ useEffect(() => {
         return <TrendingUp className="w-4 h-4" />;
       case "featured":
         return <Award className="w-4 h-4" />;
+      case "discount":
+        return <Award className="w-4 h-4" />;
       default:
         return <Package className="w-4 h-4" />;
     }
   };
 
-  const {popularBucketId,menuBucketId,featuredBucketId} = validateEnv();
+  const {popularBucketId,menuBucketId,featuredBucketId, discountBucketId} = validateEnv();
 
  // Get bucket ID based on active tab
  const getBucketId = (): string => {
@@ -375,6 +475,8 @@ useEffect(() => {
       return popularBucketId;
     case "featured":
       return featuredBucketId;
+    case "discount":
+      return discountBucketId;
     default:
       return "";
   }
@@ -390,6 +492,16 @@ useEffect(() => {
     }
   };
 
+  const getTimeLeft = (endDate: string) => {
+    const now = new Date();
+    const end = new Date(endDate);
+    const diff = end.getTime() - now.getTime();
+    if (diff < 0) return "Expired";
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    return `${days}d ${hours}h left`;
+  };
+
   return (
     <>
       <div className="mb-6">
@@ -399,7 +511,7 @@ useEffect(() => {
 
         {/* Content Type Tabs */}
         <div className="flex space-x-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg mb-6">
-          {(["menu", "popular", "featured"] as ContentType[]).map((type) => (
+          {(["menu", "popular", "featured", "discount"] as ContentType[]).map((type) => (
             <button
               key={type}
               onClick={() => setActiveContentTab(type)}
@@ -504,141 +616,175 @@ useEffect(() => {
               </thead>
               <tbody>
                 {paginatedItems.length > 0 ? (
-                  paginatedItems.map((item) => (
-                    <tr
-                      key={item.$id}
-                      className="border-b border-gray-100 dark:border-gray-700 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition"
-                    >
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-3">
-                          <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden flex-shrink-0 relative">
-                            {item.image ? (
-                              <Image
-                                src={fileUrl(getBucketId(),item.image)}
-                                alt={item.name}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.style.display = 'none';
-                                  target.nextElementSibling?.classList.remove('hidden');
-                                }}
-                                width={50}
-                                height={50}
-                                quality={100}
-                              />
-                            ) : null}
-                            <div className={`w-full h-full flex items-center justify-center text-gray-400 absolute top-0 left-0 ${item.image ? 'hidden' : ''}`}>
-                              <ImageIcon className="w-6 h-6" />
+                  paginatedItems.map((item) => {
+                    const isDiscount = activeContentTab === "discount";
+                    return (
+                      <tr
+                        key={item.$id}
+                        className="border-b border-gray-100 dark:border-gray-700 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition"
+                      >
+                        <td className="py-4 px-6">
+                          <div className="flex items-center gap-3">
+                            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden flex-shrink-0 relative">
+                              {item.image ? (
+                                <Image
+                                  src={fileUrl(getBucketId(),item.image as string)}
+                                  alt={isDiscount ? (item as IDiscountFetched).title : item.name}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                    target.nextElementSibling?.classList.remove('hidden');
+                                  }}
+                                  width={50}
+                                  height={50}
+                                  quality={100}
+                                />
+                              ) : null}
+                              <div className={`w-full h-full flex items-center justify-center text-gray-400 absolute top-0 left-0 ${item.image ? 'hidden' : ''}`}>
+                                <ImageIcon className="w-6 h-6" />
+                              </div>
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900 dark:text-gray-100">
+                                {isDiscount ? (item as IDiscountFetched).title : item.name}
+                              </p>
+                              <p className="text-sm text-gray-500 line-clamp-2">
+                                {isDiscount ? (item as IDiscountFetched).description : item.description}
+                              </p>
                             </div>
                           </div>
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-gray-100">
-                              {item.name}
-                            </p>
-                            <p className="text-sm text-gray-500 line-clamp-2">
-                              {item.description}
-                            </p>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="text-sm text-gray-500">
+                            {!isDiscount ? (
+                              <>
+                                <p className="flex items-center gap-1 mb-1">
+                                  <span className="font-medium">Category:</span>
+                                  <span className={`px-2 py-1 rounded-full text-xs ${
+                                    item.category === 'veg' || item.category === 'Vegetarian'
+                                      ? 'bg-green-100 text-green-800'
+                                      : 'bg-red-100 text-red-800'
+                                  }`}>
+                                    {item.category}
+                                  </span>
+                                </p>
+                                {('cookTime' in item) && (
+                                  <p className="flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    {item.cookTime}
+                                  </p>
+                                )}
+                                {('cookingTime' in item) && (
+                                  <p className="flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    {item.cookingTime}
+                                  </p>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                <p className="flex items-center gap-1 mb-1">
+                                  <span className="font-medium">Applies To:</span>
+                                  <span className="px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                                    {(item as IDiscountFetched).appliesTo}
+                                  </span>
+                                </p>
+                                <p className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {getTimeLeft((item as IDiscountFetched).validTo)}
+                                </p>
+                              </>
+                            )}
                           </div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="text-sm text-gray-500">
-                          <p className="flex items-center gap-1 mb-1">
-                            <span className="font-medium">Category:</span>
-                            <span className={`px-2 py-1 rounded-full text-xs ${
-                              item.category === 'veg' || item.category === 'Vegetarian'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              {item.category}
-                            </span>
-                          </p>
-                          {('cookTime' in item) && (
-                            <p className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {item.cookTime}
-                            </p>
+                        </td>
+                        <td className="py-4 px-6">
+                          <div>
+                            {!isDiscount ? (
+                              <>
+                                <p className="font-bold text-orange-600">
+                                  ₦{item.price}
+                                </p>
+                                {item.originalPrice && item.originalPrice !== item.price && (
+                                  <p className="text-sm text-gray-500 line-through">
+                                    ₦{item.originalPrice}
+                                  </p>
+                                )}
+                              </>
+                            ) : (
+                              <p className="font-bold text-orange-600">
+                                {(item as IDiscountFetched).discountType === "percentage" 
+                                  ? `${(item as IDiscountFetched).discountValue}%` 
+                                  : `₦${(item as IDiscountFetched).discountValue}`}
+                              </p>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4 px-6">
+                          {!isDiscount ? (
+                            <div className="flex items-center gap-1">
+                              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                              <span className="text-sm font-medium">
+                                {item.rating}
+                              </span>
+                              {('reviewCount' in item) && (
+                                <span className="text-xs text-gray-500">
+                                  ({item.reviewCount})
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-sm text-gray-500">N/A</span>
                           )}
-                          {('cookingTime' in item) && (
-                            <p className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {item.cookingTime}
-                            </p>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <div>
-                          <p className="font-bold text-orange-600">
-                            ₦{item.price}
-                          </p>
-                          {item.originalPrice && item.originalPrice !== item.price && (
-                            <p className="text-sm text-gray-500 line-through">
-                              ₦{item.originalPrice}
-                            </p>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                          <span className="text-sm font-medium">
-                            {item.rating}
-                          </span>
-                          {('reviewCount' in item) && (
-                            <span className="text-xs text-gray-500">
-                              ({item.reviewCount})
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        {getApprovalBadge(item.isApproved)}
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleApproval(item.$id, true)}
-                            disabled={item.isApproved}
-                            className={`p-2 rounded-lg transition ${
-                              item.isApproved
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : 'bg-green-600 text-white hover:bg-green-700'
-                            }`}
-                            title="Approve"
-                          >
-                            <CheckCircle className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleApproval(item.$id, false)}
-                            disabled={!item.isApproved && item.isApproved !== undefined}
-                            className={`p-2 rounded-lg transition ${
-                              !item.isApproved && item.isApproved !== undefined
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : 'bg-red-600 text-white hover:bg-red-700'
-                            }`}
-                            title="Reject"
-                          >
-                            <XCircle className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleEdit(item)}
-                            className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                            title="Edit"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteClick(item)}
-                            className="p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                        </td>
+                        <td className="py-4 px-6">
+                          {getApprovalBadge(item.isApproved)}
+                        </td>
+                        <td className="py-4 px-6">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleApproval(item.$id, true)}
+                              disabled={item.isApproved}
+                              className={`p-2 rounded-lg transition ${
+                                item.isApproved
+                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                  : 'bg-green-600 text-white hover:bg-green-700'
+                              }`}
+                              title="Approve"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleApproval(item.$id, false)}
+                              disabled={!item.isApproved && item.isApproved !== undefined}
+                              className={`p-2 rounded-lg transition ${
+                                !item.isApproved && item.isApproved !== undefined
+                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                  : 'bg-red-600 text-white hover:bg-red-700'
+                              }`}
+                              title="Reject"
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleEdit(item)}
+                              className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                              title="Edit"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteClick(item)}
+                              className="p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
                     <td colSpan={6} className="py-8 text-center text-gray-500">
@@ -653,112 +799,122 @@ useEffect(() => {
           {/* Mobile View */}
           <div className="lg:hidden space-y-4">
             {paginatedItems.length > 0 ? (
-              paginatedItems.map((item) => (
-                <div
-                  key={item.$id}
-                  className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4"
-                >
-                  <div className="flex gap-3 mb-3">
-                    <div className="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden flex-shrink-0 relative">
-                      {item.image ? (
-                        <Image
-                          src={fileUrl(getBucketId(),item.image)}
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            target.nextElementSibling?.classList.remove('hidden');
-                          }}
-                          width={50}
-                          height={50}
-                        />
-                      ) : null}
-                      <div className={`w-full h-full flex items-center justify-center text-gray-400 absolute top-0 left-0 ${item.image ? 'hidden' : ''}`}>
-                        <ImageIcon className="w-6 h-6" />
+              paginatedItems.map((item) => {
+                const isDiscount = activeContentTab === "discount";
+                return (
+                  <div
+                    key={item.$id}
+                    className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4"
+                  >
+                    <div className="flex gap-3 mb-3">
+                      <div className="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden flex-shrink-0 relative">
+                        {item.image ? (
+                          <Image
+                            src={fileUrl(getBucketId(),item.image as string)}
+                            alt={isDiscount ? (item as IDiscountFetched).title : item.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              target.nextElementSibling?.classList.remove('hidden');
+                            }}
+                            width={50}
+                            height={50}
+                          />
+                        ) : null}
+                        <div className={`w-full h-full flex items-center justify-center text-gray-400 absolute top-0 left-0 ${item.image ? 'hidden' : ''}`}>
+                          <ImageIcon className="w-6 h-6" />
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-1">
-                        {item.name}
-                      </h3>
-                      <p className="text-sm text-gray-500 mb-2 line-clamp-2">
-                        {item.description}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-orange-600">
-                            ₦{item.price}
-                          </span>
-                          {item.originalPrice && item.originalPrice !== item.price && (
-                            <span className="text-sm text-gray-500 line-through">
-                              ₦{item.originalPrice}
+                      <div className="flex-1">
+                        <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-1">
+                          {isDiscount ? (item as IDiscountFetched).title : item.name}
+                        </h3>
+                        <p className="text-sm text-gray-500 mb-2 line-clamp-2">
+                          {isDiscount ? (item as IDiscountFetched).description : item.description}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-orange-600">
+                              {!isDiscount ? `₦${item.price}` : 
+                                `${(item as IDiscountFetched).discountType} ${(item as IDiscountFetched).discountValue}`}
                             </span>
+                            {!isDiscount && item.originalPrice && item.originalPrice !== item.price && (
+                              <span className="text-sm text-gray-500 line-through">
+                                ₦{item.originalPrice}
+                              </span>
+                            )}
+                          </div>
+                          {!isDiscount ? (
+                            <div className="flex items-center gap-1">
+                              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                              <span className="text-sm font-medium">{item.rating}</span>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-gray-500">N/A</span>
                           )}
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                          <span className="text-sm font-medium">{item.rating}</span>
-                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          !isDiscount 
+                            ? (item.category === 'veg' || item.category === 'Vegetarian'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800')
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {!isDiscount ? item.category : (item as IDiscountFetched).appliesTo}
+                        </span>
+                        {getApprovalBadge(item.isApproved)}
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleApproval(item.$id, true)}
+                          disabled={item.isApproved}
+                          className={`flex-1 p-2 rounded-lg transition ${
+                            item.isApproved
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : 'bg-green-600 text-white hover:bg-green-700'
+                          }`}
+                        >
+                          <CheckCircle className="w-4 h-4 mx-auto" />
+                          <span className="text-xs mt-1 block">Approve</span>
+                        </button>
+                        <button
+                          onClick={() => handleApproval(item.$id, false)}
+                          disabled={!item.isApproved && item.isApproved !== undefined}
+                          className={`flex-1 p-2 rounded-lg transition ${
+                            !item.isApproved && item.isApproved !== undefined
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : 'bg-red-600 text-white hover:bg-red-700'
+                          }`}
+                        >
+                          <XCircle className="w-4 h-4 mx-auto" />
+                          <span className="text-xs mt-1 block">Reject</span>
+                        </button>
+                        <button
+                          onClick={() => handleEdit(item)}
+                          className="flex-1 p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                        >
+                          <Edit2 className="w-4 h-4 mx-auto" />
+                          <span className="text-xs mt-1 block">Edit</span>
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClick(item)}
+                          className="flex-1 p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                        >
+                          <Trash2 className="w-4 h-4 mx-auto" />
+                          <span className="text-xs mt-1 block">Delete</span>
+                        </button>
                       </div>
                     </div>
                   </div>
-                  
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className={`px-2 py-1 rounded-full text-xs ${
-                        item.category === 'veg' || item.category === 'Vegetarian'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {item.category}
-                      </span>
-                      {getApprovalBadge(item.isApproved)}
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleApproval(item.$id, true)}
-                        disabled={item.isApproved}
-                        className={`flex-1 p-2 rounded-lg transition ${
-                          item.isApproved
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'bg-green-600 text-white hover:bg-green-700'
-                        }`}
-                      >
-                        <CheckCircle className="w-4 h-4 mx-auto" />
-                        <span className="text-xs mt-1 block">Approve</span>
-                      </button>
-                      <button
-                        onClick={() => handleApproval(item.$id, false)}
-                        disabled={!item.isApproved && item.isApproved !== undefined}
-                        className={`flex-1 p-2 rounded-lg transition ${
-                          !item.isApproved && item.isApproved !== undefined
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'bg-red-600 text-white hover:bg-red-700'
-                        }`}
-                      >
-                        <XCircle className="w-4 h-4 mx-auto" />
-                        <span className="text-xs mt-1 block">Reject</span>
-                      </button>
-                      <button
-                        onClick={() => handleEdit(item)}
-                        className="flex-1 p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                      >
-                        <Edit2 className="w-4 h-4 mx-auto" />
-                        <span className="text-xs mt-1 block">Edit</span>
-                      </button>
-                      <button
-                        onClick={() => handleDeleteClick(item)}
-                        className="flex-1 p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-                      >
-                        <Trash2 className="w-4 h-4 mx-auto" />
-                        <span className="text-xs mt-1 block">Delete</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="text-center text-gray-500 p-4 bg-white dark:bg-gray-800 rounded-xl shadow-md">
                 No items found.
@@ -835,178 +991,366 @@ useEffect(() => {
             </div>
 
             <form className="space-y-5">
-              {/* Basic Information Section */}
-              <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Basic Information</h4>
-                
-                <div>
-                  <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Item Name
-                  </Label>
-                  <Input
-                    name="name"
-                    value={editFormData.name}
-                    onChange={handleEditChange}
-                    placeholder="Enter item name"
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  />
-                </div>
-
-                <div>
-                  <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Description
-                  </Label>
-                  <textarea
-                    name="description"
-                    value={editFormData.description}
-                    onChange={handleEditChange}
-                    placeholder="Enter item description"
-                    rows={3}
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 resize-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Category
-                    </Label>
-                      <select
-                        name="category"
-                        value={editFormData.category}
-                        onChange={handleEditChange}
-                        className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                      >
-                        <option value="">Select category</option>
-                        <option value="veg">Vegetarian</option>
-                        <option value="non-veg">Non-Vegetarian</option>
-                      </select>
-                  </div>
-
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Rating
-                    </Label>
-                    <Input
-                      name="rating"
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      max="5"
-                      value={editFormData.rating}
-                      onChange={handleEditChange}
-                      placeholder="0.0"
-                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Pricing Section */}
-              <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Pricing</h4>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Price (₦)
-                    </label>
-                    <input
-                      name="price"
-                      type="number"
-                      value={editFormData.price}
-                      onChange={handleEditChange}
-                      placeholder="0.00"
-                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                    />
-                  </div>
-
-                  {("originalPrice" in editFormData && editFormData.originalPrice !== undefined) && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Original Price (₦)
-                      </label>
-                      <input
-                        name="originalPrice"
-                        type="number"
-                        value={editFormData.originalPrice}
-                        onChange={handleEditChange}
-                        placeholder="0.00"
-                        className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                      />
-                    </div>
-                  )}
-
-                  {("discount" in editFormData && editFormData.discount !== undefined) && (
+              {activeContentTab !== "discount" ? (
+                <>
+                  {/* Basic Information Section */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Basic Information</h4>
+                    
                     <div>
                       <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Discount
+                        Item Name
                       </Label>
                       <Input
-                        name="discount"
-                        value={editFormData.discount}
+                        name="name"
+                        value={editFormData.name}
                         onChange={handleEditChange}
-                        placeholder="e.g., 20% OFF"
+                        placeholder="Enter item name"
                         className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                       />
                     </div>
-                  )}
-                </div>
-              </div>
 
-              {/* Additional Details Section */}
-              <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Additional Details</h4>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  {("cookTime" in editFormData || "cookingTime" in editFormData) && (
                     <div>
                       <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Cooking Time
+                        Description
+                      </Label>
+                      <textarea
+                        name="description"
+                        value={editFormData.description}
+                        onChange={handleEditChange}
+                        placeholder="Enter item description"
+                        rows={3}
+                        className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 resize-none"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Category
+                        </Label>
+                          <select
+                            name="category"
+                            value={editFormData.category}
+                            onChange={handleEditChange}
+                            className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                          >
+                            <option value="">Select category</option>
+                            <option value="veg">Vegetarian</option>
+                            <option value="non-veg">Non-Vegetarian</option>
+                          </select>
+                      </div>
+
+                      <div>
+                        <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Rating
+                        </Label>
+                        <Input
+                          name="rating"
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          max="5"
+                          value={editFormData.rating}
+                          onChange={handleEditChange}
+                          placeholder="0.0"
+                          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pricing Section */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Pricing</h4>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Price (₦)
+                        </label>
+                        <input
+                          name="price"
+                          type="number"
+                          value={editFormData.price}
+                          onChange={handleEditChange}
+                          placeholder="0.00"
+                          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
+
+                      {("originalPrice" in editFormData && editFormData.originalPrice !== undefined) && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Original Price (₦)
+                          </label>
+                          <input
+                            name="originalPrice"
+                            type="number"
+                            value={editFormData.originalPrice}
+                            onChange={handleEditChange}
+                            placeholder="0.00"
+                            className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                          />
+                        </div>
+                      )}
+
+                      {("discount" in editFormData && editFormData.discount !== undefined) && (
+                        <div>
+                          <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Discount
+                          </Label>
+                          <Input
+                            name="discount"
+                            value={editFormData.discount}
+                            onChange={handleEditChange}
+                            placeholder="e.g., 20% OFF"
+                            className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Additional Details Section */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Additional Details</h4>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      {("cookTime" in editFormData || "cookingTime" in editFormData) && (
+                        <div>
+                          <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Cooking Time
+                          </Label>
+                          <Input
+                            name={"cookTime" in editFormData ? "cookTime" : "cookingTime"}
+                            value={editFormData.cookTime || editFormData.cookingTime || ""}
+                            onChange={handleEditChange}
+                            placeholder="e.g., 20-25 mins"
+                            className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                          />
+                        </div>
+                      )}
+
+                      {("reviewCount" in editFormData && editFormData.reviewCount !== undefined) && (
+                        <div>
+                          <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            Review Count
+                          </Label>
+                          <input
+                            name="reviewCount"
+                            type="number"
+                            min="0"
+                            value={editFormData.reviewCount}
+                            onChange={handleEditChange}
+                            placeholder="0"
+                            className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                          />
+                        </div>
+                      )}
+
+                      <div>
+                        <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Restaurant
+                        </Label>
+                        <Input
+                        title="This field is non editable"
+                          name="restaurantId"
+                          disabled
+                         value={restaurantName || editFormData.restaurantId}
+                          onChange={handleEditChange}
+                          placeholder="Enter restaurant ID"
+                          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Discount Specific Fields */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Basic Information</h4>
+                    
+                    <div>
+                      <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Title
                       </Label>
                       <Input
-                        name={"cookTime" in editFormData ? "cookTime" : "cookingTime"}
-                        value={editFormData.cookTime || editFormData.cookingTime || ""}
+                        name="title"
+                        value={editFormData.title}
                         onChange={handleEditChange}
-                        placeholder="e.g., 20-25 mins"
+                        placeholder="Enter discount title"
                         className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                       />
                     </div>
-                  )}
 
-                  {("reviewCount" in editFormData && editFormData.reviewCount !== undefined) && (
                     <div>
                       <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Review Count
+                        Description
                       </Label>
-                      <input
-                        name="reviewCount"
-                        type="number"
-                        min="0"
-                        value={editFormData.reviewCount}
+                      <textarea
+                        name="description"
+                        value={editFormData.description}
                         onChange={handleEditChange}
-                        placeholder="0"
+                        placeholder="Enter discount description"
+                        rows={3}
+                        className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 resize-none"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Discount Type
+                        </Label>
+                        <select
+                          name="discountType"
+                          value={editFormData.discountType}
+                          onChange={handleEditChange}
+                          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        >
+                          <option value="percentage">Percentage</option>
+                          <option value="fixed">Fixed Amount</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Discount Value
+                        </Label>
+                        <Input
+                          name="discountValue"
+                          type="number"
+                          min="0"
+                          value={editFormData.discountValue}
+                          onChange={handleEditChange}
+                          placeholder="e.g., 20 or 500"
+                          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Validity Section */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Validity</h4>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Valid From
+                        </Label>
+                        <Input
+                          name="validFrom"
+                          type="datetime-local"
+                          value={editFormData.validFrom}
+                          onChange={handleEditChange}
+                          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
+
+                      <div>
+                        <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Valid To
+                        </Label>
+                        <Input
+                          name="validTo"
+                          type="datetime-local"
+                          value={editFormData.validTo}
+                          onChange={handleEditChange}
+                          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Scope Section */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Scope</h4>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Applies To
+                        </Label>
+                        <select
+                          name="appliesTo"
+                          value={editFormData.appliesTo}
+                          onChange={handleEditChange}
+                          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        >
+                          <option value="all">All</option>
+                          <option value="item">Item</option>
+                          <option value="category">Category</option>
+                          <option value="restaurant">Restaurant</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Target ID
+                        </Label>
+                        <Input
+                          name="targetId"
+                          value={editFormData.targetId}
+                          onChange={handleEditChange}
+                          placeholder="Item/Category/Restaurant ID"
+                          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Promo Code (Optional)
+                        </Label>
+                        <Input
+                          name="code"
+                          value={editFormData.code}
+                          onChange={handleEditChange}
+                          placeholder="Enter promo code"
+                          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
+
+                      <div>
+                        <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Min Order Value (₦)
+                        </Label>
+                        <Input
+                          name="minOrderValue"
+                          type="number"
+                          min="0"
+                          value={editFormData.minOrderValue}
+                          onChange={handleEditChange}
+                          placeholder="0"
+                          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Restaurant Section */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Restaurant</h4>
+                    
+                    <div>
+                      <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Restaurant ID
+                      </Label>
+                      <Input
+                        name="restaurantId"
+                        value={editFormData.restaurantId}
+                        onChange={handleEditChange}
+                        placeholder="Enter restaurant ID"
                         className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                       />
                     </div>
-                  )}
-
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Restaurant
-                    </Label>
-                    <Input
-                    title="This field is non editable"
-                      name="restaurantId"
-                      disabled
-                     value={restaurantName || editFormData.restaurantId}
-                      onChange={handleEditChange}
-                      placeholder="Enter restaurant ID"
-                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                    />
                   </div>
-                </div>
-              </div>
+                </>
+              )}
 
               {/* Image Upload Section */}
               <div className="space-y-4">
@@ -1047,23 +1391,63 @@ useEffect(() => {
               <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                 <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Status</h4>
                 
-                <Label className="flex items-center gap-3 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-900/30 transition">
-                  <Input
-                    type="checkbox"
-                    name="isApproved"
-                    checked={editFormData.isApproved}
-                    onChange={(e) => setEditFormData({ ...editFormData, isApproved: e.target.checked })}
-                    className="w-5 h-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
-                  />
-                  <div className="flex-1">
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Approved for display
-                    </span>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      This item will be visible to customers when approved
-                    </p>
+                {activeContentTab === "discount" ? (
+                  <div className="space-y-4">
+                    <Label className="flex items-center gap-3 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-900/30 transition">
+                      <Input
+                        type="checkbox"
+                        name="isActive"
+                        checked={editFormData.isActive}
+                        onChange={(e) => setEditFormData({ ...editFormData, isActive: e.target.checked })}
+                        className="w-5 h-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                      />
+                      <div className="flex-1">
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Active Discount
+                        </span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          This discount will be available when active
+                        </p>
+                      </div>
+                    </Label>
+
+                    <Label className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/30 transition">
+                      <Input
+                        type="checkbox"
+                        name="isApproved"
+                        checked={editFormData.isApproved}
+                        onChange={(e) => setEditFormData({ ...editFormData, isApproved: e.target.checked })}
+                        className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                      />
+                      <div className="flex-1">
+                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          Approved for display
+                        </span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          This item will be visible to customers when approved
+                        </p>
+                      </div>
+                    </Label>
                   </div>
-                </Label>
+                ) : (
+                  <Label className="flex items-center gap-3 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-900/30 transition">
+                    <Input
+                      type="checkbox"
+                      name="isApproved"
+                      checked={editFormData.isApproved}
+                      onChange={(e) => setEditFormData({ ...editFormData, isApproved: e.target.checked })}
+                      className="w-5 h-5 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                    />
+                    <div className="flex-1">
+                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        Approved for display
+                      </span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        This item will be visible to customers when approved
+                      </p>
+                    </div>
+                  </Label>
+                )}
               </div>
 
               {/* Action Buttons */}

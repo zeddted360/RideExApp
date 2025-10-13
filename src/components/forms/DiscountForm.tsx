@@ -92,6 +92,36 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading }: DiscountFormPr
             )}
           </div>
           <div>
+            <Label htmlFor="originalPrice">Original Price (₦)</Label>
+            <Input
+              id="originalPrice"
+              type="number"
+              {...form.register("originalPrice", { valueAsNumber: true })}
+              placeholder="e.g. 1000"
+              className="h-12 focus:ring-2 focus:ring-orange-500"
+            />
+            {form.formState.errors.originalPrice && (
+              <p className="text-red-500 text-sm mt-1">
+                {form.formState.errors.originalPrice.message}
+              </p>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="discountedPrice">Discounted Price (₦)</Label>
+            <Input
+              id="discountedPrice"
+              type="number"
+              {...form.register("discountedPrice", { valueAsNumber: true })}
+              placeholder="e.g. 800"
+              className="h-12 focus:ring-2 focus:ring-orange-500"
+            />
+            {form.formState.errors.discountedPrice && (
+              <p className="text-red-500 text-sm mt-1">
+                {form.formState.errors.discountedPrice.message}
+              </p>
+            )}
+          </div>
+          <div>
             <Label htmlFor="validFrom">Valid From</Label>
             <Input
               id="validFrom"

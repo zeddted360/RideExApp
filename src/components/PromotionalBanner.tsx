@@ -24,6 +24,10 @@ export default function PromotionalBanner() {
   const { discounts: reduxDiscounts } = useSelector((state: RootState) => state.discounts); 
   const { user } = useAuth();
   const router = useRouter();
+  
+  const { setItem,setIsOpen,item } = useShowCart();
+
+  // console.log("the discounted item is :", item);
 
   useEffect(() => {
     dispatch(listAsyncDiscounts());
@@ -76,6 +80,42 @@ export default function PromotionalBanner() {
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     return `${days}d ${hours}h left`;
+  };
+
+  const handleApplyDeal = (discount: IDiscountFetched) => {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+
+    // For simplicity, assume appliesTo === "item" and targetId is the item ID
+    // If not, you may need to handle differently based on appliesTo
+    const basePrice = discount.originalPrice ? parseFloat(discount.originalPrice.toString().replace(/[₦,]/g, "")) : 0;
+    let discountedPrice = discount.discountedPrice || basePrice;
+
+    if (!discount.discountedPrice) {
+      if (discount.discountType === "percentage") {
+        discountedPrice = basePrice * (1 - discount.discountValue / 100);
+      } else {
+        discountedPrice = basePrice - discount.discountValue;
+      }
+    }
+    setItem({
+      userId: user.userId as string,
+      itemId: discount.$id,
+      name: discount.title,
+      image: discount.image as string,
+      price: discountedPrice.toString(),
+      restaurantId: discount.restaurantId || "", 
+      quantity: 1,
+      category: discount.appliesTo === "category" ? discount.targetId || "discount" : "discount",
+      source: "discount",
+      description: discount.description,
+      discountType: discount.discountType,
+      discountValue: discount.discountValue,
+    });
+    setIsOpen(true);
+
   };
 
   if (loadingOffers || loadingDiscounts) {
@@ -183,7 +223,7 @@ export default function PromotionalBanner() {
         {discounts.length > 0 ? (
           <div className="grid gap-8 lg:gap-12">
             <PromotionalImageManager/>
-            {discounts.map((discount, index) => (
+            {discounts.filter(item=> item.isApproved === true).map((discount, index) => (
               <div
                 key={discount.$id}
                 className={`flex flex-col ${
@@ -293,15 +333,7 @@ export default function PromotionalBanner() {
 
                       <Button
                         aria-label={`Apply ${discount.title}`}
-                        onClick={() => {
-                          // Handle discount application (e.g., add to cart with code, or navigate to items)
-                          if (user) {
-                            // Example: Navigate to cart or apply code
-                            router.push("/cart");
-                          } else {
-                            router.push("/login");
-                          }
-                        }}
+                        onClick={() => handleApplyDeal(discount)}
                         className="flex items-center bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-2.5 rounded-full font-semibold hover:from-orange-600 hover:to-red-600 transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-opacity-50"
                       >
                         <ShoppingCart className="w-5 h-5 mr-2" />

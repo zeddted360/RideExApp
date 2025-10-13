@@ -9,7 +9,7 @@ const RestaurantCard = ({ restaurant }: { restaurant: IRestaurantFetched }) => (
     <div className="relative">
       <div className="w-full h-28 sm:h-32 md:h-36 overflow-hidden rounded-t-xl">
         <Image
-          src={fileUrl(validateEnv().restaurantBucketId, restaurant.logo)}
+          src={fileUrl(validateEnv().restaurantBucketId, restaurant.logo as string)}
           alt={restaurant.name}
           width={200}
           height={150}

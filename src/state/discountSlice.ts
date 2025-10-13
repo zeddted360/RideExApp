@@ -82,7 +82,7 @@ export const createAsyncDiscount = createAsyncThunk<
         image: imageId,
         isActive: data.isActive ?? true,
         usageCount: 0,
-        extras: data.extras || [],  // Append extras as array of IDs
+        extras: data.extras || [],  
       }
     );
 
@@ -98,7 +98,7 @@ export const createAsyncDiscount = createAsyncThunk<
 // Async thunk for updating discount
 export const updateAsyncDiscount = createAsyncThunk<
   IDiscountFetched,
-  { id: string; data: Partial<Omit<IDiscount, "image"> & { extras?: string[] }>; imageFile?: FileList },
+  { id: string; data: Partial<Omit<IDiscount, "image"> & { extras?: string[] }>; imageFile?: File | null },
   { rejectValue: string }
 >("discount/updateDiscount", async ({ id, data, imageFile }, { rejectWithValue }) => {
   try {
@@ -106,12 +106,12 @@ export const updateAsyncDiscount = createAsyncThunk<
 
     let imageId: string | undefined; // If not updating image, keep existing
 
-    if (imageFile && imageFile[0]) {
+    if (imageFile && imageFile instanceof File) {
       // Upload new image if provided
       const uploadedFile = await storage.createFile(
         discountBucketId,
         ID.unique(),
-        imageFile[0]
+        imageFile
       );
       imageId = uploadedFile.$id;
       // TODO: Delete old image if exists (fetch current and delete)

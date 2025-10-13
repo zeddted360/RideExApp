@@ -152,6 +152,10 @@ export const discountSchema = z.object({
   discountType: z.enum(["percentage", "fixed"], {
     required_error: "Discount type is required",
   }),
+  originalPrice:z.number({ required_error: "Original value is required" })
+    .positive("Discount value must be greater than 0"),
+  discountedPrice:z.number({ required_error: "Discount price is required" })
+    .positive("Discount value must be greater than 0"),
   discountValue: z
     .number({ required_error: "Discount value is required" })
     .positive("Discount value must be greater than 0")

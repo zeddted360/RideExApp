@@ -33,11 +33,12 @@ import { useAuth } from "@/context/authContext";
 const AddToCartModal = () => {
   const { isOpen, setIsOpen, item } = useShowCart();
 
+  // console.log("the discounted item is :", item);
+
+
   const dispatch = useDispatch<AppDispatch>();
-  const { error, orders } = useSelector((state: RootState) => ({
-    error: state.orders.error,
-    orders: state.orders.orders,
-  }));
+  const error = useSelector((state: RootState) => state.orders.error);
+  const orders = useSelector((state: RootState) => state.orders.orders);
   const [quantity, setQuantity] = useState(item.quantity || 1);
   const [specialInstructions, setSpecialInstructions] = useState("");
   const [selectedExtraIds, setSelectedExtraIds] = useState<string[]>([]);
@@ -319,10 +320,12 @@ const AddToCartModal = () => {
         <div className="relative w-full h-48 sm:h-64 bg-gradient-to-br from-orange-100 via-orange-50 to-red-50 dark:from-gray-800 dark:via-gray-850 dark:to-gray-900 overflow-hidden flex-shrink-0">
           <Image
             src={fileUrl(
-              item.source === "featured"
+                  item.source === "featured"
                 ? validateEnv().featuredBucketId
                 : item.source === "popular"
                 ? validateEnv().popularBucketId
+                :item.source === "discount"
+                ? validateEnv().discountBucketId
                 : validateEnv().menuBucketId,
               item.image
             )}
@@ -349,6 +352,14 @@ const AddToCartModal = () => {
               {item.category === "veg" ? "Vegetarian" : "Non-Veg"}
             </span>
           </div>
+          {/* Discount Badge */}
+          {item.category === "discount" && item.discountType && item.discountValue !== undefined && (
+            <div className="absolute top-3 right-3 z-10">
+              <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-red-500/90 text-white border border-red-400 shadow-lg backdrop-blur-sm">
+                {item.discountType === "percentage" ? `${item.discountValue}%` : `₦${item.discountValue}`} Off
+              </span>
+            </div>
+          )}
           {/* Item Info Overlay */}
           <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
             <h2 className="text-xl sm:text-2xl font-bold mb-1 drop-shadow-lg line-clamp-1">

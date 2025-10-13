@@ -65,7 +65,7 @@ const RestaurantCarousel: React.FC<RestaurantCarouselProps> = ({ restaurants, lo
                 >
                   <div className="relative w-full h-24">
                     <Image
-                      src={fileUrl(validateEnv().restaurantBucketId, r.logo)}
+                      src={fileUrl(validateEnv().restaurantBucketId, r.logo as string)}
                       alt={r.name}
                       fill
                       className="object-cover w-full h-full"
@@ -98,7 +98,7 @@ const RestaurantCarousel: React.FC<RestaurantCarouselProps> = ({ restaurants, lo
                 >
                   <div className="relative w-full h-32">
                     <Image
-                      src={fileUrl(validateEnv().restaurantBucketId, r.logo)}
+                      src={fileUrl(validateEnv().restaurantBucketId, r.logo as string)}
                       alt={r.name}
                       fill
                       className="object-cover w-full h-full"

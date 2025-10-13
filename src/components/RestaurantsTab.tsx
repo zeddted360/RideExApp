@@ -112,7 +112,7 @@ export default function RestaurantsTab({
       reader.onloadend = () => {
         setLogoPreview(reader.result as string);
       };
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(file as File);
     } else {
       setLogoPreview(null);
     }
@@ -238,7 +238,7 @@ export default function RestaurantsTab({
     return pages;
   };
 
-  if (loading === "pending" || vendorsLoading === "pending") {
+  if (loading === "pending" || vendorsLoading ) {
     return (
       <div className="flex flex-col justify-center items-center py-20">
         <Loader2 className="w-12 h-12 animate-spin text-orange-600 mb-4" />
