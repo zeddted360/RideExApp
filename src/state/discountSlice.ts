@@ -96,7 +96,8 @@ export const createAsyncDiscount = createAsyncThunk<
 });
 
 // Async thunk for updating discount
-export const updateAsyncDiscount = createAsyncThunk<
+export const 
+updateAsyncDiscount = createAsyncThunk<
   IDiscountFetched,
   { id: string; data: Partial<Omit<IDiscount, "image"> & { extras?: string[] }>; imageFile?: File | null },
   { rejectValue: string }

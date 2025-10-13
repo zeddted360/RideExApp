@@ -240,6 +240,8 @@ const ProfileDropdown = ({ children }: ProfileDropdownProps) => {
     setValidationErrors({});
   };
 
+console.log("the user role is :", user?.role);  
+
   const cancelEditing = () => {
     setEditingField(null);
     setShowEditDialog(false);
@@ -282,6 +284,16 @@ const ProfileDropdown = ({ children }: ProfileDropdownProps) => {
         updatedName.$id,
         { fullName: updatedName.name }
       );
+      if(user?.role === "vendor") {
+        await databases.updateDocument(
+          validateEnv().databaseId,
+          validateEnv().vendorsCollectionId,
+          user.userId,
+          {
+            fullName:updatedName.name
+          }
+        )
+      }
       dispatch(getCurrentUserAsync());
       toast.success("Name updated successfully!");
       setEditingField(null);
@@ -319,7 +331,18 @@ const ProfileDropdown = ({ children }: ProfileDropdownProps) => {
       setTempCurrentPasswordForEmail(formData.currentPassword);
 
       // Initiate email update
-      await account.updateEmail(formData.email, formData.currentPassword);
+     const updatedEmail = await account.updateEmail(formData.email, formData.currentPassword);
+
+       if(user?.role === "vendor") {
+        await databases.updateDocument(
+          validateEnv().databaseId,
+          validateEnv().vendorsCollectionId,
+          user.userId,
+          {
+            email:updatedEmail.email
+          }
+        )
+      }
       
       // Send verification link to new email
       await account.createVerification(verifyEmailUrl);
@@ -394,9 +417,18 @@ const ProfileDropdown = ({ children }: ProfileDropdownProps) => {
       setOldPhone(currentPhone);
       setTempPassword(formData.currentPassword);
       setPhoneVerifiedSuccess(false);
-
-      // Temporarily update the phone number to send OTP
-      await account.updatePhone(formattedPhone, formData.currentPassword);
+      //Temporarily update the phone number to send OTP
+      const updatedPhone = await account.updatePhone(formattedPhone, formData.currentPassword);
+       if(user?.role === "vendor") {
+        await databases.updateDocument(
+          validateEnv().databaseId,
+          validateEnv().vendorsCollectionId,
+          user.userId,
+          {
+            phoneNumber:updatedPhone.phone
+          }
+        )
+      }
       // Send verification code
       await account.createPhoneVerification();
       
