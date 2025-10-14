@@ -386,89 +386,6 @@ const AddFoodItemForm = () => {
     setShowEditModal(true);
   };
 
-  const handleUpdate = async () => {
-    if (!selectedItem) return;
-    try {
-      setIsUpdating(true);
-      const itemId = selectedItem.$id;
-      let updateData: any;
-      let action;
-      const subType = subActiveTab;
-      switch (subType) {
-        case "menu":
-          updateData = {
-            name: editFormData.name,
-            description: editFormData.description,
-            price: editFormData.price,
-            originalPrice: editFormData.originalPrice,
-            rating: parseFloat(editFormData.rating),
-            cookTime: editFormData.cookTime,
-            category: editFormData.category,
-            restaurantId: editFormData.restaurantId,
-            isApproved: editFormData.isApproved,
-          };
-          action = updateAsyncMenuItem({ itemId, data: updateData, newImage });
-          break;
-        case "featured":
-          updateData = {
-            name: editFormData.name,
-            description: editFormData.description,
-            price: editFormData.price,
-            rating: parseFloat(editFormData.rating),
-            category: editFormData.category,
-            restaurantId: editFormData.restaurantId,
-            isApproved: editFormData.isApproved,
-          };
-          action = updateAsyncFeaturedItem({ itemId, data: updateData, newImage });
-          break;
-        case "popular":
-          updateData = {
-            name: editFormData.name,
-            description: editFormData.description,
-            price: editFormData.price,
-            originalPrice: editFormData.originalPrice,
-            rating: parseFloat(editFormData.rating),
-            reviewCount: parseInt(editFormData.reviewCount?.toString() || "0", 10),
-            category: editFormData.category,
-            cookingTime: editFormData.cookingTime,
-            isPopular: editFormData.isPopular,
-            discount: editFormData.discount,
-            restaurantId: editFormData.restaurantId,
-            isApproved: editFormData.isApproved,
-          };
-          action = updateAsyncPopularItem({ itemId, data: updateData, newImage });
-          break;
-      }
-
-      if (action) {
-        await dispatch(action as any).unwrap();
-        toast.success("Item updated successfully");
-        setShowEditModal(false);
-        // Refetch based on sub tab
-        switch (subType) {
-          case "menu":
-            dispatch(listAsyncMenusItem());
-            break;
-          case "featured":
-            dispatch(listAsyncFeaturedItems());
-            break;
-          case "popular":
-            dispatch(listAsyncPopularItems());
-            break;
-        }
-      }
-    } catch (error) {
-      toast.error("Failed to update item");
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  const handleDeleteClick = (item: IMenuItemFetched | IFeaturedItemFetched | IPopularItemFetched) => {
-    setSelectedItem(item);
-    setShowDeleteModal(true);
-  };
-
   const confirmDelete = async () => {
     if (!selectedItem) return;
 
@@ -529,7 +446,7 @@ const AddFoodItemForm = () => {
   };
 
   const renderItemCard = (item: IMenuItemFetched | IPopularItemFetched | IFeaturedItemFetched, type: "menu" | "featured" | "popular") => (
-    <div className="group flex bg-white dark:bg-gray-800 rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 w-full h-[240px] border border-gray-200 dark:border-gray-700">
+    <div  className="group flex bg-white dark:bg-gray-800 rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 w-full h-[240px] border border-gray-200 dark:border-gray-700">
       {/* Image on the left */}
       <div className="relative w-64 h-full overflow-hidden flex-shrink-0">
         <Image
@@ -589,6 +506,18 @@ const AddFoodItemForm = () => {
       </div>
     </div>
   );
+
+  const filteredSubTabs = useMemo(() => {
+    const allTabs = [
+      { id: "menu", label: "Menu Items" },
+      { id: "featured", label: "Featured Items" },
+      { id: "popular", label: "Popular Items" },
+    ];
+    if (role === "admin") {
+      return allTabs;
+    }
+    return allTabs.filter(tab => tab.id === "menu");
+  }, [role]);
 
   if (!isAuthenticated || role === "user" || role === null) {
     return (
@@ -659,11 +588,7 @@ const AddFoodItemForm = () => {
         {activeTab === "edit-menu" && (
           <div className="space-y-6">
             <div className="flex space-x-4 border-b border-gray-200 dark:border-gray-700 pb-2">
-              {[
-                { id: "menu", label: "Menu Items" },
-                { id: "featured", label: "Featured Items" },
-                { id: "popular", label: "Popular Items" },
-              ].map((tab) => (
+              {filteredSubTabs.map((tab) => (
                 <Button
                   key={tab.id}
                   onClick={() => setSubActiveTab(tab.id as "menu" | "featured" | "popular")}
@@ -685,7 +610,7 @@ const AddFoodItemForm = () => {
                   No menu items available.
                 </div>
               ) : null}
-              {subActiveTab === "featured" && filteredFeaturedItems.length > 0 ? (
+              {subActiveTab === "featured"  && filteredFeaturedItems.length > 0 ? (
                 filteredFeaturedItems.map((item: IFeaturedItemFetched) =><div key={item.$id}>{renderItemCard(item, "featured")}</div> )
               ) : subActiveTab === "featured" ? (
                 <div className="col-span-full text-center py-12 text-gray-500 dark:text-gray-400">
@@ -704,7 +629,6 @@ const AddFoodItemForm = () => {
         )}
        {activeTab === "menu-item" && (
         <div className="space-y-6">
-          <MenuItemForm form={menuItemForm} restaurants={vendorRestaurants} onSubmit={handleMenuItemSubmit} loading={loading} />
           <AddExtrasModal 
             onAddExtras={(selectedExtras) => {
               setMenuSelectedExtras(selectedExtras);
@@ -712,39 +636,39 @@ const AddFoodItemForm = () => {
               toast.success(`${selectedExtras.length} extras added!`);
             }} 
           />
+          <MenuItemForm form={menuItemForm} restaurants={vendorRestaurants} onSubmit={handleMenuItemSubmit} loading={loading} />
         </div>
       )}
        {activeTab === "featured-item" && (
-        <div className="space-y-6">
-          <FeaturedItemForm form={featuredItemForm} restaurants={vendorRestaurants} onSubmit={handleFeaturedItemSubmit} loading={loading} />
+        <div  className="space-y-6">
           <AddExtrasModal 
             onAddExtras={(selectedExtras) => {
               setFeaturedSelectedExtras(selectedExtras);
               toast.success(`${selectedExtras.length} extras added!`);
             }} 
           />
+          <FeaturedItemForm form={featuredItemForm} restaurants={vendorRestaurants} onSubmit={handleFeaturedItemSubmit} loading={loading} />
         </div>
       )}
         {activeTab === "popular-item" && (
           <div className="space-y-6">
-          <PopularItemForm form={popularItemForm} restaurants={vendorRestaurants} onSubmit={handlePopularItemSubmit} loading={loading} />
           <AddExtrasModal 
             onAddExtras={(selectedExtras) => {
               setPopularSelectedExtras(selectedExtras);
               toast.success(`${selectedExtras.length} extras added!`);
             }} 
           />
-
+          <PopularItemForm form={popularItemForm} restaurants={vendorRestaurants} onSubmit={handlePopularItemSubmit} loading={loading} />
           </div>
         )}
         {activeTab === "discount" && (
           <div className="space-y-6">
-          <DiscountForm form={discountForm} targetOptions={targetOptions} onSubmit={handleDiscountSubmit} loading={loading} />
-          <AddExtrasModal 
+             <AddExtrasModal 
             onAddExtras={(selectedExtras) => {
               toast.success(`${selectedExtras.length} extras added!`);
             }} 
           />
+          <DiscountForm form={discountForm} targetOptions={targetOptions} onSubmit={handleDiscountSubmit} loading={loading} />
           </div>
         )}
         {

@@ -9,13 +9,12 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Minus, Plus, ShoppingCart, X, CheckCircle } from "lucide-react";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import { useShowCart } from "@/context/showCart";
-import { ICartItemOrder, ICartItemFetched, IFetchedExtras, IRestaurantFetched } from "../../../types/types";
+import { ICartItemOrder, ICartItemFetched, IFetchedExtras, ISelectedExtra } from "../../../types/types";
 import {
   createOrderAsync,
   resetOrders,
@@ -30,27 +29,24 @@ import { databases } from "@/utils/appwrite";
 import { Query } from "appwrite";
 import { useAuth } from "@/context/authContext";
 
+
 const AddToCartModal = () => {
   const { isOpen, setIsOpen, item } = useShowCart();
-
-  // console.log("the discounted item is :", item);
-
 
   const dispatch = useDispatch<AppDispatch>();
   const error = useSelector((state: RootState) => state.orders.error);
   const orders = useSelector((state: RootState) => state.orders.orders);
   const [quantity, setQuantity] = useState(item.quantity || 1);
   const [specialInstructions, setSpecialInstructions] = useState("");
-  const [selectedExtraIds, setSelectedExtraIds] = useState<string[]>([]);
+  const [extraQuantities, setExtraQuantities] = useState<Record<string, number>>({});
   const [allExtras, setAllExtras] = useState<IFetchedExtras[]>([]);
   const [extrasLoading, setExtrasLoading] = useState<"idle" | "pending" | "succeeded" | "failed">("idle");
   const [extrasError, setExtrasError] = useState<string | null>(null);
   const maxInstructionsLength = 200;
-  // Get user from context
   const { user } = useAuth();
   const userId = user?.userId;
 
-  // Fetch all extras by vendorId when available
+
   useEffect(() => {
     if (isOpen && Array.isArray(item.extras) && item.extras.length > 0) {
       const fetchAllExtras = async () => {
@@ -76,16 +72,15 @@ const AddToCartModal = () => {
       fetchAllExtras();
     } else {
       setAllExtras([]);
-      setSelectedExtraIds([]);
+      setExtraQuantities({});
     }
   }, [isOpen, item.extras]);
 
-  // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
       setQuantity(item.quantity || 1);
       setSpecialInstructions("");
-      setSelectedExtraIds([]);
+      setExtraQuantities({});
       setAllExtras([]);
       setExtrasLoading("idle");
       setExtrasError(null);
@@ -95,59 +90,40 @@ const AddToCartModal = () => {
     }
   }, [isOpen, item.quantity, dispatch, error]);
 
-  // Regex for classifications (based on research)
-  const spoonRegex = /(rice|egg sauce|beans|porridge|pasta|spaghetti|macaroni|stew|pizza|jollof|fried rice|white rice|yam pottage|asaro)/i;
+  const spoonRegex = /(rice|egg sauce|beans|porridge|porridge|pasta|spaghetti|macaroni|stew|pizza|jollof|fried rice|white rice|yam pottage|asaro)/i;
   const soupRegex = /(soup|egusi|ogbono|okra|efo|ewedu|gbegiri|banga|afang|pepper soup)/i;
 
-  // Determine if item requires plastic container
-  const requiresPlastic = spoonRegex.test(item.name);
+  const requiresPlastic = spoonRegex.test(item.name) || soupRegex.test(item.name);
 
-  // Find plastic container extra
   const plasticExtra = useMemo(() => {
     return allExtras.find((extra) => extra.name.toLowerCase().includes("plastic container"));
   }, [allExtras]);
 
-  // Auto-select mandatory plastic if required
-  useEffect(() => {
-    if (requiresPlastic && plasticExtra) {
-      setSelectedExtraIds((prev) => {
-        if (!prev.includes(plasticExtra.$id)) {
-          return [...prev, plasticExtra.$id];
-        }
-        return prev;
-      });
-    }
-  }, [requiresPlastic, plasticExtra]);
-
-  // Filter optional extras (item-specific or all others, excluding plastic)
   const optionalExtras = useMemo(() => {
-    return allExtras.filter((extra) =>
-      item.extras?.includes(extra.$id) && extra.$id !== plasticExtra?.$id
-    );
-  }, [allExtras, item.extras, plasticExtra]);
+    return allExtras.filter((extra) => extra.$id !== plasticExtra?.$id);
+  }, [allExtras, plasticExtra]);
 
-  // Calculate plastic quantity based on item quantity
-  const plasticQty = useMemo(() => {
-    if (quantity <= 2) return 1;
-    return 2; // For 3 or more, charge for 2
-  }, [quantity]);
+  useEffect(() => {
+    const initialQuantities: Record<string, number> = {};
+    optionalExtras.forEach((extra) => {
+      initialQuantities[extra.$id] = 0;
+    });
+    setExtraQuantities(initialQuantities);
+  }, [optionalExtras]);
 
-  // Calculate extras total
+  const plasticQty = quantity;
+
   const extrasTotal = useMemo(() => {
     let total = 0;
-    // Optional extras: per unit * quantity
-    selectedExtraIds.forEach((id) => {
-      const extra = optionalExtras.find((e) => e.$id === id);
-      if (extra) {
-        total += parseFloat(extra.price) * quantity;
-      }
+    optionalExtras.forEach((extra) => {
+      const qty = extraQuantities[extra.$id] || 0;
+      total += parseFloat(extra.price) * qty;
     });
-    // Plastic: price * plasticQty (capped, not per unit)
-    if (requiresPlastic && plasticExtra && selectedExtraIds.includes(plasticExtra.$id)) {
+    if (requiresPlastic && plasticExtra) {
       total += parseFloat(plasticExtra.price) * plasticQty;
     }
     return total;
-  }, [selectedExtraIds, optionalExtras, requiresPlastic, plasticExtra, quantity, plasticQty]);
+  }, [extraQuantities, optionalExtras, requiresPlastic, plasticExtra, quantity, plasticQty]);
 
   const parsePrice = (priceString: string | number): number => {
     return typeof priceString === "string"
@@ -159,48 +135,74 @@ const AddToCartModal = () => {
   const subtotal = itemPrice * quantity;
   const totalPrice = subtotal + extrasTotal;
 
-  const handleExtraToggle = (extraId: string) => {
-    setSelectedExtraIds((prev) =>
-      prev.includes(extraId)
-        ? prev.filter((id) => id !== extraId)
-        : [...prev, extraId]
-    );
+  const handleExtraQuantityChange = (extraId: string, delta: number) => {
+    setExtraQuantities((prev) => {
+      const current = prev[extraId] || 0;
+      return { ...prev, [extraId]: Math.max(0, current + delta) };
+    });
   };
 
   const handleAddToCart = async () => {
-    // Check if the item already exists in the cart
+    const newSelectedExtras: ISelectedExtra[] = [];
+    if (requiresPlastic && plasticExtra) {
+      newSelectedExtras.push({ extraId: plasticExtra.$id, quantity });
+    }
+    optionalExtras.forEach((extra) => {
+      const qty = extraQuantities[extra.$id] || 0;
+      if (qty > 0) {
+        newSelectedExtras.push({ extraId: extra.$id, quantity: qty });
+      }
+    });
+
+    const stringifiedNewSelectedExtras = newSelectedExtras.map(e => JSON.stringify(e));
+
     const existingOrder = orders?.find(
       (order) => order.itemId === item.itemId && order.userId === item.userId
     );
 
     if (existingOrder) {
-      // Update existing order
+      // Parse existing selectedExtras from string[] to ISelectedExtra[]
+      const existingExtrasMap = new Map<string, number>();
+      (existingOrder.selectedExtras || []).forEach((extraStr: ISelectedExtra | string) => {
+        try {
+          const e: ISelectedExtra = JSON.parse(extraStr as string);
+          existingExtrasMap.set(e.extraId, e.quantity);
+        } catch (e) {
+          console.error("Failed to parse existing extra:", extraStr, e);
+        }
+      });
+
+      // Merge with new extras
+      newSelectedExtras.forEach((newE) => {
+        const curr = existingExtrasMap.get(newE.extraId) || 0;
+        existingExtrasMap.set(newE.extraId, curr + newE.quantity);
+      });
+
+      const mergedExtras: ISelectedExtra[] = Array.from(existingExtrasMap.entries()).map(
+        ([extraId, qty]) => ({ extraId, quantity: qty })
+      );
+
+      const stringifiedMergedExtras = mergedExtras.map(e => JSON.stringify(e));
+
       const newQuantity = existingOrder.quantity + quantity;
       const newSubtotal = itemPrice * newQuantity;
-      const newPlasticQty = newQuantity <= 2 ? 1 : 2;
-      const newOptionalExtrasTotal = selectedExtraIds.reduce((sum, id) => {
-        const extra = optionalExtras.find((e) => e.$id === id);
-        return sum + (extra ? parseFloat(extra.price) : 0);
-      }, 0) * newQuantity;
-      const newPlasticTotal = plasticExtra ? parseFloat(plasticExtra.price) * newPlasticQty : 0;
-      const newTotalPrice = newSubtotal + newOptionalExtrasTotal + newPlasticTotal;
+      let newExtrasTotal = 0;
+      mergedExtras.forEach((e) => {
+        const extra = allExtras.find((ex) => ex.$id === e.extraId);
+        if (extra) {
+          newExtrasTotal += parseFloat(extra.price) * e.quantity;
+        }
+      });
+      const newTotalPrice = newSubtotal + newExtrasTotal;
 
-      // For selectedExtras, merge new optional + plastic if required
-      let newSelectedExtras = [...(existingOrder.selectedExtras || [])];
-      if (requiresPlastic && plasticExtra && !newSelectedExtras.includes(plasticExtra.$id)) {
-        newSelectedExtras.push(plasticExtra.$id);
-      }
-      newSelectedExtras = [...new Set([...newSelectedExtras, ...selectedExtraIds])];
-
-      // Optimistic update
+      // Optimistic update with stringified extras
       dispatch(
         addOrder({
           ...existingOrder,
           quantity: newQuantity,
           totalPrice: newTotalPrice,
-          specialInstructions:
-            specialInstructions || existingOrder.specialInstructions,
-          selectedExtras: newSelectedExtras,
+          specialInstructions: specialInstructions || existingOrder.specialInstructions,
+          selectedExtras: stringifiedMergedExtras,
         })
       );
       toast.success(`${item.name} quantity updated in cart!`, {
@@ -215,9 +217,8 @@ const AddToCartModal = () => {
             orderData: {
               quantity: newQuantity,
               totalPrice: newTotalPrice,
-              specialInstructions:
-                specialInstructions || existingOrder.specialInstructions,
-              selectedExtras: newSelectedExtras,
+              specialInstructions: specialInstructions || existingOrder.specialInstructions,
+              selectedExtras: stringifiedMergedExtras,
             },
           })
         ).unwrap();
@@ -227,7 +228,7 @@ const AddToCartModal = () => {
           duration: 4000,
           position: "top-right",
         });
-        // Revert optimistic update
+        // Revert with original stringified extras
         dispatch(
           addOrder({
             ...existingOrder,
@@ -239,12 +240,7 @@ const AddToCartModal = () => {
         );
       }
     } else {
-      // Add new order
       const tempId = `temp-${Date.now()}-${Math.random()}`;
-      const newSelectedExtras = [...selectedExtraIds];
-      if (requiresPlastic && plasticExtra && !newSelectedExtras.includes(plasticExtra.$id)) {
-        newSelectedExtras.push(plasticExtra.$id);
-      }
       const newItem: ICartItemFetched = {
         $id: tempId,
         userId: userId,
@@ -259,10 +255,9 @@ const AddToCartModal = () => {
         specialInstructions,
         status: "pending",
         source: item.source,
-        selectedExtras: newSelectedExtras,
+        selectedExtras: stringifiedNewSelectedExtras, // Already stringified
       } as unknown as ICartItemFetched;
 
-      // Optimistic update
       dispatch(addOrder(newItem));
       toast.success(`${newItem.name} added to cart!`, {
         duration: 3000,
@@ -270,7 +265,6 @@ const AddToCartModal = () => {
       });
 
       try {
-        // Exclude $id from the payload sent to Appwrite
         const { $id, ...orderData } = newItem;
         await dispatch(
           createOrderAsync({
@@ -300,7 +294,6 @@ const AddToCartModal = () => {
         )}
         aria-describedby="dialog-description"
       >
-        {/* Close Button */}
         <button
           onClick={() => setIsOpen(false)}
           className="absolute top-4 right-4 z-50 w-10 h-10 flex items-center justify-center rounded-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-lg hover:bg-white dark:hover:bg-gray-800 transition-all duration-200 group"
@@ -316,15 +309,14 @@ const AddToCartModal = () => {
           </DialogDescription>
         </DialogHeader>
 
-        {/* Hero Image Section */}
         <div className="relative w-full h-48 sm:h-64 bg-gradient-to-br from-orange-100 via-orange-50 to-red-50 dark:from-gray-800 dark:via-gray-850 dark:to-gray-900 overflow-hidden flex-shrink-0">
           <Image
             src={fileUrl(
-                  item.source === "featured"
+              item.source === "featured"
                 ? validateEnv().featuredBucketId
                 : item.source === "popular"
                 ? validateEnv().popularBucketId
-                :item.source === "discount"
+                : item.source === "discount"
                 ? validateEnv().discountBucketId
                 : validateEnv().menuBucketId,
               item.image
@@ -336,9 +328,7 @@ const AddToCartModal = () => {
             quality={90}
             priority
           />
-          {/* Gradient Overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-          {/* Category Badge */}
           <div className="absolute top-3 left-3 z-10">
             <span
               className={cn(
@@ -352,7 +342,6 @@ const AddToCartModal = () => {
               {item.category === "veg" ? "Vegetarian" : "Non-Veg"}
             </span>
           </div>
-          {/* Discount Badge */}
           {item.category === "discount" && item.discountType && item.discountValue !== undefined && (
             <div className="absolute top-3 right-3 z-10">
               <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-red-500/90 text-white border border-red-400 shadow-lg backdrop-blur-sm">
@@ -360,7 +349,6 @@ const AddToCartModal = () => {
               </span>
             </div>
           )}
-          {/* Item Info Overlay */}
           <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
             <h2 className="text-xl sm:text-2xl font-bold mb-1 drop-shadow-lg line-clamp-1">
               {item.name === "Jollof" ? "African Jollof" : item.name}
@@ -378,9 +366,7 @@ const AddToCartModal = () => {
           </div>
         </div>
 
-        {/* Content Section */}
         <div className="px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-5">
-          {/* Quantity Selector */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">
@@ -413,14 +399,14 @@ const AddToCartModal = () => {
               </div>
               <button
                 onClick={() => setQuantity(quantity + 1)}
-                className="w-12 h-12 flex items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95 touch-manipulation"
+                className="w-12 h-12 flex items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700
+                                transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95 touch-manipulation"
               >
                 <Plus className="w-5 h-5" />
               </button>
             </div>
           </div>
 
-          {/* Optional Extras Section */}
           {optionalExtras.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-3">
@@ -433,25 +419,18 @@ const AddToCartModal = () => {
               </div>
               <div className="space-y-3 max-h-48 overflow-y-auto">
                 {optionalExtras.map((extra) => {
-                  const isSelected = selectedExtraIds.includes(extra.$id);
+                  const qty = extraQuantities[extra.$id] || 0;
                   const extraPrice = parseFloat(extra.price);
                   return (
                     <div
                       key={extra.$id}
                       className={cn(
-                        "flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 cursor-pointer hover:shadow-md",
-                        isSelected
+                        "flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200",
+                        qty > 0
                           ? "border-orange-500 bg-orange-50 dark:bg-orange-900/10"
                           : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                       )}
-                      onClick={() => handleExtraToggle(extra.$id)}
                     >
-                      <Checkbox
-                        id={`extra-${extra.$id}`}
-                        checked={isSelected}
-                        onCheckedChange={() => handleExtraToggle(extra.$id)}
-                        className="h-5 w-5 rounded"
-                      />
                       <div className="relative w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
                         {extra.image ? (
                           <Image
@@ -467,18 +446,38 @@ const AddToCartModal = () => {
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <Label
-                          htmlFor={`extra-${extra.$id}`}
-                          className="text-sm font-medium text-gray-900 dark:text-gray-100 cursor-pointer block mb-1"
-                        >
+                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-1">
                           {extra.name}
-                        </Label>
+                        </div>
                         <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
                           {extra.description || "Popular add-on"}
                         </p>
                         <p className="text-sm font-semibold text-orange-600 dark:text-orange-400">
-                          +₦{extraPrice.toLocaleString()} {quantity > 1 ? `x ${quantity}` : ""}
+                          ₦{extraPrice.toLocaleString()} each
                         </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleExtraQuantityChange(extra.$id, -1)}
+                          disabled={qty <= 0}
+                          className={cn(
+                            "w-8 h-8 flex items-center justify-center rounded-md transition-all",
+                            qty <= 0
+                              ? "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                              : "bg-gradient-to-br from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700"
+                          )}
+                        >
+                          <Minus className="w-4 h-4" />
+                        </button>
+                        <span className="w-8 text-center text-sm font-medium text-gray-900 dark:text-gray-100">
+                          {qty}
+                        </span>
+                        <button
+                          onClick={() => handleExtraQuantityChange(extra.$id, 1)}
+                          className="w-8 h-8 flex items-center justify-center rounded-md bg-gradient-to-br from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 transition-all"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
                   );
@@ -487,7 +486,6 @@ const AddToCartModal = () => {
             </div>
           )}
 
-          {/* Plastic Container Section (Mandatory if applicable) */}
           {requiresPlastic && plasticExtra && (
             <div>
               <div className="flex items-center justify-between mb-3">
@@ -533,7 +531,6 @@ const AddToCartModal = () => {
             </div>
           )}
 
-          {/* Special Instructions */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">
@@ -564,7 +561,6 @@ const AddToCartModal = () => {
             </div>
           </div>
 
-          {/* Price Summary */}
           <div className="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-xl p-3 border-2 border-orange-200 dark:border-orange-800">
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs text-gray-600 dark:text-gray-400">
@@ -596,7 +592,6 @@ const AddToCartModal = () => {
             </div>
           </div>
 
-          {/* Add to Cart Button */}
           <Button
             onClick={handleAddToCart}
             className={cn(

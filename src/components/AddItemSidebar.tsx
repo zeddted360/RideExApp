@@ -10,6 +10,8 @@ import {
   ChevronRight,
   PlusCircle,
 } from "lucide-react";
+import { Button } from "./ui/button";
+import { useAuth } from "@/context/authContext";
 
 interface AddItemSidebarProps {
   activeTab: "account" | "discount" | "menu-item" | "featured-item" | "popular-item" | "edit-menu" | "extras";
@@ -57,6 +59,16 @@ const AddItemSidebar = ({ activeTab, setActiveTab }: AddItemSidebarProps) => {
      { id: "extras", label: "Manage Extras", icon: PlusCircle, description: "Add extract" }
   ];
 
+  const user = useAuth();
+  const role = user.role;
+
+  const filteredTabs = tabs.filter(tab => {
+    if (role === "vendor" && (tab.id === "featured-item" || tab.id === "popular-item")) {
+      return false;
+    }
+    return true;
+  });
+
   return (
     <aside className="w-full lg:w-72 bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-850 border-b lg:border-r border-gray-200 dark:border-gray-700 shadow-lg lg:shadow-none">
       {/* Desktop Sidebar */}
@@ -78,7 +90,7 @@ const AddItemSidebar = ({ activeTab, setActiveTab }: AddItemSidebarProps) => {
 
         {/* Navigation */}
         <nav className="space-y-2">
-          {tabs.map((tab) => {
+          {filteredTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             
@@ -147,12 +159,12 @@ const AddItemSidebar = ({ activeTab, setActiveTab }: AddItemSidebarProps) => {
           <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Dashboard</h2>
         </div>
         <nav className="flex overflow-x-auto gap-2 p-4 scrollbar-hide">
-          {tabs.map((tab) => {
+          {filteredTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             
             return (
-              <button
+              <Button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as typeof activeTab)}
                 className={`flex flex-col items-center gap-2 p-3 rounded-xl font-medium transition-all duration-200 whitespace-nowrap min-w-[100px] ${
@@ -173,7 +185,7 @@ const AddItemSidebar = ({ activeTab, setActiveTab }: AddItemSidebarProps) => {
                   }`} />
                 </div>
                 <span className="text-xs font-semibold">{tab.label}</span>
-              </button>
+              </Button>
             );
           })}
         </nav>

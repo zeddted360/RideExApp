@@ -52,6 +52,11 @@ import { useAuth } from "@/context/authContext";
 import { databases } from "@/utils/appwrite";
 import { Query } from "appwrite";
 
+interface ISelectedExtra {
+  extraId: string;
+  quantity: number;
+}
+
 const CartDrawer = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { error, loading, orders } = useSelector(
@@ -67,6 +72,7 @@ const CartDrawer = () => {
   const pathname = usePathname();
 
   const spoonRegex = /(rice|egg sauce|beans|porridge|pasta|spaghetti|macaroni|stew|pizza|jollof|fried rice|white rice|yam pottage|asaro)/i;
+  const soupRegex = /(soup|egusi|ogbono|okra|efo|ewedu|gbegiri|banga|afang|pepper soup)/i;
 
   useEffect(() => {
     if (user?.userId && !orders && !loading) {
@@ -88,7 +94,14 @@ const CartDrawer = () => {
       const allExtraIds = new Set<string>();
       orders.forEach(order => {
         if (order.selectedExtras && Array.isArray(order.selectedExtras)) {
-          order.selectedExtras.forEach(id => allExtraIds.add(id));
+          order.selectedExtras.forEach((extraStr:ISelectedExtra | string) => {
+            try {
+              const extraObj = JSON.parse(extraStr as string);
+              allExtraIds.add(extraObj.extraId);
+            } catch (e) {
+              console.error("Failed to parse extra:", extraStr, e);
+            }
+          });
         }
       });
 
@@ -126,9 +139,8 @@ const CartDrawer = () => {
     }
   }, [orders, loading, activeCart]);
 
-  const calculatePlasticQty = (quantity: number) => {
-    if (quantity <= 2) return 1;
-    return 2;
+  const calculatePlasticQty = (quantity: number, extraQty: number) => {
+    return extraQty * (quantity / (extraQty > 0 ? extraQty : 1));
   };
 
   const calculateNewTotalPrice = useCallback((
@@ -143,35 +155,64 @@ const CartDrawer = () => {
 
     const itemPrice = parsePrice(order.price);
     const itemName = order.name || "";
-    const requiresPlastic = spoonRegex.test(itemName);
+    const requiresPlastic = spoonRegex.test(itemName) || soupRegex.test(itemName);
 
     const newSubtotal = itemPrice * newQuantity;
 
     let extrasTotal = 0;
 
     if (order.selectedExtras && Array.isArray(order.selectedExtras)) {
-      order.selectedExtras.forEach((extraId) => {
-        const extra = extrasCache[extraId];
-        if (extra) {
-          const isPlastic = extra.name.toLowerCase().includes("plastic container");
-          
-          if (isPlastic && requiresPlastic) {
-            const plasticQty = calculatePlasticQty(newQuantity);
-            extrasTotal += parseFloat(extra.price) * plasticQty;
-          } else if (!isPlastic) {
-            extrasTotal += parseFloat(extra.price) * newQuantity;
+      order.selectedExtras.forEach((extraStr:ISelectedExtra | string) => {
+        try {
+          const extraObj = JSON.parse(extraStr as string);
+          const extra = extrasCache[extraObj.extraId];
+          if (extra) {
+            const isPlastic = extra.name.toLowerCase().includes("plastic container");
+            
+            let effectiveQty = extraObj.quantity;
+            if (isPlastic && requiresPlastic) {
+              effectiveQty = Math.round(calculatePlasticQty(newQuantity, extraObj.quantity));
+            }
+            
+            extrasTotal += parseFloat(extra.price) * effectiveQty;
           }
+        } catch (e) {
+          console.error("Failed to parse extra for total calculation:", extraStr, e);
         }
       });
     }
 
     return newSubtotal + extrasTotal;
-  }, [extrasCache, spoonRegex]);
+  }, [extrasCache, spoonRegex, soupRegex]);
 
   const handleUpdateQuantity = useCallback(
     debounce(async (order: ICartItemFetched, change: number) => {
       const newQuantity = Math.max(0, order.quantity + change);
       const newTotalPrice = calculateNewTotalPrice(order, newQuantity);
+
+      // Parse and update selectedExtras quantities for compulsory items
+      let updatedSelectedExtras: ISelectedExtra[] = [];
+      if (order.selectedExtras && Array.isArray(order.selectedExtras)) {
+        updatedSelectedExtras = order.selectedExtras.map((extraStr:ISelectedExtra | string) => {
+          try {
+            return JSON.parse(extraStr as string);
+          } catch (e) {
+            console.error("Failed to parse extra:", extraStr, e);
+            return null;
+          }
+        }).filter((e): e is ISelectedExtra => e !== null);
+      }
+
+      if (newQuantity > 0) {
+        const plasticExtra = updatedSelectedExtras.find(e => 
+          extrasCache[e.extraId]?.name.toLowerCase().includes("plastic container")
+        );
+        if (plasticExtra && (spoonRegex.test(order.name) || soupRegex.test(order.name))) {
+          plasticExtra.quantity = newQuantity; // Scale compulsory to new quantity
+        }
+      }
+
+      const stringifiedSelectedExtras = updatedSelectedExtras.map(e => JSON.stringify(e));
 
       dispatch(updateQuantity({ orderId: order.$id, change }));
 
@@ -195,7 +236,11 @@ const CartDrawer = () => {
           await dispatch(
             updateOrderAsync({
               orderId: order.$id,
-              orderData: { quantity: newQuantity, totalPrice: newTotalPrice },
+              orderData: { 
+                quantity: newQuantity, 
+                totalPrice: newTotalPrice,
+                selectedExtras: stringifiedSelectedExtras
+              },
             })
           ).unwrap();
         } catch (err) {
@@ -204,7 +249,7 @@ const CartDrawer = () => {
         }
       }
     }, 300),
-    [dispatch, calculateNewTotalPrice]
+    [dispatch, calculateNewTotalPrice, extrasCache, spoonRegex, soupRegex]
   );
 
   const handleDeleteOrder = useCallback(
@@ -243,8 +288,17 @@ const CartDrawer = () => {
   const getItemExtras = (order: ICartItemFetched) => {
     if (!order.selectedExtras || !Array.isArray(order.selectedExtras)) return [];
     return order.selectedExtras
-      .map(id => extrasCache[id])
-      .filter(Boolean);
+      .map((extraStr: ISelectedExtra | string) => {
+        try {
+          const extraObj = JSON.parse(extraStr as string);
+          const extra = extrasCache[extraObj.extraId];
+          return extra ? { ...extra, quantity: extraObj.quantity } : null;
+        } catch (e) {
+          console.error("Failed to parse extra for display:", extraStr, e);
+          return null;
+        }
+      })
+      .filter(Boolean) as (IFetchedExtras & { quantity: number })[];
   };
 
   const restrictedPaths = ["/checkout"]
@@ -376,7 +430,7 @@ const CartDrawer = () => {
                                   className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full text-xs font-medium"
                                 >
                                   <Plus className="w-2.5 h-2.5" />
-                                  {extra.name}
+                                  {extra.name} {extra.quantity > 1 ? `x${extra.quantity}` : ''}
                                 </span>
                               ))}
                             </div>

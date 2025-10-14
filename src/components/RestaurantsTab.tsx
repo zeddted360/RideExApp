@@ -616,7 +616,7 @@ export default function RestaurantsTab({
                         className="w-full h-11 px-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-shadow appearance-none"
                       >
                         <option value="">Select vendor</option>
-                        {vendors.map((vendor: IVendorFetched) => (
+                        {vendors.filter(ven=> ven.status === "approved").map((vendor: IVendorFetched) => (
                           <option key={vendor.$id} value={vendor.$id}>
                             {vendor.businessName}
                           </option>

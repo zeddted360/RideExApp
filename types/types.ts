@@ -101,7 +101,7 @@ export interface ICartItemOrder extends ICartItem {
   specialInstructions?: string;
   totalPrice: number;
   status: "pending" | "processing" | "success";
-  selectedExtras?: string[];
+  selectedExtras?: ISelectedExtra[] | string[];
 }
 
 export interface ICartItemFetched extends ICartItemOrder, Models.Document {}
@@ -322,3 +322,8 @@ export interface IExtras {
 }
 
 export interface IFetchedExtras extends IExtras, Models.Document {}
+
+export interface ISelectedExtra {
+  extraId: string;
+  quantity: number;
+}

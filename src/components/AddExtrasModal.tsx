@@ -80,7 +80,7 @@ const AddExtrasModal: React.FC<AddExtrasModalProps> = ({ onAddExtras, loading = 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="w-full mt-4 h-11">
+        <Button variant="outline" className="w-full mt-4 h-11 bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800 hover:bg-orange-100 dark:hover:bg-orange-900/30">
           <Plus className="w-4 h-4 mr-2" />
           Add Extras
         </Button>
