@@ -7,7 +7,7 @@ import { RootState, AppDispatch } from "@/state/store";
 import { createNotification } from "@/state/notificationSlice";
 import { account, databases, validateEnv } from "@/utils/appwrite";
 import { ID } from "appwrite";
-import { OrderStatus, INotification, ICartItemFetched, IExtras } from "../../../types/types";
+import { OrderStatus, INotification, ICartItemFetched, ISelectedExtra } from "../../../types/types";
 import { calculateDeliveryFee } from "@/utils/deliveryFeeCalculator";
 import { Loader } from "@googlemaps/js-api-loader";
 import { useRouter } from "next/navigation";
@@ -81,6 +81,7 @@ export default function CheckoutClient() {
     () => branches.find((b) => b.id === selectedBranch),
     [selectedBranch]
   );
+
   // Custom debounce hook for delivery fee calculation
   const useDebounce = (value: string, delay: number) => {
     const [debouncedValue, setDebouncedValue] = useState(value);
@@ -91,11 +92,13 @@ export default function CheckoutClient() {
     return debouncedValue;
   };
   const debouncedAddress = useDebounce(address, 500);
+
   // Centralized error handling with auto-clear
   const handleError = (message: string) => {
     setError(message);
     setTimeout(() => setError(null), 5000);
   };
+
   // Google Maps initialization
   const initMap = useCallback(() => {
     if (!dialogAutocompleteInput.current || !window.google?.maps) return;
@@ -211,12 +214,12 @@ export default function CheckoutClient() {
   const userId = user?.userId;
   const userEmail = user?.email;
 
-
   useEffect(() => {
     if (user) {
       if (user.phoneNumber) setPhoneNumber(user.phoneNumber);
     }
   }, [user]);
+
   // Fetch user addresses
   useEffect(() => {
     if (showAddressForm) {
@@ -352,10 +355,12 @@ export default function CheckoutClient() {
 
     setShowAddressForm(false);
   };
+
   // Handle place order
   const handlePlaceOrder = useCallback(() => {
     setShowConfirmation(true);
   }, []);
+
   // Handle confirm order
   const handleConfirmOrder = useCallback(async () => {
     if (!address || !phoneNumber || orders.length === 0) {
@@ -373,23 +378,33 @@ export default function CheckoutClient() {
     setIsOrderLoading(true);
     try {
       const orderId = ID.unique();
-      const structuredItems = orders.map((cartItem: ICartItemFetched) => (JSON.stringify({
-                itemId: cartItem.itemId,
-                quantity: cartItem.quantity || 1,  
-                extrasIds: cartItem.selectedExtras?.map((extra: string) => extra) || [],  
-                priceAtOrder: cartItem.price,  
-              })));
+      const structuredItems = orders.map((cartItem: ICartItemFetched) =>
+        JSON.stringify({
+          itemId: cartItem.itemId,
+          quantity: cartItem.quantity || 1,
+          extrasIds: cartItem.selectedExtras?.map((extra:ISelectedExtra | string) => {
+            try {
+              const parsedExtra: ISelectedExtra = JSON.parse(extra as string);
+              return `${parsedExtra.extraId}_${parsedExtra.quantity}`; 
+            } catch (e) {
+              console.error("Failed to parse extra:", extra, e);
+              return null;
+            }
+          }).filter((id): id is string => id !== null) || [],
+          priceAtOrder: cartItem.price,
+        })
+      );
 
       const order = {
         orderId,
         itemIds: orders.map((item: ICartItemFetched) => item.itemId),
-        items:structuredItems,
+        items: structuredItems,
         paymentMethod,
         address,
         label,
         deliveryTime: formatDeliveryTime(calculateDeliveryTime()),
         createdAt: new Date().toISOString(),
-        total:paymentMethod === "cash" ? subtotal : subtotal + deliveryFee,
+        total: paymentMethod === "cash" ? subtotal : subtotal + deliveryFee,
         status: "pending" as OrderStatus,
         phone: phoneNumber,
         customerId: userId,
@@ -397,6 +412,7 @@ export default function CheckoutClient() {
         deliveryDistance,
         deliveryDuration,
         selectedBranchId: selectedBranch,
+        apartmentFlat,
       };
 
       const { databaseId, bookedOrdersCollectionId } = validateEnv();
@@ -450,7 +466,6 @@ export default function CheckoutClient() {
     formatDeliveryTime,
   ]);
 
- 
   if (!isClient) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-100 via-white to-orange-50 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900 flex items-center justify-center py-12 px-4">
@@ -566,7 +581,6 @@ export default function CheckoutClient() {
               <PaymentMethodSelector
                 paymentMethod={paymentMethod}
                 setPaymentMethod={setPaymentMethod}
-           
               />
             </section>
 
@@ -596,7 +610,7 @@ export default function CheckoutClient() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          onClick={() =>{ setShowCashModal(false)}}
+          onClick={() => setShowCashModal(false)}
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}

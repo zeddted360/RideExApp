@@ -23,7 +23,7 @@ import { createAsyncDiscount, listAsyncDiscounts, updateAsyncDiscount, deleteAsy
 import toast from "react-hot-toast";
 import { createAsyncFeaturedItem, listAsyncFeaturedItems, updateAsyncFeaturedItem, deleteAsyncFeaturedItem } from "@/state/featuredSlice";
 import { createAsyncPopularItem, listAsyncPopularItems, updateAsyncPopularItem, deleteAsyncPopularItem } from "@/state/popularSlice";
-import {  IDiscount, IRestaurantFetched, IMenuItemFetched, IFeaturedItemFetched, IPopularItemFetched, IExtras, IFetchedExtras } from "../../types/types";
+import {  IDiscount, IRestaurantFetched, IMenuItemFetched, IFeaturedItemFetched, IPopularItemFetched, IExtras, IFetchedExtras, IDiscountFetched } from "../../types/types";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/authContext";
 import AddItemSidebar from "./AddItemSidebar";
@@ -44,13 +44,13 @@ const AddFoodItemForm = () => {
   const [activeTab, setActiveTab] = useState<
      "account" | "menu-item" | "featured-item" | "popular-item" | "discount" | "edit-menu" | "extras"
   >("account");
-  const [subActiveTab, setSubActiveTab] = useState<"menu" | "featured" | "popular">("menu");
+  const [subActiveTab, setSubActiveTab] = useState<"menu" | "featured" | "popular" | "discount">("menu");
   const [loading, setLoading] = useState(false);
   const [searchCategory, setSearchCategory] = useState("");
 
   // Edit state
   const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<IMenuItemFetched | IFeaturedItemFetched | IPopularItemFetched | null>(null);
+  const [selectedItem, setSelectedItem] = useState<IMenuItemFetched | IFeaturedItemFetched | IPopularItemFetched | IDiscountFetched | null>(null);
   const [editFormData, setEditFormData] = useState<any>({});
   const [newImage, setNewImage] = useState<File | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -70,6 +70,7 @@ const AddFoodItemForm = () => {
   const { featuredItems } = useSelector((state: RootState) => state.featuredItem);
   const { popularItems } = useSelector((state: RootState) => state.popularItem);
   const { menuItems } = useSelector((state: RootState) => state.menuItem);
+  const { discounts } = useSelector((state: RootState) => state.discounts);
 
   // const {extras} = useSelector((state:RootState)=>state.extra);
 
@@ -134,6 +135,13 @@ const AddFoodItemForm = () => {
       vendorRestaurants.some((r: IRestaurantFetched) => r.$id === item.restaurantId)
     ),
   [popularItems, vendorRestaurants]);
+
+  const filteredDiscounts = useMemo(() =>
+    discounts.filter((item: IDiscountFetched) =>
+      vendorRestaurants.some((r: IRestaurantFetched) => r.$id === item.targetId),
+), 
+  [discounts, vendorRestaurants]);
+
 
   // Initialize forms
 
@@ -333,6 +341,7 @@ const AddFoodItemForm = () => {
         targetId: data.targetId,
         image: data.image,
         isActive: data.isActive,
+        restaurantId:data.restaurantId,
       };
       await dispatch(createAsyncDiscount(discountData)).unwrap();
       discountForm.reset();
@@ -345,38 +354,70 @@ const AddFoodItemForm = () => {
   };
 
   // Edit handlers
-  const handleEdit = (item: IMenuItemFetched | IFeaturedItemFetched | IPopularItemFetched, type: "menu" | "featured" | "popular") => {
+  const handleEdit = (item: IMenuItemFetched | IFeaturedItemFetched | IPopularItemFetched | IDiscountFetched, type: "menu" | "featured" | "popular" | "discount") => {
     setSelectedItem(item);
-    const commonData = {
-      name: item.name,
-      description: item.description || "",
-      price: item.price,
-      rating: item.rating,
-      category: item.category,
-      restaurantId: item.restaurantId,
+    let formData: any = {
       isApproved: item.isApproved,
     };
-    let formData: any = { ...commonData };
     switch (type) {
       case "menu":
         formData = {
           ...formData,
+          name: item.name,
+          description: item.description || "",
+          price: item.price,
           originalPrice: (item as IMenuItemFetched).originalPrice || "",
+          rating: item.rating,
           cookTime: (item as IMenuItemFetched).cookTime || "",
+          category: item.category,
+          restaurantId: item.restaurantId,
+        };
+        break;
+      case "featured":
+        formData = {
+          ...formData,
+          name: item.name,
+          description: item.description || "",
+          price: item.price,
+          rating: item.rating,
+          category: item.category,
+          restaurantId: item.restaurantId,
         };
         break;
       case "popular":
         formData = {
           ...formData,
+          name: item.name,
+          description: item.description || "",
+          price: item.price,
           originalPrice: (item as IPopularItemFetched).originalPrice || "",
-          cookingTime: (item as IPopularItemFetched).cookingTime || "",
+          rating: item.rating,
           reviewCount: (item as IPopularItemFetched).reviewCount || 0,
+          cookingTime: (item as IPopularItemFetched).cookingTime || "",
           isPopular: (item as IPopularItemFetched).isPopular || false,
           discount: (item as IPopularItemFetched).discount || "",
+          category: item.category,
+          restaurantId: item.restaurantId,
         };
         break;
-      case "featured":
-        // Only common fields for featured
+      case "discount":
+        formData = {
+          ...formData,
+          title: (item as IDiscountFetched).title,
+          description: (item as IDiscountFetched).description || "",
+          discountType: (item as IDiscountFetched).discountType,
+          discountValue: (item as IDiscountFetched).discountValue,
+          originalPrice: (item as IDiscountFetched).originalPrice,
+          discountedPrice: (item as IDiscountFetched).discountedPrice,
+          validFrom: (item as IDiscountFetched).validFrom,
+          validTo: (item as IDiscountFetched).validTo,
+          minOrderValue: (item as IDiscountFetched).minOrderValue,
+          maxUses: (item as IDiscountFetched).maxUses,
+          code: (item as IDiscountFetched).code,
+          appliesTo: (item as IDiscountFetched).appliesTo,
+          targetId: (item as IDiscountFetched).targetId,
+          isActive: (item as IDiscountFetched).isActive,
+        };
         break;
       default:
         break;
@@ -403,10 +444,13 @@ const AddFoodItemForm = () => {
         case "popular":
           action = deleteAsyncPopularItem({ itemId: selectedItem.$id, imageId: (selectedItem as IPopularItemFetched).image });
           break;
+        case "discount":
+          action = deleteAsyncDiscount(selectedItem.$id);
+          break;
       }
 
       if (action) {
-        await dispatch(action).unwrap();
+        await dispatch(action as any).unwrap();
         toast.success("Item deleted successfully");
         setShowDeleteModal(false);
         // Refetch based on sub tab
@@ -419,6 +463,9 @@ const AddFoodItemForm = () => {
             break;
           case "popular":
             dispatch(listAsyncPopularItems());
+            break;
+          case "discount":
+            dispatch(listAsyncDiscounts());
             break;
         }
       }
@@ -439,18 +486,27 @@ const AddFoodItemForm = () => {
     return `Add New ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1).replace('-', ' ')}`;
   };
 
-  const { menuBucketId, popularBucketId, featuredBucketId } = validateEnv();
+  const { menuBucketId, popularBucketId, featuredBucketId, discountBucketId } = validateEnv();
 
-  const getBucketId = (type: "menu" | "featured" | "popular"): string => {
-    return type === "menu" ? menuBucketId : type === "featured" ? featuredBucketId : popularBucketId;
+  const getBucketId = (type: "menu" | "featured" | "popular" | "discount"): string => {
+    return type === "menu" ? menuBucketId : type === "featured" ? featuredBucketId : type === "discount" ? discountBucketId : popularBucketId;
   };
 
-  const renderItemCard = (item: IMenuItemFetched | IPopularItemFetched | IFeaturedItemFetched, type: "menu" | "featured" | "popular") => (
+  const renderItemCard = (item: IMenuItemFetched | IPopularItemFetched | IFeaturedItemFetched | IDiscountFetched, type: "menu" | "featured" | "popular" | "discount") => {
+    let displayName = item.name || (item as IDiscountFetched).title || "Unnamed";
+    let displayDescription = item.description || 'No description available.';
+    let displayCategory = item.category || (type === "discount" ? (item as IDiscountFetched).appliesTo : undefined);
+    let displayPrice = item.price;
+    if (type === "discount") {
+      const discount = item as IDiscountFetched;
+      displayPrice = discount.discountedPrice ? `₦${discount.discountedPrice}` : `-${discount.discountValue}${discount.discountType === "percentage" ? "%" : "₦"}`;
+    }
+    return (
     <div  className="group flex bg-white dark:bg-gray-800 rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 w-full h-[240px] border border-gray-200 dark:border-gray-700">
       {/* Image on the left */}
       <div className="relative w-64 h-full overflow-hidden flex-shrink-0">
         <Image
-          src={fileUrl(getBucketId(type), item.image)}
+          src={fileUrl(getBucketId(type), item.image as string)}
           alt={`${type} item image`}
           fill
           className="object-cover group-hover:scale-105 transition-transform duration-300"
@@ -462,14 +518,16 @@ const AddFoodItemForm = () => {
       <div className="flex-1 p-4 flex flex-col justify-between">
         <div className="space-y-2">
           <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg line-clamp-1">
-            {item.name}
+            {displayName}
           </h3>
           <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-3">
-            {item.description || 'No description available.'}
+            {displayDescription}
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-            {item.category}
-          </p>
+          {displayCategory && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+              {displayCategory}
+            </p>
+          )}
           {type === "menu" && (
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Cook Time: {item.cookTime}
@@ -490,14 +548,24 @@ const AddFoodItemForm = () => {
               </p>
             </>
           )}
+          {type === "discount" && (
+            <>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Valid From: {(item as IDiscountFetched).validFrom}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Valid To: {(item as IDiscountFetched).validTo}
+              </p>
+            </>
+          )}
         </div>
         <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
           <span className="text-xl font-bold text-orange-600 dark:text-orange-400">
-            ₦{item.price}
+            {displayPrice}
           </span>
           <Button
             onClick={() => handleEdit(item, type)}
-            aria-label={`Edit ${item.name}`}
+            aria-label={`Edit ${displayName}`}
             className="flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-xl font-semibold text-sm hover:from-blue-600 hover:to-blue-700 transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-50 min-w-[80px]"
           >
             Edit
@@ -505,20 +573,21 @@ const AddFoodItemForm = () => {
         </div>
       </div>
     </div>
-  );
+  )};
 
   const filteredSubTabs = useMemo(() => {
     const allTabs = [
       { id: "menu", label: "Menu Items" },
       { id: "featured", label: "Featured Items" },
       { id: "popular", label: "Popular Items" },
+      { id: "discount", label: "Discounts" },
     ];
     if (role === "admin") {
       return allTabs;
     }
-    return allTabs.filter(tab => tab.id === "menu");
+    return allTabs.filter(tab => tab.id === "menu" || tab.id === "discount");
   }, [role]);
-
+  // Access control
   if (!isAuthenticated || role === "user" || role === null) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
@@ -536,7 +605,7 @@ const AddFoodItemForm = () => {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-gradient-to-br  from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
       <AddItemSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
         <h1 className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 mb-8 text-center lg:text-left">
@@ -591,7 +660,7 @@ const AddFoodItemForm = () => {
               {filteredSubTabs.map((tab) => (
                 <Button
                   key={tab.id}
-                  onClick={() => setSubActiveTab(tab.id as "menu" | "featured" | "popular")}
+                  onClick={() => setSubActiveTab(tab.id as "menu" | "featured" | "popular" | "discount")}
                   className={`px-4 py-2 font-medium rounded-t-lg transition-colors ${
                     subActiveTab === tab.id
                       ? "bg-orange-500 text-white border-b-2 border-orange-500"
@@ -622,6 +691,13 @@ const AddFoodItemForm = () => {
               ) : subActiveTab === "popular" ? (
                 <div className="col-span-full text-center py-12 text-gray-500 dark:text-gray-400">
                   No popular items available.
+                </div>
+              ) : null}
+              {subActiveTab === "discount" && filteredDiscounts.length > 0 ? (
+                filteredDiscounts.map((item: IDiscountFetched) =><div key={item.$id}>{renderItemCard(item, "discount")}</div> )
+              ) : subActiveTab === "discount" ? (
+                <div className="col-span-full text-center py-12 text-gray-500 dark:text-gray-400">
+                  No discounts available.
                 </div>
               ) : null}
             </div>
@@ -668,7 +744,7 @@ const AddFoodItemForm = () => {
               toast.success(`${selectedExtras.length} extras added!`);
             }} 
           />
-          <DiscountForm form={discountForm} targetOptions={targetOptions} onSubmit={handleDiscountSubmit} loading={loading} />
+          <DiscountForm form={discountForm} targetOptions={targetOptions} onSubmit={handleDiscountSubmit} loading={loading} restaurants={vendorRestaurants}  />
           </div>
         )}
         {
@@ -712,7 +788,7 @@ const AddFoodItemForm = () => {
               </div>
               <div className="space-y-4 mb-6">
                 <p className="text-gray-700 dark:text-gray-300">
-                  Are you sure you want to delete "{selectedItem.name}"? This action cannot be undone.
+                  Are you sure you want to delete "{selectedItem.name || (selectedItem as IDiscountFetched).title}"? This action cannot be undone.
                 </p>
               </div>
               <div className="flex space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">

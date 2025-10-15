@@ -145,6 +145,7 @@ export const discountSchema = z.object({
     .string()
     .min(1, "Title is required")
     .max(255, "Title is too long"),
+    restaurantId:z.string(),
   description: z
     .string()
     .min(1, "Description is required")
@@ -153,13 +154,12 @@ export const discountSchema = z.object({
     required_error: "Discount type is required",
   }),
   originalPrice:z.number({ required_error: "Original value is required" })
-    .positive("Discount value must be greater than 0"),
+    .positive("Original price must be greater than 0"),
   discountedPrice:z.number({ required_error: "Discount price is required" })
-    .positive("Discount value must be greater than 0"),
+    .positive("Discounted price must be greater than 0"),
   discountValue: z
     .number({ required_error: "Discount value is required" })
-    .positive("Discount value must be greater than 0")
-    .max(100, "Discount cannot exceed 100%"),
+    .positive("Discount value must be greater than 0"),
   validFrom: z
     .string()
     .min(1, "Valid from date is required")
@@ -194,6 +194,39 @@ export const discountSchema = z.object({
 }).refine((data) => new Date(data.validFrom) < new Date(data.validTo), {
   message: "Valid to date must be after valid from date",
   path: ["validTo"],
+}).superRefine((data, ctx) => {
+  // Conditional validation for discountValue based on discountType
+  if (data.discountType === "percentage") {
+    if (data.discountValue > 100) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Discount cannot exceed 100%",
+        path: ["discountValue"],
+      });
+    }
+  } else { // fixed
+    if (data.discountValue > data.originalPrice) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Fixed discount cannot exceed original price",
+        path: ["discountValue"],
+      });
+    }
+  }
+  // Ensure discountedPrice matches the calculation
+  let expectedDiscounted: number;
+  if (data.discountType === "percentage") {
+    expectedDiscounted = Math.round((data.originalPrice * (1 - data.discountValue / 100)) * 100) / 100;
+  } else {
+    expectedDiscounted = Math.round((data.originalPrice - data.discountValue) * 100) / 100;
+  }
+  if (data.discountedPrice !== expectedDiscounted) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Discounted price must match the calculated value",
+      path: ["discountedPrice"],
+    });
+  }
 });
 
 export const vendorRegistrationSchema = z

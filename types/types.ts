@@ -94,6 +94,13 @@ export interface ICartItem {
    extras?: string[];
    discountType?: "percentage" | "fixed" ;
    discountValue?:number;
+   minOrderValue?:number;
+   maxUses?:number;
+   code?:string;
+   appliesTo?: "all" | "item" | "category" | "restaurant";
+   targetId?: string;
+    validFrom?: string; 
+  validTo?: string;
 }
 
 //  cart item order processed
@@ -210,7 +217,7 @@ export interface INotificationState {
 export interface IBookedOrderFetched extends Models.Document {
   orderId: string;
   itemIds?:string[];
-  items?: Array<string>;
+  items?: string[];
   customerId: string;
   address: string;
   label?: "Home" | "Work" | "Other";

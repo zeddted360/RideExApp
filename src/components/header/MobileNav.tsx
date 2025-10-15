@@ -175,7 +175,7 @@ const MobileNav: React.FC<MobileNavProps> = ({
               {(user?.isAdmin || role === "vendor") && (
                 <>
                   <DropdownMenuItem
-                    onClick={() => router.push("/add-item")}
+                    onClick={() => router.push("/vendor")}
                     className="flex items-center gap-3 px-4 py-3 cursor-pointer text-orange-600 font-bold bg-orange-50 dark:bg-orange-900/20 rounded-lg mt-1"
                   >
                     <Plus className="w-4 h-4" />
@@ -183,7 +183,7 @@ const MobileNav: React.FC<MobileNavProps> = ({
                   </DropdownMenuItem>
                   {role === "admin" && (
                     <DropdownMenuItem
-                      onClick={() => router.push("/admin/orders")}
+                      onClick={() => router.push("/admin/dashboard")}
                       className="flex items-center gap-3 px-4 py-3 cursor-pointer"
                     >
                       <Shield className="w-4 h-4 text-gray-500" />

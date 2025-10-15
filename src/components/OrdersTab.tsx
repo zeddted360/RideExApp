@@ -71,6 +71,11 @@ interface StructuredItem {
   priceAtOrder: number;
 }
 
+interface ParsedExtra {
+  extraId: string;
+  quantity: number;
+}
+
 export default function OrdersTab({
   orders,
   loading,
@@ -87,7 +92,6 @@ export default function OrdersTab({
   ORDER_STATUSES,
   branches,
 }: OrdersTabProps) {
-
   const dispatch = useDispatch<AppDispatch>();
 
   const menuItems = useSelector((state: RootState) => state.menuItem.menuItems);
@@ -139,10 +143,10 @@ export default function OrdersTab({
           validateEnv().userCollectionId,
           customerId
         ) as IUserFectched;
-        setCustomerNames(prev => ({ ...prev, [customerId]: response.fullName as string }));
+        setCustomerNames((prev) => ({ ...prev, [customerId]: response.fullName as string }));
       } catch (err) {
         console.error(err instanceof Error ? err.message : "Error fetching customer name");
-        setCustomerNames(prev => ({ ...prev, [customerId]: "Unknown Customer" }));
+        setCustomerNames((prev) => ({ ...prev, [customerId]: "Unknown Customer" }));
       }
     }
   };
@@ -150,7 +154,7 @@ export default function OrdersTab({
   useEffect(() => {
     if (orders.length > 0 && !fetchingNames) {
       setFetchingNames(true);
-      const uniqueCustomerIds = [...new Set(orders.map(order => order.customerId))];
+      const uniqueCustomerIds = [...new Set(orders.map((order) => order.customerId))];
       uniqueCustomerIds.forEach(fetchCustomerName);
       setFetchingNames(false);
     }
@@ -161,11 +165,12 @@ export default function OrdersTab({
       try {
         const parsedItems = selectedOrder.items.map((itemStr: string) => JSON.parse(itemStr)) as StructuredItem[];
         setStructuredItems(parsedItems);
-        
+
         setFetchingExtras(true);
         const extraIds = new Set<string>();
         parsedItems.forEach((structuredItem) => {
-          structuredItem.extrasIds.forEach((extraId: string) => {
+          structuredItem.extrasIds.forEach((extraIdStr: string) => {
+            const [extraId] = extraIdStr.split('_');
             if (extraId) {
               extraIds.add(extraId);
             }
@@ -210,7 +215,7 @@ export default function OrdersTab({
       setSelectedOrderToDelete(null);
     } catch (err: any) {
       toast.error(err.message || "Failed to delete order");
-    }finally{
+    } finally {
       setIsDeleting(false);
     }
   };
@@ -233,10 +238,19 @@ export default function OrdersTab({
     return colors[status] || "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900/30 dark:text-gray-300 dark:border-gray-800";
   };
 
-  const deliveryFee = selectedOrder?.deliveryFee || 333; 
+  const deliveryFee = selectedOrder?.deliveryFee || 333;
   const deliveryTime = selectedOrder?.deliveryTime;
   const deliveryAddress = selectedOrder?.address;
   const deliverContact = selectedOrder?.phone;
+
+  // Helper function to parse extraId_quantity strings
+  const parseExtraId = (extraIdStr: string): ParsedExtra => {
+    const [extraId, quantityStr] = extraIdStr.split('_');
+    return {
+      extraId,
+      quantity: parseInt(quantityStr, 10) || 1, // Default to 1 if parsing fails
+    };
+  };
 
   return (
     <>
@@ -714,19 +728,22 @@ export default function OrdersTab({
                     );
                   }
 
-                  const plasticExtra = fetchedExtras[structuredItem.extrasIds.find(id => fetchedExtras[id]?.name.toLowerCase().includes("plastic container")) || ""];
-                  const plasticQty = structuredItem.quantity <= 2 ? 1 : 2;
+                  // Parse extrasIds to extract extraId and quantity
+                  const parsedExtras = structuredItem.extrasIds.map(parseExtraId);
+
+                  // Find plastic container extra
+                  const plasticExtraEntry = parsedExtras.find((parsed) => fetchedExtras[parsed.extraId]?.name.toLowerCase().includes("plastic container"));
+                  const plasticExtra = plasticExtraEntry ? fetchedExtras[plasticExtraEntry.extraId] : null;
+                  const plasticQty = plasticExtraEntry ? plasticExtraEntry.quantity : 0;
 
                   const itemSubtotal = structuredItem.priceAtOrder * structuredItem.quantity;
-                  const optionalExtrasSubtotal = structuredItem.extrasIds.reduce((sum, extraId) => {
-                    const extra = fetchedExtras[extraId];
-                    if (extra && !extra.name.toLowerCase().includes("plastic container")) {
-                      return sum + (+(extra.price) * structuredItem.quantity);
+                  const extrasSubtotal = parsedExtras.reduce((sum, parsedExtra) => {
+                    const extra = fetchedExtras[parsedExtra.extraId];
+                    if (extra) {
+                      return sum + (+extra.price * parsedExtra.quantity);
                     }
                     return sum;
                   }, 0);
-                  const plasticSubtotal = (plasticExtra ? +plasticExtra.price * plasticQty : 0);
-                  const extrasSubtotal = optionalExtrasSubtotal + plasticSubtotal;
                   const lineTotal = itemSubtotal + extrasSubtotal;
 
                   return (
@@ -773,19 +790,19 @@ export default function OrdersTab({
                       </div>
 
                       {/* Extras Section */}
-                      {Array.isArray(structuredItem.extrasIds) && structuredItem.extrasIds.length > 0 && (
+                      {parsedExtras.length > 0 && (
                         <div className="p-4 sm:p-5 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/10 dark:to-purple-900/10 border-t-2 border-gray-200 dark:border-gray-700">
                           <div className="flex items-center gap-2 mb-3">
                             <Package className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                             <h5 className="text-sm font-bold text-gray-900 dark:text-white">
-                              Extras ({structuredItem.extrasIds.length})
+                              Extras ({parsedExtras.length})
                             </h5>
                           </div>
                           <div className="space-y-3">
-                            {structuredItem.extrasIds.map((extraId: string, extraIndex: number) => {
-                              const extra = fetchedExtras[extraId];
+                            {parsedExtras.map((parsedExtra, extraIndex) => {
+                              const extra = fetchedExtras[parsedExtra.extraId];
                               const isPlastic = extra?.name.toLowerCase().includes("plastic container");
-                              const extraQty = isPlastic ? plasticQty : structuredItem.quantity;
+                              const extraQty = parsedExtra.quantity;
                               const extraTotal = extra ? +extra.price * extraQty : 0;
                               return extra ? (
                                 <div
@@ -836,13 +853,13 @@ export default function OrdersTab({
                                   className="p-3 bg-gray-100 dark:bg-gray-700/50 rounded-xl text-center border border-gray-300 dark:border-gray-600"
                                 >
                                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    Extra not found
+                                    Extra not found (ID: {parsedExtra.extraId})
                                   </p>
                                 </div>
                               );
                             })}
                           </div>
-                          {structuredItem.extrasIds.length > 0 && (
+                          {parsedExtras.length > 0 && (
                             <div className="mt-4 pt-3 border-t-2 border-indigo-200 dark:border-indigo-800 flex justify-between items-center">
                               <span className="text-sm font-bold text-gray-900 dark:text-white">Extras Subtotal:</span>
                               <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
@@ -913,7 +930,7 @@ export default function OrdersTab({
               onClick={() => selectedOrderToDelete && handleDelete(selectedOrderToDelete.$id)}
               className="flex-1 h-12 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold"
             >
-             { isDeleting ? "Deleting...": "Delete Order"}
+              {isDeleting ? "Deleting..." : "Delete Order"}
             </Button>
           </DialogFooter>
         </DialogContent>

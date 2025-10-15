@@ -9,7 +9,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Minus, Plus, ShoppingCart, X, CheckCircle } from "lucide-react";
+import { Minus, Plus, ShoppingCart, X, CheckCircle, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
@@ -45,6 +45,10 @@ const AddToCartModal = () => {
   const maxInstructionsLength = 200;
   const { user } = useAuth();
   const userId = user?.userId;
+
+  const isDiscountItem = item.category === "discount";
+  const minOrderValue = item.minOrderValue || 0;
+  const isValidQuantity = !isDiscountItem || quantity >= minOrderValue;
 
 
   useEffect(() => {
@@ -141,8 +145,16 @@ const AddToCartModal = () => {
       return { ...prev, [extraId]: Math.max(0, current + delta) };
     });
   };
-
+  
   const handleAddToCart = async () => {
+    if (isDiscountItem && quantity < minOrderValue) {
+      toast.error(`Quantity cannot be less than minimum order value of ${minOrderValue} for this discounted item`, {
+        duration: 4000,
+        position: "top-right",
+      });
+      return;
+    }
+
     const newSelectedExtras: ISelectedExtra[] = [];
     if (requiresPlastic && plasticExtra) {
       newSelectedExtras.push({ extraId: plasticExtra.$id, quantity });
@@ -250,12 +262,13 @@ const AddToCartModal = () => {
         category: item.category,
         price: item.price,
         quantity,
-        totalPrice,
+        totalPrice:Number(totalPrice),
         restaurantId: item.restaurantId,
         specialInstructions,
         status: "pending",
         source: item.source,
-        selectedExtras: stringifiedNewSelectedExtras, // Already stringified
+        selectedExtras: stringifiedNewSelectedExtras, 
+        minOrderValue: item.source === "discount" ? item.minOrderValue : null,
       } as unknown as ICartItemFetched;
 
       dispatch(addOrder(newItem));
@@ -405,6 +418,14 @@ const AddToCartModal = () => {
                 <Plus className="w-5 h-5" />
               </button>
             </div>
+            {!isValidQuantity && (
+              <div className="mt-2 p-2 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                <div className="flex items-center gap-2 text-sm text-orange-800 dark:text-orange-300">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>Minimum order quantity for this discount: {minOrderValue}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {optionalExtras.length > 0 && (
@@ -594,8 +615,9 @@ const AddToCartModal = () => {
 
           <Button
             onClick={handleAddToCart}
+            disabled={!isValidQuantity}
             className={cn(
-              "w-full py-4 text-base font-bold rounded-xl transition-all duration-300 shadow-lg hover:shadow-2xl active:scale-95 touch-manipulation group",
+              "w-full py-4 text-base font-bold rounded-xl transition-all duration-300 shadow-lg hover:shadow-2xl active:scale-95 touch-manipulation group disabled:opacity-50 disabled:cursor-not-allowed",
               item.category === "veg"
                 ? "bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white"
                 : "bg-gradient-to-r from-orange-500 via-orange-600 to-red-500 hover:from-orange-600 hover:via-orange-700 hover:to-red-600 text-white"

@@ -16,6 +16,34 @@ const initialState: DiscountState = {
   error: null,
 };
 
+// Helper function to update isApproved for expired discounts
+const updateExpiredDiscounts = async (
+  databaseId: string,
+  discountsCollectionId: string,
+  discounts: IDiscountFetched[]
+) => {
+  const now = new Date().toISOString();
+  const expiredDiscounts = discounts.filter(
+    (discount) => new Date(discount.validTo) < new Date(now) && discount.isApproved
+  );
+
+  for (const discount of expiredDiscounts) {
+    try {
+      await databases.updateDocument(
+        databaseId,
+        discountsCollectionId,
+        discount.$id,
+        { isApproved: false }
+      );
+    } catch (error) {
+      console.error(
+        `Failed to update isApproved for discount ${discount.$id}:`,
+        error
+      );
+    }
+  }
+};
+
 // Async thunk for listing discounts
 export const listAsyncDiscounts = createAsyncThunk<
   IDiscountFetched[],
@@ -33,7 +61,23 @@ export const listAsyncDiscounts = createAsyncThunk<
         Query.equal("isActive", true), // Only active discounts
       ]
     );
-    return response.documents as IDiscountFetched[];
+
+    const discounts = response.documents as IDiscountFetched[];
+
+    // Update isApproved for expired discounts
+    await updateExpiredDiscounts(databaseId, discountsCollectionId, discounts);
+
+    // Fetch updated discounts after setting isApproved
+    const updatedResponse = await databases.listDocuments(
+      databaseId,
+      discountsCollectionId,
+      [
+        Query.orderDesc("validTo"),
+        Query.equal("isActive", true),
+      ]
+    );
+
+    return updatedResponse.documents as IDiscountFetched[];
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : "Unknown error";
     toast.error(`Failed to fetch discounts: ${errorMsg}`);
@@ -56,7 +100,7 @@ export const createAsyncDiscount = createAsyncThunk<
       const uploadedFile = await storage.createFile(
         discountBucketId,
         ID.unique(),
-        (data.image as FileList)[0] as File,
+        (data.image as FileList)[0] as File
       );
       imageId = uploadedFile.$id;
     }
@@ -81,8 +125,10 @@ export const createAsyncDiscount = createAsyncThunk<
         targetId: data.targetId,
         image: imageId,
         isActive: data.isActive ?? true,
+        isApproved: data.isApproved ?? false, // Set default to false for new discounts
         usageCount: 0,
-        extras: data.extras || [],  
+        extras: data.extras || [],
+        restaurantId: data.restaurantId || null,
       }
     );
 
@@ -96,17 +142,14 @@ export const createAsyncDiscount = createAsyncThunk<
 });
 
 // Async thunk for updating discount
-export const 
-updateAsyncDiscount = createAsyncThunk<
+export const updateAsyncDiscount = createAsyncThunk<
   IDiscountFetched,
   { id: string; data: Partial<Omit<IDiscount, "image"> & { extras?: string[] }>; imageFile?: File | null },
   { rejectValue: string }
 >("discount/updateDiscount", async ({ id, data, imageFile }, { rejectWithValue }) => {
   try {
     const { databaseId, discountsCollectionId, discountBucketId } = validateEnv();
-
     let imageId: string | undefined; // If not updating image, keep existing
-
     if (imageFile && imageFile instanceof File) {
       // Upload new image if provided
       const uploadedFile = await storage.createFile(
@@ -121,7 +164,7 @@ updateAsyncDiscount = createAsyncThunk<
     const updatePayload = {
       ...data,
       ...(imageId !== undefined && { image: imageId }),
-      extras: data.extras !== undefined ? data.extras : undefined,  // Ensure extras is array or undefined
+      extras: data.extras !== undefined ? data.extras : undefined, // Ensure extras is array or undefined
     };
 
     const updatedDocument = await databases.updateDocument(
@@ -136,6 +179,7 @@ updateAsyncDiscount = createAsyncThunk<
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : "Unknown error";
     toast.error(`Failed to update discount: ${errorMsg}. Check extras IDs if provided.`);
+    console.error("Error updating discount:", error);
     return rejectWithValue(errorMsg);
   }
 });

@@ -24,7 +24,6 @@ export const createOrderAsync = createAsyncThunk<
   try {
     const { databaseId, orderId } = validateEnv();
     const { $id, ...data } = orderData as ICartItemOrder & { $id?: string }; 
-
     const response = await databases.createDocument(
       databaseId,
       orderId,

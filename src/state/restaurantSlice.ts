@@ -104,20 +104,14 @@ export const getAsyncRestaurantById = createAsyncThunk<
 >("restaurant/getRestaurantById", async (id, { rejectWithValue }) => {
   try {
     const { databaseId, restaurantsCollectionId } = validateEnv();
-
     const response = await databases.getDocument(
       databaseId,
       restaurantsCollectionId,
       id
     );
-
     return response as IRestaurantFetched;
   } catch (error) {
-    toast.error(
-      `Failed to fetch restaurant: ${
-        error instanceof Error ? error.message : "Failed to fetch restaurant"
-      }`
-    );
+    console.error(error);
     return rejectWithValue(
       error instanceof Error ? error.message : "Failed to fetch restaurant"
     );

@@ -155,7 +155,6 @@ export const deleteAsyncPopularItem = createAsyncThunk<
 >("popularItem/deletePopularItem", async ({ itemId, imageId }, { rejectWithValue }) => {
   try {
     const { databaseId, popularItemsCollectionId, popularBucketId } = validateEnv();
-
     // Delete image if exists
     if (imageId) {
       await storage.deleteFile(popularBucketId, imageId);

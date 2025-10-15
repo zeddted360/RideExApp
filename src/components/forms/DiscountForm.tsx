@@ -1,5 +1,5 @@
 "use client";
-import React, { ChangeEvent, useState } from "react";
+import React, { ChangeEvent, useState, useEffect } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,19 +7,53 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, PlusCircle, Percent, DollarSign, Calendar, Upload, X, Info, Sparkles } from "lucide-react";
+import { Loader2, PlusCircle, Percent, Calendar, Upload, X, Info, Sparkles, AlertCircle, User } from "lucide-react";
 import FileInput from "@/components/FileInput";
 import { DiscountFormData } from "@/utils/schema";
+import { IRestaurantFetched } from "../../../types/types";
 
 interface DiscountFormProps {
   form: UseFormReturn<DiscountFormData>;
   targetOptions: { label: string; value: string }[];
   onSubmit: (data: DiscountFormData) => void;
   loading: boolean;
+   restaurants: IRestaurantFetched[];
 }
 
-const DiscountForm = ({ form, targetOptions, onSubmit, loading }: DiscountFormProps) => {
+const DiscountForm = ({ form, targetOptions, onSubmit, loading,restaurants }: DiscountFormProps) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [calculationWarning, setCalculationWarning] = useState<string | null>(null);
+  const { watch, setValue, clearErrors, setError } = form;
+  const originalPrice = watch("originalPrice");
+  const discountType = watch("discountType");
+  const discountValue = watch("discountValue");
+
+  useEffect(() => {
+    if (originalPrice && discountValue > 0) {
+      let calculated: number;
+      let warning: string | null = null;
+      if (discountType === "percentage") {
+        if (discountValue > 100) {
+          warning = "Percentage discount cannot exceed 100%.";
+          calculated = 0;
+        } else {
+          calculated = Math.round((originalPrice * (1 - discountValue / 100)) * 100) / 100;
+        }
+      } else { // fixed
+        if (discountValue > originalPrice) {
+          warning = "Fixed discount cannot exceed original price.";
+          calculated = 0;
+        } else {
+          calculated = Math.round((originalPrice - discountValue) * 100) / 100;
+        }
+      }
+      setValue("discountedPrice", calculated, { shouldValidate: true });
+      setCalculationWarning(warning);
+    } else {
+      setValue("discountedPrice", 0);
+      setCalculationWarning(null);
+    }
+  }, [originalPrice, discountValue, discountType, setValue]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -45,7 +79,19 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading }: DiscountFormPr
     return form.formState.touchedFields[fieldName];
   };
 
-  const discountType = form.watch("discountType");
+  const handleDiscountValueChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const val = parseFloat(e.target.value) || 0;
+    if (discountType === "percentage" && val > 100) {
+      setError("discountValue", { type: "custom", message: "Percentage discount cannot exceed 100%" });
+    } else if (discountType === "fixed" && val > originalPrice) {
+      setError("discountValue", { type: "custom", message: "Fixed discount cannot exceed original price" });
+    } else {
+      clearErrors("discountValue");
+    }
+    form.setValue("discountValue", val, { shouldValidate: true });
+  };
+
+  const hasValidationError = !!getFieldError("discountValue") || !!calculationWarning;
 
   return (
     <Card className="w-full bg-white/80 dark:bg-gray-900/80 shadow-2xl rounded-2xl border-0 py-4">
@@ -100,6 +146,41 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading }: DiscountFormPr
                 )}
               </div>
 
+              {/* Restaurant Field */}
+              <div>
+                <Label htmlFor="restaurantId" className="flex items-center gap-1">
+                  Restaurant <span className="text-red-500">*</span>
+                </Label>
+                <select
+                  id="restaurantId"
+                  {...form.register("restaurantId")}
+                  className={`h-12 w-full rounded-md border mt-1.5 transition-all ${
+                    getFieldError("restaurantId")
+                      ? "border-red-500"
+                      : "border-gray-300 dark:border-gray-700"
+                  } bg-white dark:bg-gray-800 px-3 focus:ring-2 focus:ring-orange-500 focus:outline-none`}
+                  disabled={loading}
+                >
+                  <option value="">Select Restaurant</option>
+                  {restaurants.length === 0 ? (
+                    <option disabled>No restaurants available</option>
+                  ) : (
+                    restaurants.map((r) => (
+                      <option key={r.$id} value={r.$id}>
+                        {r.name}
+                      </option>
+                    ))
+                  )}
+                </select>
+                {getFieldError("restaurantId") && (
+                  <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
+                    <Info className="w-3 h-3" />
+                    {getFieldError("restaurantId")?.message as string}
+                  </p>
+                )}
+              </div>
+
+
               {/* Description Field */}
               <div className="md:col-span-2">
                 <Label htmlFor="description" className="flex items-center gap-1">
@@ -146,7 +227,11 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading }: DiscountFormPr
                 <Label htmlFor="discountType" className="flex items-center gap-1">
                   Discount Type <span className="text-red-500">*</span>
                 </Label>
-                <Select onValueChange={(value) => form.setValue("discountType", value as "percentage" | "fixed")}>
+                <Select onValueChange={(value) => {
+                  form.setValue("discountType", value as "percentage" | "fixed");
+                  clearErrors("discountValue");
+                  setCalculationWarning(null);
+                }}>
                   <SelectTrigger
                     className={`h-12 mt-1.5 transition-all border ${
                       getFieldError("discountType")
@@ -182,8 +267,11 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading }: DiscountFormPr
                     id="discountValue"
                     type="number"
                     step="0.01"
-                    {...form.register("discountValue", { valueAsNumber: true })}
+                    {...form.register("discountValue", { 
+                      valueAsNumber: true,
+                    })}
                     placeholder={discountType === "percentage" ? "20" : "200"}
+                    onChange={handleDiscountValueChange}
                     className={`h-12 pr-8 transition-all ${
                       getFieldError("discountValue")
                         ? "border-red-500 focus:ring-red-500"
@@ -198,12 +286,18 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading }: DiscountFormPr
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {discountType === "percentage" ? "Percentage off" : "Fixed amount off"}
+                  {discountType === "percentage" ? "Percentage off (max 100%)" : "Fixed amount off"}
                 </p>
                 {getFieldError("discountValue") && (
                   <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
                     <Info className="w-3 h-3" />
                     {getFieldError("discountValue")?.message as string}
+                  </p>
+                )}
+                {calculationWarning && (
+                  <p className="text-orange-500 text-xs mt-1.5 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    {calculationWarning}
                   </p>
                 )}
               </div>
@@ -214,13 +308,17 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading }: DiscountFormPr
                   Original Price <span className="text-red-500">*</span>
                 </Label>
                 <div className="relative mt-1.5">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₦</span>
                   <Input
                     id="originalPrice"
                     type="number"
                     step="0.01"
                     {...form.register("originalPrice", { valueAsNumber: true })}
                     placeholder="1000"
+                    onChange={() => {
+                      clearErrors("discountValue");
+                      setCalculationWarning(null);
+                    }}
                     className={`h-12 pl-8 transition-all ${
                       getFieldError("originalPrice")
                         ? "border-red-500 focus:ring-red-500"
@@ -243,27 +341,26 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading }: DiscountFormPr
               {/* Discounted Price */}
               <div>
                 <Label htmlFor="discountedPrice" className="flex items-center gap-1">
-                  Discounted Price <span className="text-red-500">*</span>
+                  Discounted Price (Auto-calculated)
                 </Label>
                 <div className="relative mt-1.5">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₦</span>
                   <Input
                     id="discountedPrice"
                     type="number"
                     step="0.01"
+                    value={watch("discountedPrice")}
                     {...form.register("discountedPrice", { valueAsNumber: true })}
                     placeholder="800"
-                    className={`h-12 pl-8 transition-all ${
+                    className={`h-12 pl-8 transition-all bg-gray-100 dark:bg-gray-700 cursor-not-allowed ${
                       getFieldError("discountedPrice")
                         ? "border-red-500 focus:ring-red-500"
-                        : isFieldTouched("discountedPrice")
-                        ? "border-green-500 focus:ring-green-500"
                         : "focus:ring-orange-500"
                     }`}
-                    disabled={loading}
+                    disabled={true}
                   />
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Final price after discount</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Final price after discount (read-only)</p>
                 {getFieldError("discountedPrice") && (
                   <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
                     <Info className="w-3 h-3" />
@@ -346,7 +443,6 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading }: DiscountFormPr
                   Min Order Value <span className="text-red-500">*</span>
                 </Label>
                 <div className="relative mt-1.5">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <Input
                     id="minOrderValue"
                     type="number"
@@ -592,6 +688,8 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading }: DiscountFormPr
               onClick={() => {
                 form.reset();
                 setImagePreview(null);
+                setCalculationWarning(null);
+                clearErrors();
               }}
               disabled={loading}
               className="sm:w-auto"
@@ -600,8 +698,8 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading }: DiscountFormPr
             </Button>
             <Button
               type="submit"
-              className="flex items-center justify-center gap-2 px-8 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 sm:w-auto"
-              disabled={loading}
+              className="flex items-center justify-center gap-2 px-8 bg-gradient-to-r from-orange-500 to-yellow-500 hover:from-orange-600 hover:to-yellow-600 disabled:from-gray-400 disabled:to-gray-500 sm:w-auto"
+              disabled={loading || hasValidationError}
             >
               {loading ? (
                 <>

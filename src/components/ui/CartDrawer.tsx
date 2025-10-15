@@ -187,7 +187,23 @@ const CartDrawer = () => {
 
   const handleUpdateQuantity = useCallback(
     debounce(async (order: ICartItemFetched, change: number) => {
+      const isDiscountItem = order.source === "discount";
+      const minOrderValue = order.minOrderValue || 0;
       const newQuantity = Math.max(0, order.quantity + change);
+
+
+      if (isDiscountItem && newQuantity > 0 && newQuantity < minOrderValue) {
+        console.log("Quantity change blocked: below minimum order value");
+        toast.error(`Quantity cannot be less than minimum order value of ${minOrderValue} for this discounted item`, {
+          duration: 4000,
+          position: "top-right",
+        });
+        return;
+      }
+
+      // Optimistic update only if valid
+      dispatch(updateQuantity({ orderId: order.$id, change }));
+
       const newTotalPrice = calculateNewTotalPrice(order, newQuantity);
 
       // Parse and update selectedExtras quantities for compulsory items
@@ -213,8 +229,6 @@ const CartDrawer = () => {
       }
 
       const stringifiedSelectedExtras = updatedSelectedExtras.map(e => JSON.stringify(e));
-
-      dispatch(updateQuantity({ orderId: order.$id, change }));
 
       if (newQuantity === 0) {
         setDeletingItems((prev) => new Set(prev).add(order.$id));
@@ -380,6 +394,8 @@ const CartDrawer = () => {
                 const isDeleting = deletingItems.has(item.$id);
                 const itemExtras = getItemExtras(item);
                 const hasExtras = itemExtras.length > 0;
+                const isDiscountItem = item.source === "discount";
+                const minOrderValue = item.minOrderValue || 0;
 
                 return (
                   <div
@@ -397,6 +413,7 @@ const CartDrawer = () => {
                               ? validateEnv().featuredBucketId
                               : item.source === "popular"
                               ? validateEnv().popularBucketId
+                              :item.source === "discount" ? validateEnv().discountBucketId
                               : validateEnv().menuBucketId,
                             item.image
                           )}
@@ -445,6 +462,14 @@ const CartDrawer = () => {
                             "{item.specialInstructions}"
                           </p>
                         )}
+                        {isDiscountItem && item.quantity < minOrderValue && (
+                          <div className="mt-2 p-2 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                            <div className="flex items-center gap-2 text-sm text-orange-800 dark:text-orange-300">
+                              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                              <span>Minimum order quantity: {minOrderValue}</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex flex-col gap-2">
@@ -454,7 +479,7 @@ const CartDrawer = () => {
                             size="icon"
                             onClick={() => handleUpdateQuantity(item, -1)}
                             className="w-8 h-8 rounded-full hover:bg-white dark:hover:bg-gray-600"
-                            disabled={loading || item.quantity <= 1 || isDeleting}
+                            disabled={loading  || isDeleting}
                             aria-label={`Decrease quantity of ${item.name}`}
                           >
                             <Minus className="w-4 h-4" />

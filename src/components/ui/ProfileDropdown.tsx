@@ -240,7 +240,6 @@ const ProfileDropdown = ({ children }: ProfileDropdownProps) => {
     setValidationErrors({});
   };
 
-console.log("the user role is :", user?.role);  
 
   const cancelEditing = () => {
     setEditingField(null);
