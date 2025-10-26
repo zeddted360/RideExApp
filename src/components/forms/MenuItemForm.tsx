@@ -9,17 +9,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, PlusCircle, Utensils, Info, Upload, X, DollarSign, Clock, Star } from "lucide-react";
 import FileInput from "@/components/FileInput";
 import { MenuItemFormData } from "@/utils/schema";
-import { IRestaurantFetched } from "../../../types/types";
+import { IRestaurantFetched, IFetchedExtras } from "../../../types/types";
+import toast from "react-hot-toast";
+import AddExtrasModal from "../vendor/AddExtrasModal";
 
 interface MenuItemFormProps {
   form: UseFormReturn<MenuItemFormData>;
   restaurants: IRestaurantFetched[];
   onSubmit: (data: MenuItemFormData) => void;
   loading: boolean;
+  onAddExtras: (selectedExtras: IFetchedExtras[]) => void;
 }
 
-const MenuItemForm = ({ form, restaurants, onSubmit, loading }: MenuItemFormProps) => {
+const MenuItemForm = ({ form, restaurants, onSubmit, loading, onAddExtras }: MenuItemFormProps) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isExtrasModalOpen, setIsExtrasModalOpen] = useState(false);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -330,6 +334,22 @@ const MenuItemForm = ({ form, restaurants, onSubmit, loading }: MenuItemFormProp
             </div>
           </div>
 
+          {/* Extras Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+              <PlusCircle className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                Add Extras
+              </h3>
+            </div>
+            <div>
+              <AddExtrasModal
+                onAddExtras={onAddExtras}
+                loading={loading}
+              />
+            </div>
+          </div>
+
           {/* Image Upload Section */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
@@ -364,7 +384,7 @@ const MenuItemForm = ({ form, restaurants, onSubmit, loading }: MenuItemFormProp
                   <FileInput
                     field={{
                       ...form.register("image"),
-                      onChange: (e:ChangeEvent<HTMLInputElement>) => {
+                      onChange: (e: ChangeEvent<HTMLInputElement>) => {
                         form.register("image").onChange(e);
                         handleImageChange(e);
                       },

@@ -6,19 +6,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, PlusCircle, Flame, DollarSign, Upload, X, Info, Sparkles } from "lucide-react";
+import { Loader2, PlusCircle, Flame, DollarSign, Upload, X, Info, Sparkles, Plus } from "lucide-react";
 import FileInput from "@/components/FileInput";
 import { PopularItemFormData } from "@/utils/schema";
-import { IRestaurantFetched } from "../../../types/types";
+import { IRestaurantFetched, IFetchedExtras } from "../../../types/types";
+import AddExtrasModal from "../vendor/AddExtrasModal";
 
 interface PopularItemFormProps {
   form: UseFormReturn<PopularItemFormData>;
   restaurants: IRestaurantFetched[];
   onSubmit: (data: PopularItemFormData) => void;
   loading: boolean;
+  onAddExtras: (selectedExtras: IFetchedExtras[]) => void;
 }
 
-const PopularItemForm = ({ form, restaurants, onSubmit, loading }: PopularItemFormProps) => {
+const PopularItemForm = ({ form, restaurants, onSubmit, loading, onAddExtras }: PopularItemFormProps) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -393,6 +395,22 @@ const PopularItemForm = ({ form, restaurants, onSubmit, loading }: PopularItemFo
                   </p>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* Extras Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+              <Plus className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                Add Extras
+              </h3>
+            </div>
+            <div>
+              <AddExtrasModal
+                onAddExtras={onAddExtras}
+                loading={loading}
+              />
             </div>
           </div>
 

@@ -19,13 +19,38 @@ import {
   listAsyncRestaurants,
   getAsyncRestaurantById,
 } from "@/state/restaurantSlice";
-import { createAsyncMenuItem, listAsyncMenusItem, deleteAsyncMenuItem } from "@/state/menuSlice";
-import { createAsyncDiscount, listAsyncDiscounts, deleteAsyncDiscount } from "@/state/discountSlice";
+import {
+  createAsyncMenuItem,
+  listAsyncMenusItem,
+  deleteAsyncMenuItem,
+} from "@/state/menuSlice";
+import {
+  createAsyncDiscount,
+  listAsyncDiscounts,
+  deleteAsyncDiscount,
+} from "@/state/discountSlice";
 import toast from "react-hot-toast";
-import { createAsyncFeaturedItem, listAsyncFeaturedItems, deleteAsyncFeaturedItem } from "@/state/featuredSlice";
-import { createAsyncPopularItem, listAsyncPopularItems, deleteAsyncPopularItem } from "@/state/popularSlice";
+import {
+  createAsyncFeaturedItem,
+  listAsyncFeaturedItems,
+  deleteAsyncFeaturedItem,
+} from "@/state/featuredSlice";
+import {
+  createAsyncPopularItem,
+  listAsyncPopularItems,
+  deleteAsyncPopularItem,
+} from "@/state/popularSlice";
 import { fetchVendorByIdAsync } from "@/state/vendorSlice";
-import { IDiscount, IRestaurantFetched, IMenuItemFetched, IFeaturedItemFetched, IPopularItemFetched, IFetchedExtras, IDiscountFetched, IVendorFetched } from "../../../types/types";
+import {
+  IDiscount,
+  IRestaurantFetched,
+  IMenuItemFetched,
+  IFeaturedItemFetched,
+  IPopularItemFetched,
+  IFetchedExtras,
+  IDiscountFetched,
+  IVendorFetched,
+} from "../../../types/types";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/authContext";
 import MenuItemForm from "../forms/MenuItemForm";
@@ -47,18 +72,36 @@ import EditMenuTab from "./EditMenuTab";
 
 const AddFoodItemForm = () => {
   const [activeTab, setActiveTab] = useState<
-    "account" | "menu-item" | "featured-item" | "popular-item" | "discount" | "edit-menu" | "extras"
+    | "account"
+    | "menu-item"
+    | "featured-item"
+    | "popular-item"
+    | "discount"
+    | "edit-menu"
+    | "extras"
   >("account");
-  const [subActiveTab, setSubActiveTab] = useState<"menu" | "featured" | "popular" | "discount">("menu");
+  const [subActiveTab, setSubActiveTab] = useState<
+    "menu" | "featured" | "popular" | "discount"
+  >("menu");
   const [loading, setLoading] = useState(false);
   const [searchCategory, setSearchCategory] = useState("");
-  const [vendorStatus, setVendorStatus] = useState<'pending' | "approved" | "rejected" | null>(null);
+  const [vendorStatus, setVendorStatus] = useState<
+    "pending" | "approved" | "rejected" | null
+  >(null);
   const [isCheckingAccess, setIsCheckingAccess] = useState(true);
-  const [filteredRestaurants, setFilteredRestaurants] = useState<IRestaurantFetched[]>([]); // Added state
+  const [filteredRestaurants, setFilteredRestaurants] = useState<
+    IRestaurantFetched[]
+  >([]); // Added state
 
   // Edit state
   const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<IMenuItemFetched | IFeaturedItemFetched | IPopularItemFetched | IDiscountFetched | null>(null);
+  const [selectedItem, setSelectedItem] = useState<
+    | IMenuItemFetched
+    | IFeaturedItemFetched
+    | IPopularItemFetched
+    | IDiscountFetched
+    | null
+  >(null);
   const [editFormData, setEditFormData] = useState<any>({});
   const [newImage, setNewImage] = useState<File | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -67,15 +110,27 @@ const AddFoodItemForm = () => {
   const [restaurantName, setRestaurantName] = useState<string>("");
 
   // Extras state for menu items
-  const [menuSelectedExtras, setMenuSelectedExtras] = useState<IFetchedExtras[]>([]);
+  const [menuSelectedExtras, setMenuSelectedExtras] = useState<
+    IFetchedExtras[]
+  >([]);
   // Extras state for featured items
-  const [featuredSelectedExtras, setFeaturedSelectedExtras] = useState<IFetchedExtras[]>([]);
+  const [featuredSelectedExtras, setFeaturedSelectedExtras] = useState<
+    IFetchedExtras[]
+  >([]);
   // Extras state for popular items
-  const [popularSelectedExtras, setPopularSelectedExtras] = useState<IFetchedExtras[]>([]);
+  const [popularSelectedExtras, setPopularSelectedExtras] = useState<
+    IFetchedExtras[]
+  >([]);
+  //Extras for discount
+  const [discountSelectedExtras, setDiscountSelectedExtras] = useState<
+    IFetchedExtras[]
+  >([]);
 
   const dispatch = useDispatch<AppDispatch>();
   const { restaurants } = useSelector((state: RootState) => state.restaurant);
-  const { featuredItems } = useSelector((state: RootState) => state.featuredItem);
+  const { featuredItems } = useSelector(
+    (state: RootState) => state.featuredItem
+  );
   const { popularItems } = useSelector((state: RootState) => state.popularItem);
   const { menuItems } = useSelector((state: RootState) => state.menuItem);
   const { discounts } = useSelector((state: RootState) => state.discounts);
@@ -131,13 +186,17 @@ const AddFoodItemForm = () => {
 
   // Update filteredRestaurants when restaurants or searchCategory changes
   useEffect(() => {
-    const vendorRestaurants = restaurants.filter((r: IRestaurantFetched) => r.vendorId === user?.userId);
+    const vendorRestaurants = restaurants.filter(
+      (r: IRestaurantFetched) => r.vendorId === user?.userId
+    );
     if (!searchCategory.trim()) {
       setFilteredRestaurants(vendorRestaurants);
     } else {
       setFilteredRestaurants(
         vendorRestaurants.filter((restaurant) =>
-          restaurant.category.toLowerCase().includes(searchCategory.toLowerCase())
+          restaurant.category
+            .toLowerCase()
+            .includes(searchCategory.toLowerCase())
         )
       );
     }
@@ -145,10 +204,14 @@ const AddFoodItemForm = () => {
 
   const getRestaurantName = async (restaurantId: string): Promise<string> => {
     try {
-      const response = await dispatch(getAsyncRestaurantById(restaurantId)).unwrap();
+      const response = await dispatch(
+        getAsyncRestaurantById(restaurantId)
+      ).unwrap();
       return response.name || "Unknown restaurant";
     } catch (error) {
-      console.error(error instanceof Error ? error.message : "Could not fetch restaurant");
+      console.error(
+        error instanceof Error ? error.message : "Could not fetch restaurant"
+      );
       return "Unknown restaurant";
     }
   };
@@ -164,31 +227,35 @@ const AddFoodItemForm = () => {
   }, [editFormData.restaurantId, showEditModal, dispatch]);
 
   // Filtered items for edit menu
-  const filteredMenuItems = useMemo(() =>
-    menuItems.filter((item: IMenuItemFetched) =>
-      restaurants.some((r: IRestaurantFetched) => r.$id === item.restaurantId)
-    ),
+  const filteredMenuItems = useMemo(
+    () =>
+      menuItems.filter((item: IMenuItemFetched) =>
+        restaurants.some((r: IRestaurantFetched) => r.$id === item.restaurantId)
+      ),
     [menuItems, restaurants]
   );
 
-  const filteredFeaturedItems = useMemo(() =>
-    featuredItems.filter((item: IFeaturedItemFetched) =>
-      restaurants.some((r: IRestaurantFetched) => r.$id === item.restaurantId)
-    ),
+  const filteredFeaturedItems = useMemo(
+    () =>
+      featuredItems.filter((item: IFeaturedItemFetched) =>
+        restaurants.some((r: IRestaurantFetched) => r.$id === item.restaurantId)
+      ),
     [featuredItems, restaurants]
   );
 
-  const filteredPopularItems = useMemo(() =>
-    popularItems.filter((item: IPopularItemFetched) =>
-      restaurants.some((r: IRestaurantFetched) => r.$id === item.restaurantId)
-    ),
+  const filteredPopularItems = useMemo(
+    () =>
+      popularItems.filter((item: IPopularItemFetched) =>
+        restaurants.some((r: IRestaurantFetched) => r.$id === item.restaurantId)
+      ),
     [popularItems, restaurants]
   );
 
-  const filteredDiscounts = useMemo(() =>
-    discounts.filter((item: IDiscountFetched) =>
-      restaurants.some((r: IRestaurantFetched) => r.$id === item.targetId)
-    ),
+  const filteredDiscounts = useMemo(
+    () =>
+      discounts.filter((item: IDiscountFetched) =>
+        restaurants.some((r: IRestaurantFetched) => r.$id === item.targetId)
+      ),
     [discounts, restaurants]
   );
 
@@ -258,19 +325,25 @@ const AddFoodItemForm = () => {
       targetId: "",
       image: undefined,
       isActive: true,
+      restaurantId: "",
     },
     mode: "onChange",
   });
 
   // Dynamic target options for DiscountForm
-  const [targetOptions, setTargetOptions] = useState<{ label: string; value: string }[]>([]);
+  const [targetOptions, setTargetOptions] = useState<
+    { label: string; value: string }[]
+  >([]);
   const appliesTo = discountForm.watch("appliesTo");
 
   useEffect(() => {
     let options: { label: string; value: string }[] = [];
     switch (appliesTo) {
       case "restaurant":
-        options = restaurants.map((r: IRestaurantFetched) => ({ label: r.name, value: r.$id }));
+        options = restaurants.map((r: IRestaurantFetched) => ({
+          label: r.name,
+          value: r.$id,
+        }));
         break;
       case "item":
         options = [];
@@ -366,9 +439,11 @@ const AddFoodItemForm = () => {
         image: data.image,
         isActive: data.isActive,
         restaurantId: data.restaurantId,
+        extras: discountSelectedExtras.map((extra) => extra.$id),
       };
       await dispatch(createAsyncDiscount(discountData)).unwrap();
       discountForm.reset();
+      setDiscountSelectedExtras([]);
       toast.success("Discount added successfully!");
     } catch (error) {
       toast.error("Failed to add discount");
@@ -378,7 +453,14 @@ const AddFoodItemForm = () => {
   };
 
   // Edit handlers
-  const handleEdit = (item: IMenuItemFetched | IFeaturedItemFetched | IPopularItemFetched | IDiscountFetched, type: "menu" | "featured" | "popular" | "discount") => {
+  const handleEdit = (
+    item:
+      | IMenuItemFetched
+      | IFeaturedItemFetched
+      | IPopularItemFetched
+      | IDiscountFetched,
+    type: "menu" | "featured" | "popular" | "discount"
+  ) => {
     setSelectedItem(item);
     let formData: any = {
       isApproved: item.isApproved,
@@ -460,13 +542,22 @@ const AddFoodItemForm = () => {
       const subType = subActiveTab;
       switch (subType) {
         case "menu":
-          action = deleteAsyncMenuItem({ itemId: selectedItem.$id, imageId: (selectedItem as IMenuItemFetched).image });
+          action = deleteAsyncMenuItem({
+            itemId: selectedItem.$id,
+            imageId: (selectedItem as IMenuItemFetched).image,
+          });
           break;
         case "featured":
-          action = deleteAsyncFeaturedItem({ itemId: selectedItem.$id, imageId: (selectedItem as IFeaturedItemFetched).image });
+          action = deleteAsyncFeaturedItem({
+            itemId: selectedItem.$id,
+            imageId: (selectedItem as IFeaturedItemFetched).image,
+          });
           break;
         case "popular":
-          action = deleteAsyncPopularItem({ itemId: selectedItem.$id, imageId: (selectedItem as IPopularItemFetched).image });
+          action = deleteAsyncPopularItem({
+            itemId: selectedItem.$id,
+            imageId: (selectedItem as IPopularItemFetched).image,
+          });
           break;
         case "discount":
           action = deleteAsyncDiscount(selectedItem.$id);
@@ -507,23 +598,48 @@ const AddFoodItemForm = () => {
     if (activeTab === "edit-menu") {
       return "Edit Menu";
     }
-    return `Add New ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1).replace('-', ' ')}`;
+    return `Add New ${
+      activeTab.charAt(0).toUpperCase() + activeTab.slice(1).replace("-", " ")
+    }`;
   };
 
-  const { menuBucketId, popularBucketId, featuredBucketId, discountBucketId } = validateEnv();
+  const { menuBucketId, popularBucketId, featuredBucketId, discountBucketId } =
+    validateEnv();
 
-  const getBucketId = (type: "menu" | "featured" | "popular" | "discount"): string => {
-    return type === "menu" ? menuBucketId : type === "featured" ? featuredBucketId : type === "discount" ? discountBucketId : popularBucketId;
+  const getBucketId = (
+    type: "menu" | "featured" | "popular" | "discount"
+  ): string => {
+    return type === "menu"
+      ? menuBucketId
+      : type === "featured"
+      ? featuredBucketId
+      : type === "discount"
+      ? discountBucketId
+      : popularBucketId;
   };
 
-  const renderItemCard = (item: IMenuItemFetched | IPopularItemFetched | IFeaturedItemFetched | IDiscountFetched, type: "menu" | "featured" | "popular" | "discount") => {
-    let displayName = item.name || (item as IDiscountFetched).title || "Unnamed";
-    let displayDescription = item.description || 'No description available.';
-    let displayCategory = item.category || (type === "discount" ? (item as IDiscountFetched).appliesTo : undefined);
+  const renderItemCard = (
+    item:
+      | IMenuItemFetched
+      | IPopularItemFetched
+      | IFeaturedItemFetched
+      | IDiscountFetched,
+    type: "menu" | "featured" | "popular" | "discount"
+  ) => {
+    let displayName =
+      item.name || (item as IDiscountFetched).title || "Unnamed";
+    let displayDescription = item.description || "No description available.";
+    let displayCategory =
+      item.category ||
+      (type === "discount" ? (item as IDiscountFetched).appliesTo : undefined);
     let displayPrice = item.price;
     if (type === "discount") {
       const discount = item as IDiscountFetched;
-      displayPrice = discount.discountedPrice ? `₦${discount.discountedPrice}` : `-${discount.discountValue}${discount.discountType === "percentage" ? "%" : "₦"}`;
+      displayPrice = discount.discountedPrice
+        ? `₦${discount.discountedPrice}`
+        : `-${discount.discountValue}${
+            discount.discountType === "percentage" ? "%" : "₦"
+          }`;
     }
     return (
       <div className="group flex bg-white dark:bg-gray-800 rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 w-full h-[240px] border border-gray-200 dark:border-gray-700">
@@ -607,7 +723,7 @@ const AddFoodItemForm = () => {
     if (user?.role === "admin") {
       return allTabs;
     }
-    return allTabs.filter(tab => tab.id === "menu" || tab.id === "discount");
+    return allTabs.filter((tab) => tab.id === "menu" || tab.id === "discount");
   }, [user?.role]);
 
   // Show loader while checking access
@@ -647,66 +763,59 @@ const AddFoodItemForm = () => {
         )}
         {activeTab === "menu-item" && (
           <div className="space-y-6">
-            <AddExtrasModal
-              onAddExtras={(selectedExtras) => {
-                setMenuSelectedExtras(selectedExtras);
-                console.log("Selected extras for menu item:", selectedExtras);
-                toast.success(`${selectedExtras.length} extras added!`);
-              }}
-            />
             <MenuItemForm
               form={menuItemForm}
-              restaurants={restaurants}
+              restaurants={filteredRestaurants}
               onSubmit={handleMenuItemSubmit}
               loading={loading}
+              onAddExtras={(selectedExtras) => {
+                setMenuSelectedExtras(selectedExtras);
+                toast.success(`${selectedExtras.length} extras added!`);
+              }}
             />
           </div>
         )}
         {activeTab === "featured-item" && (
           <div className="space-y-6">
-            <AddExtrasModal
+            <FeaturedItemForm
+              form={featuredItemForm}
+              restaurants={filteredRestaurants}
+              onSubmit={handleFeaturedItemSubmit}
+              loading={loading}
               onAddExtras={(selectedExtras) => {
                 setFeaturedSelectedExtras(selectedExtras);
                 toast.success(`${selectedExtras.length} extras added!`);
               }}
             />
-            <FeaturedItemForm
-              form={featuredItemForm}
-              restaurants={restaurants}
-              onSubmit={handleFeaturedItemSubmit}
-              loading={loading}
-            />
           </div>
         )}
         {activeTab === "popular-item" && (
           <div className="space-y-6">
-            <AddExtrasModal
+            <PopularItemForm
+              form={popularItemForm}
+              restaurants={filteredRestaurants}
+              onSubmit={handlePopularItemSubmit}
+              loading={loading}
               onAddExtras={(selectedExtras) => {
                 setPopularSelectedExtras(selectedExtras);
                 toast.success(`${selectedExtras.length} extras added!`);
               }}
             />
-            <PopularItemForm
-              form={popularItemForm}
-              restaurants={restaurants}
-              onSubmit={handlePopularItemSubmit}
-              loading={loading}
-            />
           </div>
         )}
         {activeTab === "discount" && (
           <div className="space-y-6">
-            <AddExtrasModal
-              onAddExtras={(selectedExtras) => {
-                toast.success(`${selectedExtras.length} extras added!`);
-              }}
-            />
             <DiscountForm
               form={discountForm}
               targetOptions={targetOptions}
               onSubmit={handleDiscountSubmit}
               loading={loading}
-              restaurants={restaurants}
+              restaurants={filteredRestaurants}
+              onAddExtras={(selectedExtras) => {
+                setDiscountSelectedExtras(selectedExtras);
+                console.log("Selected extras for discount:", selectedExtras);
+                toast.success(`${selectedExtras.length} extras added!`);
+              }}
             />
           </div>
         )}

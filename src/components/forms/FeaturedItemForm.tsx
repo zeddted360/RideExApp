@@ -6,19 +6,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, PlusCircle, Star, Info, Upload, X, DollarSign, Sparkles } from "lucide-react";
+import { Loader2, PlusCircle, Star, Info, Upload, X, DollarSign, Sparkles, Plus } from "lucide-react";
 import FileInput from "@/components/FileInput";
 import { FeaturedItemFormData } from "@/utils/schema";
-import { IRestaurant, IRestaurantFetched } from "../../../types/types";
+import { IRestaurantFetched, IFetchedExtras } from "../../../types/types";
+import AddExtrasModal from "../vendor/AddExtrasModal";
 
 interface FeaturedItemFormProps {
   form: UseFormReturn<FeaturedItemFormData>;
   restaurants: IRestaurantFetched[];
   onSubmit: (data: FeaturedItemFormData) => void;
   loading: boolean;
+  onAddExtras: (selectedExtras: IFetchedExtras[]) => void;
 }
 
-const FeaturedItemForm = ({ form, restaurants, onSubmit, loading }: FeaturedItemFormProps) => {
+const FeaturedItemForm = ({ form, restaurants, onSubmit, loading, onAddExtras }: FeaturedItemFormProps) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -267,6 +269,22 @@ const FeaturedItemForm = ({ form, restaurants, onSubmit, loading }: FeaturedItem
                   </p>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* Extras Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+              <Plus className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                Add Extras
+              </h3>
+            </div>
+            <div>
+              <AddExtrasModal
+                onAddExtras={onAddExtras}
+                loading={loading}
+              />
             </div>
           </div>
 

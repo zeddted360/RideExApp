@@ -7,20 +7,22 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, PlusCircle, Percent, Calendar, Upload, X, Info, Sparkles, AlertCircle, User } from "lucide-react";
+import { Loader2, PlusCircle, Percent, Calendar, Upload, X, Info, Sparkles, AlertCircle, User, Plus } from "lucide-react";
 import FileInput from "@/components/FileInput";
 import { DiscountFormData } from "@/utils/schema";
-import { IRestaurantFetched } from "../../../types/types";
+import { IRestaurantFetched, IFetchedExtras } from "../../../types/types";
+import AddExtrasModal from "../vendor/AddExtrasModal";
 
 interface DiscountFormProps {
   form: UseFormReturn<DiscountFormData>;
   targetOptions: { label: string; value: string }[];
   onSubmit: (data: DiscountFormData) => void;
   loading: boolean;
-   restaurants: IRestaurantFetched[];
+  restaurants: IRestaurantFetched[];
+  onAddExtras: (selectedExtras: IFetchedExtras[]) => void;
 }
 
-const DiscountForm = ({ form, targetOptions, onSubmit, loading,restaurants }: DiscountFormProps) => {
+const DiscountForm = ({ form, targetOptions, onSubmit, loading, restaurants, onAddExtras }: DiscountFormProps) => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [calculationWarning, setCalculationWarning] = useState<string | null>(null);
   const { watch, setValue, clearErrors, setError } = form;
@@ -613,6 +615,22 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading,restaurants }: Di
                   </p>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* Extras Section */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
+              <Plus className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                Add Extras
+              </h3>
+            </div>
+            <div>
+              <AddExtrasModal
+                onAddExtras={onAddExtras}
+                loading={loading}
+              />
             </div>
           </div>
 
