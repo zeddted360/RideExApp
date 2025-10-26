@@ -10,8 +10,8 @@ import {
   ChevronRight,
   PlusCircle,
 } from "lucide-react";
-import { Button } from "./ui/button";
 import { useAuth } from "@/context/authContext";
+import { Button } from "../ui/button";
 
 interface AddItemSidebarProps {
   activeTab: "account" | "discount" | "menu-item" | "featured-item" | "popular-item" | "edit-menu" | "extras";

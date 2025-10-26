@@ -9,11 +9,12 @@ interface AuthContextType {
   userId: string | null;
   username: string | null;
   email: string | null;
-  role: "admin" | "user" | "vendor"|  null;
+  role: "admin" | "user" | "vendor" | null;
   isAdmin: boolean;
   isLoading: boolean;
   isAuthenticated: boolean;
   user: IUser | null;
+  code?: string | null;
   updateUser: (userData: any) => void;
 }
 
@@ -26,6 +27,7 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   isAuthenticated: false,
   user: null,
+  code: null,
   updateUser: () => {},
 });
 
@@ -37,27 +39,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     setIsMounted(true);
   }, []);
-
-  // console.log("the logged in user is :",user);
-
   // Fetch user data only once on mount, or when user is null and not loading
+  // Logic: If user exists and has a 'code' (pending verification), skip fetch to avoid overriding the pending state
+  // Otherwise, if no user at all, fetch to check for existing session
   useEffect(() => {
+    if (user && user.code) {
+      // User exists but is in verification mode (e.g., admin with pending code) - skip fetch
+      return;
+    }
     if (!user) {
+      // No user - fetch to check for existing session
       dispatch(getCurrentUserAsync());
     }
   }, [dispatch, user]); // Include loading to avoid fetching during pending state
 
   // Memoized context value to prevent unnecessary re-renders
+  // Refined isAuthenticated: True only if user exists AND no pending code (prevents premature auth during verification)
   const contextValue = useMemo(
     () => ({
       user,
       userId: user?.userId || null,
       username: user?.username || null,
       email: user?.email || null,
-      isAuthenticated: !!user,
+      isAuthenticated: !!user && !user?.code, // Exclude pending verification
       role: user?.role || null,
       isAdmin: user?.role === "admin" || false,
       isLoading: loading === "pending",
+      code: user?.code || null,
       updateUser: (userData: any) => {
         dispatch(updateUser(userData));
       },
@@ -78,6 +86,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           isLoading: true,
           isAuthenticated: false,
           user: null,
+          code: null,
           updateUser: () => {},
         }}
       >

@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import Image from "next/image";
-import { Star } from "lucide-react";
+import { Star, Timer, TimerOff } from "lucide-react";
 import { IRestaurantFetched } from "../../../types/types";
 import { fileUrl, validateEnv } from "@/utils/appwrite";
 import { Skeleton } from "./skeleton";
+import { isOpen } from "@/utils/isOpen";
 
 interface RestaurantCarouselProps {
   restaurants: IRestaurantFetched[];
@@ -27,6 +28,7 @@ const RestaurantCarousel: React.FC<RestaurantCarouselProps> = ({ restaurants, lo
   const [search, setSearch] = useState("");
   const filtered = restaurants.filter(r => r.name.toLowerCase().includes(search.toLowerCase()));
 
+ 
   return (
     <div className="mb-8">
       {/* Search Bar */}
@@ -60,7 +62,7 @@ const RestaurantCarousel: React.FC<RestaurantCarouselProps> = ({ restaurants, lo
               filtered.map(r => (
                 <div
                   key={r.$id}
-                  className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden flex-shrink-0 w-[140px] h-[180px] cursor-pointer hover:scale-105 transition-transform duration-200"
+                  className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden flex-shrink-0 w-[140px] h-[200px] cursor-pointer hover:scale-105 transition-transform duration-200"
                   onClick={() => onSelectRestaurant(r)}
                 >
                   <div className="relative w-full h-24">
@@ -76,9 +78,24 @@ const RestaurantCarousel: React.FC<RestaurantCarouselProps> = ({ restaurants, lo
                   <div className="p-3">
                     <div className="font-bold text-sm truncate">{r.name}</div>
                     <div className="text-xs text-gray-500 truncate">{r.category}</div>
-                    <div className="flex items-center gap-1 text-xs text-orange-500 mt-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1 text-xs text-orange-500 mt-1">
                       <Star className="w-3 h-3 fill-current" />
                       {r.rating}
+                    </div>
+                    <div className="flex items-center gap-1 text-xs mt-1">
+                      {isOpen(r) ? (
+                        <>
+                          <Timer className="w-3 h-3 text-green-600" />
+                          <span className="text-green-600 font-medium">Open</span>
+                        </>
+                      ) : (
+                        <>
+                          <TimerOff className="w-3 h-3 text-red-600" />
+                          <span className="text-red-600 font-medium">Closed</span>
+                        </>
+                      )}
+                    </div>
                     </div>
                   </div>
                 </div>
@@ -109,9 +126,24 @@ const RestaurantCarousel: React.FC<RestaurantCarouselProps> = ({ restaurants, lo
                   <div className="p-4">
                     <div className="font-bold text-base truncate">{r.name}</div>
                     <div className="text-xs text-gray-500 truncate">{r.category}</div>
-                    <div className="flex items-center gap-1 text-xs text-orange-500 mt-1">
-                      <Star className="w-3 h-3 fill-current" />
-                      {r.rating}
+                    <div className="flex items-center justify-between mt-1">
+                      <div className="flex items-center gap-1 text-xs text-orange-500">
+                        <Star className="w-3 h-3 fill-current" />
+                        {r.rating}
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-muted">
+                        {isOpen(r) ? (
+                          <>
+                            <Timer className="w-3 h-3 text-green-600" />
+                            <span className="text-green-600 font-medium">Opened</span>
+                          </>
+                        ) : (
+                          <>
+                            <TimerOff className="w-3 h-3 text-red-600" />
+                            <span className="text-red-600 font-medium">Closed</span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -124,4 +156,4 @@ const RestaurantCarousel: React.FC<RestaurantCarouselProps> = ({ restaurants, lo
   );
 };
 
-export default RestaurantCarousel; 
+export default RestaurantCarousel;

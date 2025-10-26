@@ -5,6 +5,7 @@ import { IExtras, IFetchedExtras } from "../../types/types";
 
 interface ExtraState {
   extras: IFetchedExtras[];
+  allExtras: IFetchedExtras[];
   currentExtra: IFetchedExtras | null;
   loading: "idle" | "pending" | "succeeded" | "failed";
   error: string | null;
@@ -12,6 +13,7 @@ interface ExtraState {
 
 const initialState: ExtraState = {
   extras: [],
+  allExtras: [],
   currentExtra: null,
   loading: "idle",
   error: null,
@@ -35,6 +37,29 @@ export const listAsyncExtras = createAsyncThunk<
     } catch (error) {
       return rejectWithValue(
         error instanceof Error ? error.message : "Failed to fetch extras"
+      );
+    }
+  }
+);
+
+export const listAllAsyncExtras = createAsyncThunk<
+  IFetchedExtras[],
+  void,
+  { rejectValue: string }
+>(
+  "extra/listAllAsyncExtras",
+  async (_, { rejectWithValue }) => {
+    try {
+      const { databaseId, extrasCollectionId } = validateEnv();
+      const response = await databases.listDocuments<IFetchedExtras>(
+        databaseId,
+        extrasCollectionId,
+        [Query.limit(100), Query.orderDesc("$createdAt")]
+      );
+      return response.documents;
+    } catch (error) {
+      return rejectWithValue(
+        error instanceof Error ? error.message : "Failed to fetch all extras"
       );
     }
   }
@@ -78,10 +103,10 @@ export const createAsyncExtra = createAsyncThunk<
         [Query.equal("name", extraData.name)]
       );
 
-      if(checkExistingExtract.documents.length > 0) {
+      if (checkExistingExtract.documents.length > 0) {
         throw new Error("An Extra with same name already exist");
-      };
-      
+      }
+
       let imageId: string | undefined;
       if (extraData.image instanceof File) {
         const { extrasBucketId } = validateEnv();
@@ -94,11 +119,11 @@ export const createAsyncExtra = createAsyncThunk<
       }
 
       const docData = {
-        name:extraData.name,
-        price:extraData.price,
-        description:extraData.description,
-        image:imageId,
-        vendorId:extraData.vendorId
+        name: extraData.name,
+        price: extraData.price,
+        description: extraData.description,
+        image: imageId,
+        vendorId: extraData.vendorId,
       };
 
       const response = await databases.createDocument<IFetchedExtras>(
@@ -179,7 +204,7 @@ export const deleteAsyncExtra = createAsyncThunk<
   async ({ extraId, imageId }, { rejectWithValue }) => {
     try {
       const { databaseId, extrasCollectionId, extrasBucketId } = validateEnv();
-      
+
       if (imageId) {
         await storage.deleteFile(extrasBucketId, imageId);
       }
@@ -228,6 +253,19 @@ const extraSlice = createSlice({
         state.extras = action.payload;
       })
       .addCase(listAsyncExtras.rejected, (state, action) => {
+        state.loading = "failed";
+        state.error = action.payload as string;
+      })
+      // List All
+      .addCase(listAllAsyncExtras.pending, (state) => {
+        state.loading = "pending";
+        state.error = null;
+      })
+      .addCase(listAllAsyncExtras.fulfilled, (state, action) => {
+        state.loading = "succeeded";
+        state.allExtras = action.payload;
+      })
+      .addCase(listAllAsyncExtras.rejected, (state, action) => {
         state.loading = "failed";
         state.error = action.payload as string;
       })

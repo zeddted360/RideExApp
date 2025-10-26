@@ -1,5 +1,5 @@
 // app/page.tsx
-import VendorRegistrationForm from '@/components/ui/VendorRegistrationForm';
+import VendorRegistrationForm from '@/components/vendor/VendorRegistrationForm';
 import React from 'react';
 
 export default function Page() {

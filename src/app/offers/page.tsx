@@ -1,5 +1,4 @@
-// app/offers/page.tsx (Server Component)
-import { OffersClient } from './OffersClient';
+import { OffersClient } from "@/components/offers/OffersClient";
 
 
 export default function OffersPage() {

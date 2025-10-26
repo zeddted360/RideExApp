@@ -9,8 +9,8 @@ import { validateEnv, storage } from "@/utils/appwrite";
 import { createAsyncRestaurant, deleteAsyncRestaurant, updateAsyncRestaurant } from "@/state/restaurantSlice";
 import { listAsyncVendors } from "@/state/vendorSlice"; 
 import toast from "react-hot-toast";
-import { Search, Edit3, Trash2, Loader2, X, ChevronLeft, ChevronRight, AlertCircle, PlusCircle, Upload, Star, Building2 } from "lucide-react";
-import { IRestaurantFetched, IRestaurant, IVendorFetched } from "../../types/types";
+import { Search, Edit3, Trash2, Loader2, X, ChevronLeft, ChevronRight, AlertCircle, PlusCircle, Upload, Star, Building2, Clock } from "lucide-react";
+import { IRestaurantFetched, IRestaurant, IVendorFetched, IScheduleDay } from "../../types/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +38,15 @@ const categories = [
   { value: "Premium", label: "Premium" },
   { value: "Snacks", label: "Snacks" },
 ];
+
+const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+const defaultSchedule: IScheduleDay[] = daysOfWeek.map((day) => ({
+  day: day as IScheduleDay["day"],
+  openTime: "08:00",
+  closeTime: "21:00",
+  isClosed: false,
+}));
 
 export default function RestaurantsTab({
   restaurants,
@@ -82,6 +91,7 @@ export default function RestaurantsTab({
     category: "",
     distance: "",
     vendorId: "",
+    logo:"",
   });
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -98,6 +108,7 @@ export default function RestaurantsTab({
       distance: "",
       logo: undefined,
       vendorId: "",
+      schedule: defaultSchedule,
     },
     mode: "onChange",
   });
@@ -118,6 +129,32 @@ export default function RestaurantsTab({
     }
   }, [logoFile]);
 
+  const { watch, setValue } = addForm;
+  const schedule = watch("schedule");
+
+  const handleIsClosedChange = (index: number, checked: boolean) => {
+    setValue(`schedule.${index}.isClosed`, checked);
+    if (checked) {
+      setValue(`schedule.${index}.openTime`, null);
+      setValue(`schedule.${index}.closeTime`, null);
+    } else {
+      setValue(`schedule.${index}.openTime`, "08:00");
+      setValue(`schedule.${index}.closeTime`, "21:00");
+    }
+  };
+
+  useEffect(() => {
+    schedule.forEach((day, index) => {
+      if (day.isClosed && (day.openTime !== null || day.closeTime !== null)) {
+        setValue(`schedule.${index}.openTime`, null);
+        setValue(`schedule.${index}.closeTime`, null);
+      } else if (!day.isClosed && (!day.openTime || !day.closeTime)) {
+        setValue(`schedule.${index}.openTime`, day.openTime || "08:00");
+        setValue(`schedule.${index}.closeTime`, day.closeTime || "21:00");
+      }
+    });
+  }, [schedule, setValue]);
+
   useEffect(() => {
     if (editingRestaurant) {
       setEditFormData({
@@ -127,6 +164,7 @@ export default function RestaurantsTab({
         category: editingRestaurant.category,
         distance: editingRestaurant.distance,
         vendorId: editingRestaurant.vendorId || "",
+        logo:"",
       });
     }
   }, [editingRestaurant]);
@@ -134,6 +172,13 @@ export default function RestaurantsTab({
   const handleAddRestaurantSubmit = async (data: RestaurantFormData) => {
     setFormLoading(true);
     try {
+      const processedSchedule: IScheduleDay[] = data.schedule.map((day) => ({
+        day: day.day,
+        openTime: day.openTime ?? null,
+        closeTime: day.closeTime ?? null,
+        isClosed: day.isClosed,
+      }));
+
       const restaurantData: IRestaurant = {
         name: data.name,
         logo: data.logo as FileList,
@@ -142,6 +187,7 @@ export default function RestaurantsTab({
         category: data.category,
         distance: data.distance,
         vendorId: data.vendorId,
+        schedule: processedSchedule,
       };
       await dispatch(createAsyncRestaurant(restaurantData)).unwrap();
       addForm.reset();
@@ -684,6 +730,91 @@ export default function RestaurantsTab({
                         </p>
                       )}
                     </div>
+                  </div>
+
+                  {/* Operating Hours */}
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                      Operating Hours <span className="text-red-500">*</span>
+                    </Label>
+                    <div className="space-y-4">
+                      {daysOfWeek.map((day, index) => {
+                        const isClosed = watch(`schedule.${index}.isClosed`);
+                        return (
+                          <div 
+                            key={day} 
+                            className={`p-4 rounded-lg border transition-all duration-200 ${
+                              isClosed 
+                                ? 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700' 
+                                : 'bg-orange-50/50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-900/30'
+                            }`}
+                          >
+                            <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                              <div className="w-28 flex-shrink-0">
+                                <Label className="text-sm font-bold text-gray-900 dark:text-gray-100">{day}</Label>
+                              </div>
+                              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                  <Label htmlFor={`schedule[${index}].openTime`} className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">
+                                    Open Time
+                                  </Label>
+                                  <Input
+                                    id={`schedule[${index}].openTime`}
+                                    type="time"
+                                    {...addForm.register(`schedule.${index}.openTime`)}
+                                    disabled={isClosed}
+                                    className={`h-10 border-gray-300 dark:border-gray-600 transition-colors ${
+                                      !isClosed && 'focus:border-orange-500 focus:ring-orange-500'
+                                    }`}
+                                  />
+                                  {addForm.formState.errors.schedule?.[index]?.openTime && (
+                                    <p className="text-red-500 text-xs mt-1.5 font-medium">
+                                      {addForm.formState.errors.schedule[index]?.openTime?.message}
+                                    </p>
+                                  )}
+                                </div>
+                                <div>
+                                  <Label htmlFor={`schedule[${index}].closeTime`} className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">
+                                    Close Time
+                                  </Label>
+                                  <Input
+                                    id={`schedule[${index}].closeTime`}
+                                    type="time"
+                                    {...addForm.register(`schedule.${index}.closeTime`)}
+                                    disabled={isClosed}
+                                    className={`h-10 border-gray-300 dark:border-gray-600 transition-colors ${
+                                      !isClosed && 'focus:border-orange-500 focus:ring-orange-500'
+                                    }`}
+                                  />
+                                  {addForm.formState.errors.schedule?.[index]?.closeTime && (
+                                    <p className="text-red-500 text-xs mt-1.5 font-medium">
+                                      {addForm.formState.errors.schedule[index]?.closeTime?.message}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex-shrink-0">
+                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2.5 cursor-pointer select-none">
+                                  <input
+                                    type="checkbox"
+                                    {...addForm.register(`schedule.${index}.isClosed`, {
+                                      onChange: (e) => handleIsClosedChange(index, e.target.checked),
+                                    })}
+                                    className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500 cursor-pointer transition-colors"
+                                  />
+                                  <span className={isClosed ? 'text-gray-500 dark:text-gray-400' : ''}>Closed</span>
+                                </Label>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {addForm.formState.errors.schedule && (
+                      <p className="text-red-500 text-sm mt-2">
+                        {addForm.formState.errors.schedule.message}
+                      </p>
+                    )}
                   </div>
                 </div>
               </form>

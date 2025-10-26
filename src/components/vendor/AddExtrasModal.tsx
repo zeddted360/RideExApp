@@ -16,12 +16,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Loader2, Search, Package, X, Plus } from "lucide-react";
-import { IFetchedExtras } from "../../types/types";
-import { ScrollArea } from "./ui/scroll-area";
 import { useAuth } from "@/context/authContext";
 import { listAsyncExtras } from "@/state/extraSlice";
 import Image from "next/image";
 import { fileUrl, validateEnv } from "@/utils/appwrite";
+import { IFetchedExtras } from "../../../types/types";
+import { ScrollArea } from "../ui/scroll-area";
 
 interface AddExtrasModalProps {
   onAddExtras: (selectedExtras: IFetchedExtras[]) => void;

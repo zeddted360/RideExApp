@@ -3,6 +3,7 @@ import { account, validateEnv } from "@/utils/appwrite";
 import toast from "react-hot-toast";
 import { AuthState, IUser, IUserFectched } from "../../types/types";
 import { databases } from "@/utils/appwrite";
+import { generate } from "randomstring";
 
 const initialState: AuthState = {
   user: null,
@@ -43,7 +44,7 @@ const removeLocalStorage = (key: string) => {
   }
 };
 
-// Async thunk to log normal users
+// Async thunk to log in user
 export const loginAsync = createAsyncThunk<
   IUser,
   { email: string; password: string; rememberMe: boolean },
@@ -54,17 +55,72 @@ export const loginAsync = createAsyncThunk<
     try {
       // Set session persistence based on rememberMe
       await account.createEmailPasswordSession(email, password);
-
       const user = await account.get();
       const { databaseId, userCollectionId } = validateEnv();
 
-      const userInUserCollection = await databases.getDocument(
+      const userDoc = await databases.getDocument<IUserFectched>(
         databaseId,
         userCollectionId,
         user.$id
       );
 
-      // Get phone number from localStorage if available
+      const isAdmin = userDoc.isAdmin;
+      if (isAdmin) {
+        // Generate 6-digit verification code
+        const verificationCode = generate({
+          length: 6,
+          charset: "numeric",
+        });
+
+        // Set expiration (10 minutes from now)
+        const codeExpiration = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+        // Store code and expiration in Appwrite
+        await databases.updateDocument(
+          databaseId,
+          userCollectionId,
+          user.$id,
+          {
+            verificationCode,
+            codeExpiration,
+          }
+        );
+
+        // Call API to send verification code
+        const response = await fetch("/api/admin/verify", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, code: verificationCode }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to send verification code.");
+        }
+
+        // Delete session until code is verified
+        await account.deleteSession("current");
+        toast.success(
+        "Verification code sent to your email. Please verify to log in.",
+        {
+          icon: "🔒",
+          duration: Infinity,
+        }
+        );  
+        return {
+          userId: user.$id,
+          username: user.name,
+          email: user.email,
+          role: "admin",
+          phoneNumber: userDoc.phone,
+          phoneVerified: userDoc.phoneVerified,
+          isAdmin: true,
+          code:verificationCode,
+        } as IUser;
+      }
+
+      // Non-admin user, proceed with login
       let phoneNumber: string | undefined;
       let phoneVerified: boolean | undefined;
 
@@ -80,7 +136,7 @@ export const loginAsync = createAsyncThunk<
         userId: user.$id,
         username: user.name,
         email: user.email,
-        role: userInUserCollection.isAdmin ? "admin" : "user",
+        role: userDoc.isVendor ? "vendor" : "user",
         phoneNumber: user.phone || phoneNumber,
         phoneVerified,
       } as IUser;
@@ -89,16 +145,11 @@ export const loginAsync = createAsyncThunk<
         error instanceof Error
           ? error.message
           : "Login failed. Please try again.";
-      // toast.error(message);
+          await account.deleteSession("current");
       return rejectWithValue(message);
     }
   }
 );
-
-
-// async thunk to log vendors
-
-
 
 // Async thunk to log in as guest
 export const loginAsGuestAsync = createAsyncThunk<
@@ -224,7 +275,6 @@ export const getCurrentUserAsync = createAsyncThunk<
       isAdmin,
       phoneNumber: user.phone || phoneNumber,
       phoneVerified,
-      // fullName:fullName
     };
   } catch (error) {
     // No user logged in, return null

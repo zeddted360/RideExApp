@@ -1,5 +1,5 @@
 "use client";
-import { BikeIcon, Star, ChevronLeft, ChevronRight } from "lucide-react";
+import { BikeIcon, Star, ChevronLeft, ChevronRight, Timer, TimerOff } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useDispatch, useSelector } from "react-redux";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { IRestaurantFetched } from "../../types/types";
 import { useRouter } from "next/navigation";
 import { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
+import { isOpen } from "@/utils/isOpen";
 
 // Skeleton component for loading state
 const RestaurantCardSkeleton = () => (
@@ -81,9 +82,25 @@ const RestaurantCard = React.memo(
           </h3>
           <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1 sm:space-y-2">
             <p className="line-clamp-1 font-medium">{restaurant.category}</p>
-            <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 text-xs">
-              <BikeIcon className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="truncate">{restaurant.deliveryTime}</span>
+            <div className="flex items-center justify-between gap-1.5 text-gray-500 dark:text-gray-400 text-xs">
+              <div className="flex items-center gap-1.5">
+                <BikeIcon className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate">{restaurant.deliveryTime}</span>
+              </div>
+              {/* closed or opened */}
+              <div className="flex items-center justify-between gap-1 text-xs text-muted">
+                {isOpen(restaurant) ? (
+                  <>
+                    <Timer className="w-3.5 h-3.5 text-green-600" />
+                    <span className="text-green-600 font-medium">Opened</span>
+                  </>
+                ) : (
+                  <>
+                    <TimerOff className="w-3.5 h-3.5 text-red-600" />
+                    <span className="text-red-600 font-medium">Closed</span>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>

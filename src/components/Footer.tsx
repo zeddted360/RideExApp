@@ -302,10 +302,15 @@ export default function Footer() {
                     },
                   ].map((store) => (
                     <a
+                    onClick={(e)=>{
+                        e.stopPropagation();
+                        window.alert("App coming soon!")
+                        return;
+                    }}
                       key={store.href}
-                      href={store.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      href={"#"}
+                      // target="_blank"
+                      // rel="noopener noreferrer"
                       className="group"
                     >
                       <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2 hover:bg-white/20 transition-all duration-300 group-hover:scale-105">

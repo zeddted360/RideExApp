@@ -65,7 +65,7 @@ const DesktopNav: React.FC<DesktopNavProps> = ({ pathname, t, user, role }) => {
       >
         {t("header.contact")}
       </Link>
-      {(user?.isAdmin || role === "vendor") && (
+      {(role === "admin" || role === "vendor") && !user.code &&  (
         <>
           <Link href="/vendor" className="ml-2">
             <Button className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold px-4 py-2 cursor-pointer rounded-lg shadow-md flex items-center gap-2 transition-all border-0">
@@ -73,7 +73,7 @@ const DesktopNav: React.FC<DesktopNavProps> = ({ pathname, t, user, role }) => {
              Vendor dashboard
             </Button>
           </Link>
-          {role === "admin" && (
+          {!user.code && role === "admin" &&  (
             <Link href="/admin/dashboard" className="ml-2">
               <Button className="bg-gradient-to-r from-gray-700 to-orange-500 hover:from-gray-800 hover:to-orange-600 text-white font-bold px-4 py-2 rounded-lg shadow-md flex items-center gap-2 transition-all border-0">
                 <Shield className="w-4 h-4" />

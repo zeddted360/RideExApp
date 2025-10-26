@@ -13,6 +13,7 @@ import vendorSlice from "./vendorSlice";
 import riderSlice from "./riderSlice";
 import{ categoryLogosReducer} from "./categoryLogosSlice";
 import extraReducer from "./extraSlice";
+import  promoOfferSlice  from "./offerSlice";
 
 export const store = configureStore({
   reducer: {
@@ -21,6 +22,7 @@ export const store = configureStore({
     orders: orderSlice,
     featuredItem: featuredItemSlice,
     popularItem: popularSlice,
+    promoOffer:promoOfferSlice,
     auth: authSlice,
     notifications: notificationSlice,
     bookedOrders: bookedOrdersReducer,

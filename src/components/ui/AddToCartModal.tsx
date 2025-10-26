@@ -331,6 +331,8 @@ const AddToCartModal = () => {
                 ? validateEnv().popularBucketId
                 : item.source === "discount"
                 ? validateEnv().discountBucketId
+                : item.source === 'offer' ?
+                validateEnv().promoOfferBucketId
                 : validateEnv().menuBucketId,
               item.image
             )}

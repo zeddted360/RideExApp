@@ -410,12 +410,15 @@ const CartDrawer = () => {
                         <Image
                           src={fileUrl(
                             item.source === "featured"
-                              ? validateEnv().featuredBucketId
-                              : item.source === "popular"
-                              ? validateEnv().popularBucketId
-                              :item.source === "discount" ? validateEnv().discountBucketId
-                              : validateEnv().menuBucketId,
-                            item.image
+                            ? validateEnv().featuredBucketId
+                            : item.source === "popular"
+                            ? validateEnv().popularBucketId
+                            : item.source === "discount"
+                            ? validateEnv().discountBucketId
+                            : item.source === 'offer' ?
+                            validateEnv().promoOfferBucketId
+                            : validateEnv().menuBucketId,
+                          item.image
                           )}
                           alt={item.name || "Item"}
                           className="w-full h-full object-cover"

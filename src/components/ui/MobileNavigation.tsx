@@ -44,7 +44,6 @@ const MobileNavigation = () => {
 
   const handleProfileClick = () => {
     if (!isAuthenticated) {
-      // If user is not logged in, navigate to login
       router.push("/login");
     }
   };
@@ -97,7 +96,7 @@ const MobileNavigation = () => {
           {/* Admin Dashboard button for admin users only */}
           {isAuthenticated && user?.isAdmin && (
             <button
-              onClick={() => router.push("/admin/orders")}
+              onClick={() => router.push("/admin/dashboard")}
               className="flex flex-col items-center py-2 px-4 text-gray-500 hover:text-orange-500 transition-colors"
             >
               <Shield className="w-6 h-6 mb-1" color="#f97316" />

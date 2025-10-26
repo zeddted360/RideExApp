@@ -4,7 +4,7 @@ import {
   ShoppingBag,
   ThumbsUp,
 } from "lucide-react";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/state/store";
@@ -15,6 +15,7 @@ import { listAsyncPopularItems } from "@/state/popularSlice";
 import { useAuth } from "@/context/authContext";
 import { useRouter } from "next/navigation";
 import { Button } from "./ui/button";
+import { getRestaurantNamesByIds } from "@/utils/restaurantUtils";
 
 interface IPopularItemProps {
   toggleFavorite: (id: string) => void;
@@ -26,6 +27,9 @@ const PopularItem = ({ toggleFavorite, favorites }: IPopularItemProps) => {
   const { popularItems, loading, error } = useSelector(
     (state: RootState) => state.popularItem
   );
+   const [restaurantNames, setRestaurantNames] = useState<Map<string, string>>(
+      new Map()
+    );
   const { setIsOpen, setItem } = useShowCart();
   const { user } = useAuth();
   const router = useRouter();
@@ -44,6 +48,23 @@ const PopularItem = ({ toggleFavorite, favorites }: IPopularItemProps) => {
         });
     }
   }, [dispatch, loading]);
+
+    // Fetch restaurant names when featured items change
+    useEffect(() => {
+      if (popularItems.length > 0) {
+        const restaurantIds = [
+          ...new Set(popularItems.map((item) => item.restaurantId)),
+        ];
+        getRestaurantNamesByIds(restaurantIds)
+          .then((names) => {
+            setRestaurantNames(names);
+          })
+          .catch((error) => {
+            console.warn("Failed to fetch restaurant names:", error);
+          });
+      }
+    }, [popularItems]);
+  
 
   // Filter and sort approved items by rating descending
   const approvedItems = React.useMemo(() => {
@@ -126,6 +147,10 @@ const PopularItem = ({ toggleFavorite, favorites }: IPopularItemProps) => {
                         <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base sm:text-lg line-clamp-1">
                           {item.name}
                         </h3>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 font-medium tracking-wide mb-1 line-clamp-1">
+                          {restaurantNames.get(item.restaurantId) ||
+                            `Restaurant ${item.restaurantId.slice(-4)}`}
+                        </p>
                         <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-2 sm:line-clamp-3">
                           {item.description}
                         </p>

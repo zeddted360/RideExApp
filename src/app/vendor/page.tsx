@@ -1,8 +1,8 @@
-import AddFoodItemForm from "@/components/AddItemForm";
+import AddFoodItemForm from "@/components/vendor/AddItemForm";
 import { cookies } from "next/headers";
 
 export const metadata = {
-  title: "Add Item",
+  title: "Vendor Add Item | RideEx Food Ordering App",
   description: "Add a new food item to the RideEx Food Ordering App menu.",
   openGraph: {
     title: "Add Item | RideEx Food Ordering App",

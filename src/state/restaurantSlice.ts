@@ -1,4 +1,4 @@
-// Updated restaurantSlice.ts
+// restaurantSlice.ts
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { databases, storage, validateEnv } from "@/utils/appwrite";
 import { ID, Query } from "appwrite";
@@ -53,7 +53,9 @@ export const createAsyncRestaurant = createAsyncThunk<
         deliveryTime: data.deliveryTime,
         category: data.category,
         distance: data.distance,
-        vendorId:data.vendorId,
+        vendorId: data.vendorId,
+        // Stringify each schedule object to store as string[]
+        schedule: data.schedule?.map((day) => JSON.stringify(day)),
         createdAt: new Date().toISOString(),
       }
     );
@@ -63,11 +65,11 @@ export const createAsyncRestaurant = createAsyncThunk<
   } catch (error) {
     toast.error(
       `Failed to create restaurant: ${
-        error instanceof Error ? error.message : "Failed to load resturant"
+        error instanceof Error ? error.message : "Failed to load restaurant"
       }`
     );
     return rejectWithValue(
-      error instanceof Error ? error.message : "Failed to load resturant"
+      error instanceof Error ? error.message : "Failed to load restaurant"
     );
   }
 });
@@ -87,11 +89,20 @@ export const listAsyncRestaurants = createAsyncThunk<
       restaurantsCollectionId,
       [Query.orderDesc("$createdAt")] 
     );
-    return response.documents as IRestaurantFetched[];
+
+    // Parse schedule from string[] to object array
+    const parsedRestaurants = response.documents.map((doc) => ({
+      ...doc,
+      schedule: doc.schedule
+        ? doc.schedule.map((str: string) => JSON.parse(str))
+        : undefined,
+    })) as IRestaurantFetched[];
+
+    return parsedRestaurants;
   } catch (error) {
-    toast.error(`Failed to fetch restaurants: ${error instanceof Error ? error.message : "Failed to load resturant"}`);
+    toast.error(`Failed to fetch restaurants: ${error instanceof Error ? error.message : "Failed to load restaurant"}`);
     return rejectWithValue(
-      error instanceof Error ? error.message : "Failed to load resturant"
+      error instanceof Error ? error.message : "Failed to load restaurant"
     );
   }
 });
@@ -109,7 +120,16 @@ export const getAsyncRestaurantById = createAsyncThunk<
       restaurantsCollectionId,
       id
     );
-    return response as IRestaurantFetched;
+
+    // Parse schedule from string[] to object array
+    const parsedRestaurant = {
+      ...response,
+      schedule: response.schedule
+        ? response.schedule.map((str: string) => JSON.parse(str))
+        : undefined,
+    } as IRestaurantFetched;
+
+    return parsedRestaurant;
   } catch (error) {
     console.error(error);
     return rejectWithValue(
@@ -118,20 +138,48 @@ export const getAsyncRestaurantById = createAsyncThunk<
   }
 });
 
-// Async thunk for updating restaurant (without logo change for simplicity)
+// Enhanced Async thunk for updating restaurant
 export const updateAsyncRestaurant = createAsyncThunk<
   IRestaurantFetched,
-  { id: string; data: Partial<Omit<IRestaurant, "logo">> },
+  { id: string; data: IRestaurant },
   { rejectValue: string }
 >("restaurant/updateRestaurant", async ({ id, data }, { rejectWithValue }) => {
   try {
-    const { databaseId, restaurantsCollectionId } = validateEnv();
-
+    const { databaseId, restaurantsCollectionId, restaurantBucketId } = validateEnv();
+    let updateData: any = {
+      name: data.name,
+      category: data.category,
+      deliveryTime: data.deliveryTime,
+      distance: data.distance,
+      rating: data.rating,
+      schedule: data.schedule && data.schedule?.map((day) => JSON.stringify(day)),
+    };
+    // Handle logo update if new file provided
+    if (data.logo instanceof FileList && data.logo.length > 0) {
+      // Upload new logo
+      const uploadedFile = await storage.createFile(
+        restaurantBucketId,
+        ID.unique(),
+        data.logo[0] as File
+      );
+      updateData.logo = uploadedFile.$id;
+      // Fetch current document to get old logo ID and delete old logo
+      const currentDoc: IRestaurantFetched = await databases.getDocument(
+        databaseId,
+        restaurantsCollectionId,
+        id
+      );
+      // Delete old logo file if it exists
+      if (typeof currentDoc.logo === "string" && currentDoc.logo) {
+        await storage.deleteFile(restaurantBucketId, currentDoc.logo);
+      }
+    }
+    // If no new logo, do not include 'logo' in updateData (keeps existing value)
     const updatedDocument = await databases.updateDocument(
       databaseId,
       restaurantsCollectionId,
       id,
-      data
+      updateData
     );
 
     toast.success("Restaurant updated successfully!");

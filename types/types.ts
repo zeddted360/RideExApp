@@ -10,10 +10,13 @@ export interface IUser {
   phoneVerified?: boolean;
   isAdmin?: boolean;
   fullName?:string;
+  code?:string | null;
 }
 
 export interface IUserFectched extends IUser, Models.Document {
   isVendor:boolean;
+  verificationCode?: string;
+  codeExpiration?: string;
 }
 
 export interface AuthState {
@@ -50,7 +53,13 @@ export interface IMenuItemFetched extends Models.Document {
   extras?: string[];
 }
 
-// post Restaurant
+export interface IScheduleDay {
+  day: "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday";
+  openTime: string | null;
+  closeTime: string | null;
+  isClosed: boolean;
+}
+
 export interface IRestaurant {
   name: string;
   logo: FileList | string;
@@ -58,9 +67,10 @@ export interface IRestaurant {
   deliveryTime: string;
   category: string;
   distance: string;
-  vendorId?:string;
+  vendorId?: string;
+  schedule?: IScheduleDay[];
 }
-// fetched IRestaurant
+
 export interface IRestaurantFetched extends IRestaurant, Models.Document {}
 
 export interface IFeaturedItem {
@@ -89,7 +99,7 @@ export interface ICartItem {
   restaurantId: string;
   quantity: number;
   category: string;
-  source: "menu" | "featured" | "popular" | "discount" | "";
+  source: "menu" | "featured" | "popular" | "discount" | "offer" | "";
   description?:string;
    extras?: string[];
    discountType?: "percentage" | "fixed" ;
@@ -114,14 +124,15 @@ export interface ICartItemOrder extends ICartItem {
 export interface ICartItemFetched extends ICartItemOrder, Models.Document {}
 
 export interface IPromoOffer {
-  id: number;
-  title: string;
-  subtitle: string;
-  buttonText: string;
-  bgColor: string;
-  textColor: string;
-  image: string;
-  decorativeElements: string[];
+  name: string;
+  description: string;
+  originalPrice: number; 
+  discountedPrice: number; 
+  category: "veg" | "non-veg";
+  image: string; 
+  restaurantId: string;
+  isApproved?:boolean;
+  extras?:string[];
 }
 
 export interface IPromoOfferFetched extends IPromoOffer, Models.Document {}
@@ -334,3 +345,4 @@ export interface ISelectedExtra {
   extraId: string;
   quantity: number;
 }
+
