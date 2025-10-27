@@ -28,7 +28,7 @@ const AddItemSidebar = ({ activeTab, setActiveTab }: AddItemSidebarProps) => {
     },
     { 
       id: "edit-menu", 
-      label: "Edit Menu", 
+      label: "Manage Contents", 
       icon: Edit,
       description: "Update menu items"
     },

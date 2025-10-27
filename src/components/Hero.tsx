@@ -325,7 +325,7 @@ const MiniNavigation = () => {
               </p>
             ) : (
               <div className="flex items-center justify-start gap-10 sm:gap-12 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-4">
-                {restaurants.map((restaurant) => renderCategoryItem({ ...restaurant, href: `/restaurant/${restaurant.name}`, available: true }, true))}
+                {restaurants.map((restaurant) => renderCategoryItem({ ...restaurant, href: `/restaurant/${restaurant.$id}`, available: true }, true))}
               </div>
             )}
           </div>

@@ -511,16 +511,6 @@ export default function CheckoutClient() {
             </section>
 
             <section className="rounded-2xl shadow-xl bg-white/95 dark:bg-gray-900/90 border border-orange-100 dark:border-gray-800 p-6 mb-2">
-              <DeliveryOptions
-                deliveryDay={deliveryDay}
-                setDeliveryDay={setDeliveryDay}
-                timeSlots={timeSlots}
-                selectedTimeSlot={selectedTimeSlot}
-                setSelectedTimeSlot={setSelectedTimeSlot}
-              />
-            </section>
-
-            <section className="rounded-2xl shadow-xl bg-white/95 dark:bg-gray-900/90 border border-orange-100 dark:border-gray-800 p-6 mb-2">
               <AddressSection
                 address={address}
                 phoneNumber={phoneNumber}
@@ -552,6 +542,17 @@ export default function CheckoutClient() {
                 branches={branches}
               />
             </section>
+
+            <section className="rounded-2xl shadow-xl bg-white/95 dark:bg-gray-900/90 border border-orange-100 dark:border-gray-800 p-6 mb-2">
+              <DeliveryOptions
+                deliveryDay={deliveryDay}
+                setDeliveryDay={setDeliveryDay}
+                timeSlots={timeSlots}
+                selectedTimeSlot={selectedTimeSlot}
+                setSelectedTimeSlot={setSelectedTimeSlot}
+              />
+            </section>
+            
           </motion.div>
 
           <motion.div
@@ -623,7 +624,8 @@ export default function CheckoutClient() {
               Cash on Delivery Details
             </h3>
             <p className="text-gray-700 dark:text-gray-300 mb-6 text-sm leading-relaxed">
-              Only delivery fees are paid on delivery. Payment for the items must be made before preparation begins.
+              Only delivery fees are paid on delivery. Payment for the items
+              must be made before preparation begins.
             </p>
             <button
               onClick={() => setShowCashModal(false)}

@@ -1,7 +1,14 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Loader2, XCircle, CheckCircle, Image as ImageIcon, Edit2, AlertCircle } from "lucide-react";
+import {
+  Loader2,
+  XCircle,
+  CheckCircle,
+  Image as ImageIcon,
+  Edit2,
+  AlertCircle,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import { AppDispatch } from "@/state/store";
 import { updateAsyncMenuItem } from "@/state/menuSlice";
@@ -15,10 +22,19 @@ import { listAsyncDiscounts } from "@/state/discountSlice";
 import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
-import { IFeaturedItemFetched, IMenuItemFetched, IPopularItemFetched, IDiscountFetched } from "../../../types/types";
+import {
+  IFeaturedItemFetched,
+  IMenuItemFetched,
+  IPopularItemFetched,
+  IDiscountFetched,
+} from "../../../types/types";
 
 type ContentType = "menu" | "popular" | "featured" | "discount";
-type ContentItem = IMenuItemFetched | IPopularItemFetched | IFeaturedItemFetched | IDiscountFetched;
+type ContentItem =
+  | IMenuItemFetched
+  | IPopularItemFetched
+  | IFeaturedItemFetched
+  | IDiscountFetched;
 
 interface EditItemModalProps {
   item: ContentItem;
@@ -47,10 +63,12 @@ export default function EditItemModal({
   isUpdating,
   setIsUpdating,
   restaurantName,
-  setRestaurantName
+  setRestaurantName,
 }: EditItemModalProps) {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [calculationWarning, setCalculationWarning] = useState<string | null>(null);
+  const [calculationWarning, setCalculationWarning] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     if (newImage) {
@@ -66,39 +84,70 @@ export default function EditItemModal({
 
   // Auto-calculation for discount discountedPrice
   useEffect(() => {
-    if (type === "discount" && editFormData.originalPrice && editFormData.discountValue > 0) {
+    if (
+      type === "discount" &&
+      editFormData.originalPrice &&
+      editFormData.discountValue > 0
+    ) {
       let calculated: number;
       let warning: string | null = null;
       if (editFormData.discountType === "percentage") {
         if (editFormData.discountValue > 100) {
           warning = "Percentage discount cannot exceed 100%.";
-          calculated = editFormData.originalPrice; // No discount applied
+          calculated = editFormData.originalPrice;
         } else {
-          calculated = Math.round((editFormData.originalPrice * (1 - editFormData.discountValue / 100)) * 100) / 100;
+          calculated =
+            Math.round(
+              editFormData.originalPrice *
+                (1 - editFormData.discountValue / 100) *
+                100
+            ) / 100;
         }
-      } else { // fixed
+      } else {
         if (editFormData.discountValue > editFormData.originalPrice) {
           warning = "Fixed discount cannot exceed original price.";
           calculated = 0;
         } else {
-          calculated = Math.round((editFormData.originalPrice - editFormData.discountValue) * 100) / 100;
+          calculated =
+            Math.round(
+              (editFormData.originalPrice - editFormData.discountValue) * 100
+            ) / 100;
         }
       }
-      setEditFormData((prev:any) => ({ ...prev, discountedPrice: calculated }));
+      setEditFormData((prev: any) => ({
+        ...prev,
+        discountedPrice: calculated,
+      }));
       setCalculationWarning(warning);
     } else if (type === "discount") {
-      setEditFormData((prev:any) => ({ ...prev, discountedPrice: editFormData.originalPrice || 0 }));
+      setEditFormData((prev: any) => ({
+        ...prev,
+        discountedPrice: editFormData.originalPrice || 0,
+      }));
       setCalculationWarning(null);
     }
-  }, [editFormData.originalPrice, editFormData.discountValue, editFormData.discountType, type, setEditFormData]);
+  }, [
+    editFormData.originalPrice,
+    editFormData.discountValue,
+    editFormData.discountType,
+    type,
+    setEditFormData,
+  ]);
 
-  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleEditChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
+  ) => {
     const value = e.target.value;
     if (type === "discount" && e.target.name === "discountValue") {
       const val = parseFloat(value) || 0;
       if (editFormData.discountType === "percentage" && val > 100) {
         // Optional: Show inline warning, but let schema handle on submit
-      } else if (editFormData.discountType === "fixed" && val > editFormData.originalPrice) {
+      } else if (
+        editFormData.discountType === "fixed" &&
+        val > editFormData.originalPrice
+      ) {
         // Optional: Show inline warning
       }
     }
@@ -111,7 +160,50 @@ export default function EditItemModal({
     }
   };
 
+  const hasChanges = () => {
+    // Compare editFormData with item
+    const keys = Object.keys(editFormData) as (keyof typeof editFormData)[];
+    for (const key of keys) {
+      // Skip non-relevant fields like $id, restaurantId, or isApproved if they are not editable
+      if (key === "$id" || key === "restaurantId" || key === "isApproved")
+        continue;
+
+      // Convert values to strings for consistent comparison, handling numbers and undefined
+      const formValue =
+        editFormData[key] !== undefined ? String(editFormData[key]) : "";
+      const itemValue =
+        (item as any)[key] !== undefined ? String((item as any)[key]) : "";
+
+      if (formValue !== itemValue) {
+        return true;
+      }
+    }
+    // Check if a new image is selected
+    if (newImage !== null) {
+      return true;
+    }
+    return false;
+  };
+
   const handleUpdate = async () => {
+    if (!hasChanges()) {
+      toast.error(
+        "No changes made to the item. Please update at least one field to proceed.",
+        {
+          style: {
+            background: "#f97316", // Orange background
+            color: "#ffffff", // White text
+            border: "1px solid #ea580c",
+          },
+          iconTheme: {
+            primary: "#ffffff", // White icon
+            secondary: "#f97316", // Orange background for icon
+          },
+        }
+      );
+      return;
+    }
+
     setIsUpdating(true);
     try {
       const itemId = item.$id;
@@ -123,8 +215,7 @@ export default function EditItemModal({
             name: editFormData.name,
             description: editFormData.description,
             price: editFormData.price,
-            originalPrice: editFormData.originalPrice,
-            rating: parseFloat(editFormData.rating),
+            originalPrice: editFormData.originalPrice || "0",
             cookTime: editFormData.cookTime,
             category: editFormData.category,
             restaurantId: editFormData.restaurantId,
@@ -137,21 +228,28 @@ export default function EditItemModal({
             name: editFormData.name,
             description: editFormData.description,
             price: editFormData.price,
-            rating: parseFloat(editFormData.rating),
+            rating: editFormData.rating,
             category: editFormData.category,
             restaurantId: editFormData.restaurantId,
             isApproved: editFormData.isApproved,
           };
-          action = updateAsyncFeaturedItem({ itemId, data: updateData, newImage });
+          action = updateAsyncFeaturedItem({
+            itemId,
+            data: updateData,
+            newImage,
+          });
           break;
         case "popular":
           updateData = {
             name: editFormData.name,
             description: editFormData.description,
             price: editFormData.price,
-            originalPrice: editFormData.originalPrice,
+            originalPrice: editFormData.originalPrice || "0",
             rating: parseFloat(editFormData.rating),
-            reviewCount: parseInt(editFormData.reviewCount?.toString() || "0", 10),
+            reviewCount: parseInt(
+              editFormData.reviewCount?.toString() || "0",
+              10
+            ),
             category: editFormData.category,
             cookingTime: editFormData.cookingTime,
             isPopular: editFormData.isPopular,
@@ -159,7 +257,11 @@ export default function EditItemModal({
             restaurantId: editFormData.restaurantId,
             isApproved: editFormData.isApproved,
           };
-          action = updateAsyncPopularItem({ itemId, data: updateData, newImage });
+          action = updateAsyncPopularItem({
+            itemId,
+            data: updateData,
+            newImage,
+          });
           break;
         case "discount":
           updateData = {
@@ -178,13 +280,27 @@ export default function EditItemModal({
             targetId: editFormData.targetId,
             isActive: editFormData.isActive,
           };
-          action = updateAsyncDiscount({ id:itemId, data: updateData, imageFile:newImage });
+          action = updateAsyncDiscount({
+            id: itemId,
+            data: updateData,
+            imageFile: newImage,
+          });
           break;
       }
 
       if (action) {
         await dispatch(action as any).unwrap();
-        toast.success("Item updated successfully");
+        toast.success("Item updated successfully", {
+          style: {
+            background: "#f97316",
+            color: "#ffffff",
+            border: "1px solid #ea580c",
+          },
+          iconTheme: {
+            primary: "#ffffff",
+            secondary: "#f97316",
+          },
+        });
         onClose();
         // Refetch based on type
         switch (type) {
@@ -203,7 +319,17 @@ export default function EditItemModal({
         }
       }
     } catch (error) {
-      toast.error("Failed to update item");
+      toast.error("Failed to update item", {
+        style: {
+          background: "#f97316",
+          color: "#ffffff",
+          border: "1px solid #ea580c",
+        },
+        iconTheme: {
+          primary: "#ffffff",
+          secondary: "#f97316",
+        },
+      });
     } finally {
       setIsUpdating(false);
     }
@@ -246,8 +372,9 @@ export default function EditItemModal({
             <>
               {/* Basic Information Section for non-discount */}
               <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Basic Information</h4>
-                
+                <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">
+                  Basic Information
+                </h4>
                 <div>
                   <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Item Name
@@ -260,7 +387,6 @@ export default function EditItemModal({
                     className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
-
                 <div>
                   <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Description
@@ -274,7 +400,6 @@ export default function EditItemModal({
                     className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 resize-none"
                   />
                 </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -291,30 +416,32 @@ export default function EditItemModal({
                       <option value="non-veg">Non-Vegetarian</option>
                     </select>
                   </div>
-
-                  <div>
-                    <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Rating
-                    </Label>
-                    <Input
-                      name="rating"
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      max="5"
-                      value={editFormData.rating}
-                      onChange={handleEditChange}
-                      placeholder="0.0"
-                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                    />
-                  </div>
+                  {type !== "menu" && (
+                    <div>
+                      <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Rating
+                      </Label>
+                      <Input
+                        name="rating"
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="5"
+                        value={editFormData.rating}
+                        onChange={handleEditChange}
+                        placeholder="0.0"
+                        className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Pricing Section */}
               <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Pricing</h4>
-                
+                <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">
+                  Pricing
+                </h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -329,77 +456,86 @@ export default function EditItemModal({
                       className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     />
                   </div>
-
-                  {("originalPrice" in editFormData && editFormData.originalPrice !== undefined) && (
-                    <div>
-                      <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Original Price (₦)
-                      </Label>
-                      <Input
-                        name="originalPrice"
-                        type="number"
-                        value={editFormData.originalPrice}
-                        onChange={handleEditChange}
-                        placeholder="0.00"
-                        className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                      />
-                    </div>
-                  )}
-
-                  {("discount" in editFormData && editFormData.discount !== undefined) && (
-                    <div>
-                      <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Discount
-                      </Label>
-                      <Input
-                        name="discount"
-                        value={editFormData.discount}
-                        onChange={handleEditChange}
-                        placeholder="e.g., 20% OFF"
-                        className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                      />
-                    </div>
-                  )}
+                  {"originalPrice" in editFormData &&
+                    editFormData.originalPrice !== undefined && (
+                      <div>
+                        <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Original Price (₦)
+                        </Label>
+                        <Input
+                          name="originalPrice"
+                          type="number"
+                          value={editFormData.originalPrice}
+                          onChange={handleEditChange}
+                          placeholder="0.00"
+                          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
+                    )}
+                  {"discount" in editFormData &&
+                    editFormData.discount !== undefined && (
+                      <div>
+                        <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Discount
+                        </Label>
+                        <Input
+                          name="discount"
+                          value={editFormData.discount}
+                          onChange={handleEditChange}
+                          placeholder="e.g., 20% OFF"
+                          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
+                    )}
                 </div>
               </div>
 
               {/* Additional Details Section */}
               <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Additional Details</h4>
-                
+                <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">
+                  Additional Details
+                </h4>
                 <div className="grid grid-cols-2 gap-4">
-                  {("cookTime" in editFormData || "cookingTime" in editFormData) && (
+                  {("cookTime" in editFormData ||
+                    "cookingTime" in editFormData) && (
                     <div>
                       <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Cooking Time
                       </Label>
                       <Input
-                        name={"cookTime" in editFormData ? "cookTime" : "cookingTime"}
-                        value={editFormData.cookTime || editFormData.cookingTime || ""}
+                        name={
+                          "cookTime" in editFormData
+                            ? "cookTime"
+                            : "cookingTime"
+                        }
+                        value={
+                          editFormData.cookTime ||
+                          editFormData.cookingTime ||
+                          ""
+                        }
                         onChange={handleEditChange}
                         placeholder="e.g., 20-25 mins"
                         className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                       />
                     </div>
                   )}
-
-                  {("reviewCount" in editFormData && editFormData.reviewCount !== undefined) && (
-                    <div>
-                      <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Review Count
-                      </Label>
-                      <Input
-                        name="reviewCount"
-                        type="number"
-                        min="0"
-                        value={editFormData.reviewCount}
-                        onChange={handleEditChange}
-                        placeholder="0"
-                        className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                      />
-                    </div>
-                  )}
-
+                  {"reviewCount" in editFormData &&
+                    editFormData.reviewCount !== undefined && (
+                      <div>
+                        <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Review Count
+                        </Label>
+                        <Input
+                          name="reviewCount"
+                          type="number"
+                          min="0"
+                          value={editFormData.reviewCount}
+                          onChange={handleEditChange}
+                          placeholder="0"
+                          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
+                    )}
                   <div>
                     <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Restaurant
@@ -420,8 +556,9 @@ export default function EditItemModal({
             <>
               {/* Basic Information Section for discount */}
               <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Basic Information</h4>
-                
+                <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">
+                  Basic Information
+                </h4>
                 <div>
                   <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Title
@@ -434,7 +571,6 @@ export default function EditItemModal({
                     className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                   />
                 </div>
-
                 <div>
                   <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Description
@@ -449,11 +585,11 @@ export default function EditItemModal({
                   />
                 </div>
               </div>
-
               {/* Discount Details Section */}
               <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Discount Details</h4>
-                
+                <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">
+                  Discount Details
+                </h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -469,7 +605,6 @@ export default function EditItemModal({
                       <option value="fixed">Fixed</option>
                     </select>
                   </div>
-
                   <div>
                     <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Discount Value
@@ -490,7 +625,6 @@ export default function EditItemModal({
                     </div>
                   </div>
                 </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -506,7 +640,6 @@ export default function EditItemModal({
                       className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     />
                   </div>
-
                   <div>
                     <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Discounted Price (Auto-calculated)
@@ -530,11 +663,11 @@ export default function EditItemModal({
                   </div>
                 </div>
               </div>
-
               {/* Validity Section */}
               <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Validity</h4>
-                
+                <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">
+                  Validity
+                </h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -548,7 +681,6 @@ export default function EditItemModal({
                       className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     />
                   </div>
-
                   <div>
                     <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Valid To
@@ -563,11 +695,11 @@ export default function EditItemModal({
                   </div>
                 </div>
               </div>
-
               {/* Additional Discount Details */}
               <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Additional Details</h4>
-                
+                <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">
+                  Additional Details
+                </h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -582,7 +714,6 @@ export default function EditItemModal({
                       className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     />
                   </div>
-
                   <div>
                     <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Max Uses
@@ -597,7 +728,6 @@ export default function EditItemModal({
                     />
                   </div>
                 </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -611,7 +741,6 @@ export default function EditItemModal({
                       className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-orange-400 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                     />
                   </div>
-
                   <div>
                     <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Applies To
@@ -629,7 +758,6 @@ export default function EditItemModal({
                     </select>
                   </div>
                 </div>
-
                 <div>
                   <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Target ID
@@ -648,8 +776,9 @@ export default function EditItemModal({
 
           {/* Image Upload Section */}
           <div className="space-y-4">
-            <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Image</h4>
-            
+            <h4 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">
+              Image
+            </h4>
             <div>
               <Label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Upload New Image (Optional)
@@ -660,12 +789,12 @@ export default function EditItemModal({
                     <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                       <ImageIcon className="w-5 h-5" />
                       <span className="text-sm">
-                        {newImage ? newImage.name : 'Choose an image'}
+                        {newImage ? newImage.name : "Choose an image"}
                       </span>
                     </div>
                   </div>
                   <Input
-                    type="file" 
+                    type="file"
                     onChange={handleEditFileChange}
                     accept="image/*"
                     className="hidden"
@@ -680,6 +809,7 @@ export default function EditItemModal({
               )}
             </div>
           </div>
+
           {/* Action Buttons */}
           <div className="flex gap-3 justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
             <Button
@@ -692,7 +822,10 @@ export default function EditItemModal({
             <Button
               type="button"
               onClick={handleUpdate}
-              disabled={isUpdating || (type === "discount" && Boolean(calculationWarning))}
+              disabled={
+                isUpdating ||
+                (type === "discount" && Boolean(calculationWarning))
+              }
               className="px-6 py-2.5 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white rounded-lg transition font-medium flex items-center gap-2"
             >
               {isUpdating ? (

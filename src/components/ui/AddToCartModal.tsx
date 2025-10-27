@@ -9,12 +9,24 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Minus, Plus, ShoppingCart, X, CheckCircle, AlertCircle } from "lucide-react";
+import {
+  Minus,
+  Plus,
+  ShoppingCart,
+  X,
+  CheckCircle,
+  AlertCircle,
+} from "lucide-react";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import { cn } from "@/lib/utils";
 import { useShowCart } from "@/context/showCart";
-import { ICartItemOrder, ICartItemFetched, IFetchedExtras, ISelectedExtra } from "../../../types/types";
+import {
+  ICartItemOrder,
+  ICartItemFetched,
+  IFetchedExtras,
+  ISelectedExtra,
+} from "../../../types/types";
 import {
   createOrderAsync,
   resetOrders,
@@ -29,18 +41,20 @@ import { databases } from "@/utils/appwrite";
 import { Query } from "appwrite";
 import { useAuth } from "@/context/authContext";
 
-
 const AddToCartModal = () => {
   const { isOpen, setIsOpen, item } = useShowCart();
-
   const dispatch = useDispatch<AppDispatch>();
   const error = useSelector((state: RootState) => state.orders.error);
   const orders = useSelector((state: RootState) => state.orders.orders);
   const [quantity, setQuantity] = useState(item.quantity || 1);
   const [specialInstructions, setSpecialInstructions] = useState("");
-  const [extraQuantities, setExtraQuantities] = useState<Record<string, number>>({});
+  const [extraQuantities, setExtraQuantities] = useState<
+    Record<string, number>
+  >({});
   const [allExtras, setAllExtras] = useState<IFetchedExtras[]>([]);
-  const [extrasLoading, setExtrasLoading] = useState<"idle" | "pending" | "succeeded" | "failed">("idle");
+  const [extrasLoading, setExtrasLoading] = useState<
+    "idle" | "pending" | "succeeded" | "failed"
+  >("idle");
   const [extrasError, setExtrasError] = useState<string | null>(null);
   const maxInstructionsLength = 200;
   const { user } = useAuth();
@@ -50,7 +64,16 @@ const AddToCartModal = () => {
   const minOrderValue = item.minOrderValue || 0;
   const isValidQuantity = !isDiscountItem || quantity >= minOrderValue;
 
+  // Regex for packaging extras
+  const packagingRegex = /(pack|plastic container|takeaway container)/i;
+  const spoonRegex =
+    /(rice|egg sauce|beans|porridge|porridge|pasta|spaghetti|macaroni|stew|pizza|jollof|fried rice|white rice|yam pottage|asaro)/i;
+  const soupRegex =
+    /(soup|egusi|ogbono|okra|efo|ewedu|gbegiri|banga|afang|pepper soup)/i;
+  const requiresPlastic =
+    spoonRegex.test(item.name) || soupRegex.test(item.name);
 
+  // Fetch extras
   useEffect(() => {
     if (isOpen && Array.isArray(item.extras) && item.extras.length > 0) {
       const fetchAllExtras = async () => {
@@ -67,7 +90,8 @@ const AddToCartModal = () => {
           setAllExtras(fetchedExtras);
           setExtrasLoading("succeeded");
         } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : "Failed to fetch extras";
+          const errorMsg =
+            error instanceof Error ? error.message : "Failed to fetch extras";
           setExtrasError(errorMsg);
           setExtrasLoading("failed");
           toast.error(errorMsg);
@@ -80,6 +104,41 @@ const AddToCartModal = () => {
     }
   }, [isOpen, item.extras]);
 
+  // Initialize extra quantities
+  useEffect(() => {
+    const initialQuantities: Record<string, number> = {};
+    allExtras.forEach((extra) => {
+      if (
+        packagingRegex.test(extra.name) ||
+        (requiresPlastic &&
+          extra.name.toLowerCase().includes("plastic container"))
+      ) {
+        initialQuantities[extra.$id] = quantity; // Auto-set to item quantity
+      } else {
+        initialQuantities[extra.$id] = 0; // Optional extras start at 0
+      }
+    });
+    setExtraQuantities(initialQuantities);
+  }, [allExtras, quantity, requiresPlastic]);
+
+  // Update packaging quantities when item quantity changes
+  useEffect(() => {
+    setExtraQuantities((prev) => {
+      const updated = { ...prev };
+      allExtras.forEach((extra) => {
+        if (
+          packagingRegex.test(extra.name) ||
+          (requiresPlastic &&
+            extra.name.toLowerCase().includes("plastic container"))
+        ) {
+          updated[extra.$id] = quantity;
+        }
+      });
+      return updated;
+    });
+  }, [quantity, allExtras, requiresPlastic]);
+
+  // Reset state when modal closes
   useEffect(() => {
     if (!isOpen) {
       setQuantity(item.quantity || 1);
@@ -94,40 +153,36 @@ const AddToCartModal = () => {
     }
   }, [isOpen, item.quantity, dispatch, error]);
 
-  const spoonRegex = /(rice|egg sauce|beans|porridge|porridge|pasta|spaghetti|macaroni|stew|pizza|jollof|fried rice|white rice|yam pottage|asaro)/i;
-  const soupRegex = /(soup|egusi|ogbono|okra|efo|ewedu|gbegiri|banga|afang|pepper soup)/i;
-
-  const requiresPlastic = spoonRegex.test(item.name) || soupRegex.test(item.name);
-
-  const plasticExtra = useMemo(() => {
-    return allExtras.find((extra) => extra.name.toLowerCase().includes("plastic container"));
-  }, [allExtras]);
+  // Categorize extras
+  const packagingExtras = useMemo(() => {
+    return allExtras.filter(
+      (extra) =>
+        packagingRegex.test(extra.name) ||
+        (requiresPlastic &&
+          extra.name.toLowerCase().includes("plastic container"))
+    );
+  }, [allExtras, requiresPlastic]);
 
   const optionalExtras = useMemo(() => {
-    return allExtras.filter((extra) => extra.$id !== plasticExtra?.$id);
-  }, [allExtras, plasticExtra]);
+    return allExtras.filter(
+      (extra) =>
+        !packagingRegex.test(extra.name) &&
+        !(
+          requiresPlastic &&
+          extra.name.toLowerCase().includes("plastic container")
+        )
+    );
+  }, [allExtras, requiresPlastic]);
 
-  useEffect(() => {
-    const initialQuantities: Record<string, number> = {};
-    optionalExtras.forEach((extra) => {
-      initialQuantities[extra.$id] = 0;
-    });
-    setExtraQuantities(initialQuantities);
-  }, [optionalExtras]);
-
-  const plasticQty = quantity;
-
+  // Calculate extras total
   const extrasTotal = useMemo(() => {
     let total = 0;
-    optionalExtras.forEach((extra) => {
+    allExtras.forEach((extra) => {
       const qty = extraQuantities[extra.$id] || 0;
       total += parseFloat(extra.price) * qty;
     });
-    if (requiresPlastic && plasticExtra) {
-      total += parseFloat(plasticExtra.price) * plasticQty;
-    }
     return total;
-  }, [extraQuantities, optionalExtras, requiresPlastic, plasticExtra, quantity, plasticQty]);
+  }, [extraQuantities, allExtras]);
 
   const parsePrice = (priceString: string | number): number => {
     return typeof priceString === "string"
@@ -145,44 +200,48 @@ const AddToCartModal = () => {
       return { ...prev, [extraId]: Math.max(0, current + delta) };
     });
   };
-  
+
   const handleAddToCart = async () => {
     if (isDiscountItem && quantity < minOrderValue) {
-      toast.error(`Quantity cannot be less than minimum order value of ${minOrderValue} for this discounted item`, {
-        duration: 4000,
-        position: "top-right",
-      });
+      toast.error(
+        `Minimum order quantity for this discount: ${minOrderValue}`,
+        {
+          duration: 4000,
+          position: "top-right",
+        }
+      );
       return;
     }
 
     const newSelectedExtras: ISelectedExtra[] = [];
-    if (requiresPlastic && plasticExtra) {
-      newSelectedExtras.push({ extraId: plasticExtra.$id, quantity });
-    }
-    optionalExtras.forEach((extra) => {
+    allExtras.forEach((extra) => {
       const qty = extraQuantities[extra.$id] || 0;
       if (qty > 0) {
         newSelectedExtras.push({ extraId: extra.$id, quantity: qty });
       }
     });
 
-    const stringifiedNewSelectedExtras = newSelectedExtras.map(e => JSON.stringify(e));
+    const stringifiedNewSelectedExtras = newSelectedExtras.map((e) =>
+      JSON.stringify(e)
+    );
 
     const existingOrder = orders?.find(
       (order) => order.itemId === item.itemId && order.userId === item.userId
     );
 
     if (existingOrder) {
-      // Parse existing selectedExtras from string[] to ISelectedExtra[]
+      // Parse existing selectedExtras
       const existingExtrasMap = new Map<string, number>();
-      (existingOrder.selectedExtras || []).forEach((extraStr: ISelectedExtra | string) => {
-        try {
-          const e: ISelectedExtra = JSON.parse(extraStr as string);
-          existingExtrasMap.set(e.extraId, e.quantity);
-        } catch (e) {
-          console.error("Failed to parse existing extra:", extraStr, e);
+      (existingOrder.selectedExtras || []).forEach(
+        (extraStr: ISelectedExtra | string) => {
+          try {
+            const e: ISelectedExtra = JSON.parse(extraStr as string);
+            existingExtrasMap.set(e.extraId, e.quantity);
+          } catch (e) {
+            console.error("Failed to parse existing extra:", extraStr, e);
+          }
         }
-      });
+      );
 
       // Merge with new extras
       newSelectedExtras.forEach((newE) => {
@@ -190,11 +249,13 @@ const AddToCartModal = () => {
         existingExtrasMap.set(newE.extraId, curr + newE.quantity);
       });
 
-      const mergedExtras: ISelectedExtra[] = Array.from(existingExtrasMap.entries()).map(
-        ([extraId, qty]) => ({ extraId, quantity: qty })
-      );
+      const mergedExtras: ISelectedExtra[] = Array.from(
+        existingExtrasMap.entries()
+      ).map(([extraId, qty]) => ({ extraId, quantity: qty }));
 
-      const stringifiedMergedExtras = mergedExtras.map(e => JSON.stringify(e));
+      const stringifiedMergedExtras = mergedExtras.map((e) =>
+        JSON.stringify(e)
+      );
 
       const newQuantity = existingOrder.quantity + quantity;
       const newSubtotal = itemPrice * newQuantity;
@@ -207,13 +268,14 @@ const AddToCartModal = () => {
       });
       const newTotalPrice = newSubtotal + newExtrasTotal;
 
-      // Optimistic update with stringified extras
+      // Optimistic update
       dispatch(
         addOrder({
           ...existingOrder,
           quantity: newQuantity,
           totalPrice: newTotalPrice,
-          specialInstructions: specialInstructions || existingOrder.specialInstructions,
+          specialInstructions:
+            specialInstructions || existingOrder.specialInstructions,
           selectedExtras: stringifiedMergedExtras,
         })
       );
@@ -229,7 +291,8 @@ const AddToCartModal = () => {
             orderData: {
               quantity: newQuantity,
               totalPrice: newTotalPrice,
-              specialInstructions: specialInstructions || existingOrder.specialInstructions,
+              specialInstructions:
+                specialInstructions || existingOrder.specialInstructions,
               selectedExtras: stringifiedMergedExtras,
             },
           })
@@ -240,7 +303,6 @@ const AddToCartModal = () => {
           duration: 4000,
           position: "top-right",
         });
-        // Revert with original stringified extras
         dispatch(
           addOrder({
             ...existingOrder,
@@ -262,12 +324,12 @@ const AddToCartModal = () => {
         category: item.category,
         price: item.price,
         quantity,
-        totalPrice:Number(totalPrice),
+        totalPrice: Number(totalPrice),
         restaurantId: item.restaurantId,
         specialInstructions,
         status: "pending",
         source: item.source,
-        selectedExtras: stringifiedNewSelectedExtras, 
+        selectedExtras: stringifiedNewSelectedExtras,
         minOrderValue: item.source === "discount" ? item.minOrderValue : null,
       } as unknown as ICartItemFetched;
 
@@ -318,7 +380,8 @@ const AddToCartModal = () => {
         <DialogHeader className="sr-only">
           <DialogTitle>Add {item.name} to Cart</DialogTitle>
           <DialogDescription id="dialog-description">
-            Customize your order for {item.name}. Adjust quantity and add special instructions.
+            Customize your order for {item.name}. Adjust quantity and add
+            special instructions.
           </DialogDescription>
         </DialogHeader>
 
@@ -331,8 +394,8 @@ const AddToCartModal = () => {
                 ? validateEnv().popularBucketId
                 : item.source === "discount"
                 ? validateEnv().discountBucketId
-                : item.source === 'offer' ?
-                validateEnv().promoOfferBucketId
+                : item.source === "offer"
+                ? validateEnv().promoOfferBucketId
                 : validateEnv().menuBucketId,
               item.image
             )}
@@ -354,16 +417,21 @@ const AddToCartModal = () => {
               )}
             >
               <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-              {item.category === "veg" ? "Vegetarian" : "Non-Veg"}
+              {item.category === "veg" ? "Vegetarian" : "Non-Vegetarian"}
             </span>
           </div>
-          {item.category === "discount" && item.discountType && item.discountValue !== undefined && (
-            <div className="absolute top-3 right-3 z-10">
-              <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-red-500/90 text-white border border-red-400 shadow-lg backdrop-blur-sm">
-                {item.discountType === "percentage" ? `${item.discountValue}%` : `₦${item.discountValue}`} Off
-              </span>
-            </div>
-          )}
+          {item.category === "discount" &&
+            item.discountType &&
+            item.discountValue !== undefined && (
+              <div className="absolute top-3 right-3 z-10">
+                <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold bg-red-500/90 text-white border border-red-400 shadow-lg backdrop-blur-sm">
+                  {item.discountType === "percentage"
+                    ? `${item.discountValue}%`
+                    : `₦${item.discountValue}`}{" "}
+                  Off
+                </span>
+              </div>
+            )}
           <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
             <h2 className="text-xl sm:text-2xl font-bold mb-1 drop-shadow-lg line-clamp-1">
               {item.name === "Jollof" ? "African Jollof" : item.name}
@@ -414,8 +482,7 @@ const AddToCartModal = () => {
               </div>
               <button
                 onClick={() => setQuantity(quantity + 1)}
-                className="w-12 h-12 flex items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700
-                                transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95 touch-manipulation"
+                className="w-12 h-12 flex items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95 touch-manipulation"
               >
                 <Plus className="w-5 h-5" />
               </button>
@@ -424,17 +491,74 @@ const AddToCartModal = () => {
               <div className="mt-2 p-2 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg">
                 <div className="flex items-center gap-2 text-sm text-orange-800 dark:text-orange-300">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <span>Minimum order quantity for this discount: {minOrderValue}</span>
+                  <span>
+                    Minimum order quantity for this discount: {minOrderValue}
+                  </span>
                 </div>
               </div>
             )}
           </div>
 
+          {packagingExtras.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">
+                  Required Packaging
+                </h3>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  Automatically added based on quantity
+                </span>
+              </div>
+              <div className="space-y-3">
+                {packagingExtras.map((extra) => {
+                  const qty = extraQuantities[extra.$id] || 0;
+                  const extraPrice = parseFloat(extra.price);
+                  return (
+                    <div
+                      key={extra.$id}
+                      className="flex items-center gap-3 p-3 rounded-xl border-2 border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/10"
+                    >
+                      <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                      <div className="relative w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                        {extra.image ? (
+                          <Image
+                            src={fileUrl(
+                              validateEnv().extrasBucketId,
+                              extra.image
+                            )}
+                            fill
+                            alt={extra.name}
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-700">
+                            <span className="text-xs text-gray-500">?</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <Label className="text-sm font-medium text-gray-900 dark:text-gray-100 block mb-1">
+                          {extra.name}
+                        </Label>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                          {extra.description || "Essential for safe delivery"}
+                        </p>
+                        <p className="text-sm font-semibold text-green-600 dark:text-green-400">
+                          +₦{extraPrice.toLocaleString()} x {qty}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {optionalExtras.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">
-                  Add Optional Extras
+                  Optional Extras
                 </h3>
                 <span className="text-xs text-gray-500 dark:text-gray-400">
                   Customize your order
@@ -457,7 +581,10 @@ const AddToCartModal = () => {
                       <div className="relative w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
                         {extra.image ? (
                           <Image
-                            src={fileUrl(validateEnv().extrasBucketId, extra.image)}
+                            src={fileUrl(
+                              validateEnv().extrasBucketId,
+                              extra.image
+                            )}
                             fill
                             alt={extra.name}
                             className="object-cover"
@@ -481,7 +608,9 @@ const AddToCartModal = () => {
                       </div>
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => handleExtraQuantityChange(extra.$id, -1)}
+                          onClick={() =>
+                            handleExtraQuantityChange(extra.$id, -1)
+                          }
                           disabled={qty <= 0}
                           className={cn(
                             "w-8 h-8 flex items-center justify-center rounded-md transition-all",
@@ -496,7 +625,9 @@ const AddToCartModal = () => {
                           {qty}
                         </span>
                         <button
-                          onClick={() => handleExtraQuantityChange(extra.$id, 1)}
+                          onClick={() =>
+                            handleExtraQuantityChange(extra.$id, 1)
+                          }
                           className="w-8 h-8 flex items-center justify-center rounded-md bg-gradient-to-br from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 transition-all"
                         >
                           <Plus className="w-4 h-4" />
@@ -505,51 +636,6 @@ const AddToCartModal = () => {
                     </div>
                   );
                 })}
-              </div>
-            </div>
-          )}
-
-          {requiresPlastic && plasticExtra && (
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">
-                  Required Packaging
-                </h3>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  Automatically added
-                </span>
-              </div>
-              <div className="space-y-3">
-                <div
-                  className="flex items-center gap-3 p-3 rounded-xl border-2 border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/10"
-                >
-                  <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
-                  <div className="relative w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
-                    {plasticExtra.image ? (
-                      <Image
-                        src={fileUrl(validateEnv().extrasBucketId, plasticExtra.image)}
-                        fill
-                        alt={plasticExtra.name}
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-700">
-                        <span className="text-xs text-gray-500">?</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <Label className="text-sm font-medium text-gray-900 dark:text-gray-100 block mb-1">
-                      {plasticExtra.name}
-                    </Label>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
-                      {plasticExtra.description || "Essential for safe delivery"}
-                    </p>
-                    <p className="text-sm font-semibold text-green-600 dark:text-green-400">
-                      +₦{parseFloat(plasticExtra.price).toLocaleString()} x {plasticQty}
-                    </p>
-                  </div>
-                </div>
               </div>
             </div>
           )}
@@ -567,17 +653,19 @@ const AddToCartModal = () => {
               <textarea
                 value={specialInstructions}
                 onChange={(e) => setSpecialInstructions(e.target.value)}
-                placeholder="E.g., Extra spicy, no onions, well done..."
+                placeholder="E.g., extra spicy, no onions, well done..."
                 maxLength={maxInstructionsLength}
                 className="w-full min-h-[80px] resize-none bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 focus:border-orange-500 dark:focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 placeholder:text-gray-400 dark:placeholder:text-gray-500 rounded-xl p-3 text-gray-900 dark:text-gray-100 text-sm transition-all duration-200"
               />
               <div className="absolute bottom-2 right-2">
-                <span className={cn(
-                  "text-xs font-medium px-2 py-1 rounded-full transition-colors",
-                  specialInstructions.length > maxInstructionsLength * 0.8
-                    ? "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
-                    : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
-                )}>
+                <span
+                  className={cn(
+                    "text-xs font-medium px-2 py-1 rounded-full transition-colors",
+                    specialInstructions.length > maxInstructionsLength * 0.8
+                      ? "bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
+                      : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+                  )}
+                >
                   {specialInstructions.length}/{maxInstructionsLength}
                 </span>
               </div>
@@ -630,7 +718,9 @@ const AddToCartModal = () => {
               <ShoppingCart className="w-5 h-5 group-hover:animate-bounce" />
               <span>Add to Cart</span>
               <span className="opacity-75">•</span>
-              <span className="font-extrabold">₦{totalPrice.toLocaleString()}</span>
+              <span className="font-extrabold">
+                ₦{totalPrice.toLocaleString()}
+              </span>
             </span>
           </Button>
         </div>

@@ -93,6 +93,7 @@ export const restaurantSchema = z.object({
   schedule: z.array(scheduleDaySchema).length(7, "Schedule must include exactly 7 days"),
 });
 
+
 export const menuItemSchema = z.object({
   name: z.string().min(1, "Item name is required").max(255, "Name is too long"),
   description: z
@@ -104,11 +105,7 @@ export const menuItemSchema = z.object({
     .string()
     .min(1, "Original price is required")
     .max(50, "Original price is too long"),
-  image:fileListSchema,
-  rating: z
-    .number()
-    .min(0, "Rating must be between 0 and 5")
-    .max(5, "Rating must be between 0 and 5"),
+  image: fileListSchema,
   cookTime: z
     .string()
     .min(1, "Cook time is required")
@@ -120,6 +117,8 @@ export const menuItemSchema = z.object({
     .string()
     .min(1, "Restaurant is required")
     .max(36, "Restaurant ID is too long"),
+  needsTakeawayContainer: z.boolean().optional(),
+  extraPortion: z.boolean().optional(),
 });
 
 export const featuredItemSchema = z.object({
@@ -182,94 +181,94 @@ export const popularItemSchema = z.object({
     .max(36, "Restaurant ID is too long"),
 });
 
-export const discountSchema = z.object({
-  title: z
-    .string()
-    .min(1, "Title is required")
-    .max(255, "Title is too long"),
-    restaurantId:z.string(),
-  description: z
-    .string()
-    .min(1, "Description is required")
-    .max(1000, "Description is too long"),
-  discountType: z.enum(["percentage", "fixed"], {
-    required_error: "Discount type is required",
-  }),
-  originalPrice:z.number({ required_error: "Original value is required" })
-    .positive("Original price must be greater than 0"),
-  discountedPrice:z.number({ required_error: "Discount price is required" })
-    .positive("Discounted price must be greater than 0"),
-  discountValue: z
-    .number({ required_error: "Discount value is required" })
-    .positive("Discount value must be greater than 0"),
-  validFrom: z
-    .string()
-    .min(1, "Valid from date is required")
-    .refine((val) => !isNaN(Date.parse(val)), "Invalid date format"),
-  validTo: z
-    .string()
-    .min(1, "Valid to date is required")
-    .refine((val) => !isNaN(Date.parse(val)), "Invalid date format"),
-  minOrderValue: z
-    .number({ required_error: "Min order value is required" })
-    .min(0, "Min order value cannot be negative")
-    .optional()
-    .or(z.literal(0)),
-  maxUses: z
-    .number({ required_error: "Max uses is required" })
-    .min(0, "Max uses cannot be negative")
-    .optional()
-    .or(z.literal(0)),
-  code: z
-    .string()
-    .max(50, "Code is too long")
-    .optional(),
-  appliesTo: z.enum(["all", "item", "category", "restaurant"], {
-    required_error: "Applies to is required",
-  }),
-  targetId: z
-    .string()
-    .max(36, "Target ID is too long")
-    .optional(),
-  image: fileListSchema.optional(),
-  isActive: z.boolean(),
-}).refine((data) => new Date(data.validFrom) < new Date(data.validTo), {
-  message: "Valid to date must be after valid from date",
-  path: ["validTo"],
-}).superRefine((data, ctx) => {
-  // Conditional validation for discountValue based on discountType
-  if (data.discountType === "percentage") {
-    if (data.discountValue > 100) {
+export const discountSchema = z
+  .object({
+    title: z.string().min(1, "Title is required").max(255, "Title is too long"),
+    restaurantId: z.string(),
+    description: z
+      .string()
+      .min(1, "Description is required")
+      .max(1000, "Description is too long"),
+    discountType: z.enum(["percentage", "fixed"], {
+      required_error: "Discount type is required",
+    }),
+    originalPrice: z
+      .number({ required_error: "Original value is required" })
+      .positive("Original price must be greater than 0"),
+    discountedPrice: z
+      .number({ required_error: "Discount price is required" })
+      .positive("Discounted price must be greater than 0"),
+    discountValue: z
+      .number({ required_error: "Discount value is required" })
+      .positive("Discount value must be greater than 0"),
+    validFrom: z
+      .string()
+      .min(1, "Valid from date is required")
+      .refine((val) => !isNaN(Date.parse(val)), "Invalid date format"),
+    validTo: z
+      .string()
+      .min(1, "Valid to date is required")
+      .refine((val) => !isNaN(Date.parse(val)), "Invalid date format"),
+    minOrderValue: z
+      .number({ required_error: "Min order value is required" })
+      .min(0, "Min order value cannot be negative")
+      .optional()
+      .or(z.literal(0)),
+    maxUses: z
+      .number({ required_error: "Max uses is required" })
+      .min(0, "Max uses cannot be negative")
+      .optional()
+      .or(z.literal(0)),
+    code: z.string().max(50, "Code is too long").optional(),
+    appliesTo: z.enum(["new", "deal", "exclusive", "limited-time"], {
+      required_error: "Applies to is required",
+    }),
+    targetId: z.string().max(36, "Target ID is too long").optional(),
+    image: fileListSchema,
+    isActive: z.boolean(),
+  })
+  .refine((data) => new Date(data.validFrom) < new Date(data.validTo), {
+    message: "Valid to date must be after valid from date",
+    path: ["validTo"],
+  })
+  .superRefine((data, ctx) => {
+    // Conditional validation for discountValue based on discountType
+    if (data.discountType === "percentage") {
+      if (data.discountValue > 100) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Discount cannot exceed 100%",
+          path: ["discountValue"],
+        });
+      }
+    } else {
+      // fixed
+      if (data.discountValue > data.originalPrice) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Fixed discount cannot exceed original price",
+          path: ["discountValue"],
+        });
+      }
+    }
+    // Ensure discountedPrice matches the calculation
+    let expectedDiscounted: number;
+    if (data.discountType === "percentage") {
+      expectedDiscounted =
+        Math.round(data.originalPrice * (1 - data.discountValue / 100) * 100) /
+        100;
+    } else {
+      expectedDiscounted =
+        Math.round((data.originalPrice - data.discountValue) * 100) / 100;
+    }
+    if (data.discountedPrice !== expectedDiscounted) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Discount cannot exceed 100%",
-        path: ["discountValue"],
+        message: "Discounted price must match the calculated value",
+        path: ["discountedPrice"],
       });
     }
-  } else { // fixed
-    if (data.discountValue > data.originalPrice) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Fixed discount cannot exceed original price",
-        path: ["discountValue"],
-      });
-    }
-  }
-  // Ensure discountedPrice matches the calculation
-  let expectedDiscounted: number;
-  if (data.discountType === "percentage") {
-    expectedDiscounted = Math.round((data.originalPrice * (1 - data.discountValue / 100)) * 100) / 100;
-  } else {
-    expectedDiscounted = Math.round((data.originalPrice - data.discountValue) * 100) / 100;
-  }
-  if (data.discountedPrice !== expectedDiscounted) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Discounted price must match the calculated value",
-      path: ["discountedPrice"],
-    });
-  }
-});
+  });
 
 export const vendorRegistrationSchema = z
   .object({

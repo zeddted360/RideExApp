@@ -42,12 +42,13 @@ export const createAsyncMenuItem = createAsyncThunk<
         price: data.price,
         originalPrice: data.originalPrice,
         image: imageFile.$id,
-        rating: data.rating,
         cookTime: data.cookTime,
         category: data.category,
         restaurantId: data.restaurantId,
         isApproved: false,
-        extras: data.extras || [],  // Append extras as array of IDs
+        extras: data.extras || [], 
+        needsTakeawayContainer: data.needsTakeawayContainer,
+        extraPortion: data.extraPortion,
       }
     );
 
@@ -93,7 +94,7 @@ export const updateAsyncMenuItem = createAsyncThunk<
     const { databaseId, menuItemsCollectionId, menuBucketId } = validateEnv();
     let updateData = { 
       ...data,
-      extras: data.extras !== undefined ? data.extras : undefined,  // Ensure it's an array or undefined (not null)
+      extras: data.extras !== undefined ? data.extras : null,  
     };
 
     if (newImage) {

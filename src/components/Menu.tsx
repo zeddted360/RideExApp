@@ -40,7 +40,6 @@ const RestaurantCard = React.memo(
     const handleClick = () => {
       router.push(`/restaurant/${restaurant.name}`);
     };
-
     return (
       <div
         onClick={handleClick}

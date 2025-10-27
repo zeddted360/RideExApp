@@ -76,11 +76,6 @@ const RestaurantList = () => {
     }
   };
 
-  const scrollRight = () => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: 300, behavior: "smooth" });
-    }
-  };
 
   // Loading state
   if (loading === "pending" && menuLoading === "pending") {

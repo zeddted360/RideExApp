@@ -20,7 +20,8 @@ export const RestaurantMenuItem: React.FC<MenuItemCardProps> = ({ item, restaura
   const router = useRouter();
   const [isFavorited, setIsFavorited] = useState(false);
   const [imageError, setImageError] = useState(false);
-  const {setIsOpen,setItem,} = useShowCart();
+  const { setIsOpen, setItem, } = useShowCart();
+
 
   const handleAddToCart = async () => {
     if(user) {
@@ -34,6 +35,7 @@ export const RestaurantMenuItem: React.FC<MenuItemCardProps> = ({ item, restaura
         quantity: 1,
         category: item.category,
         source: 'menu' as const,
+        extras:item.extras,
       })
       setIsOpen(true);
     }else {

@@ -1,4 +1,3 @@
-// AddFoodItemForm.tsx
 "use client";
 import React, { useEffect, useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
@@ -63,12 +62,14 @@ import { fileUrl, validateEnv } from "@/utils/appwrite";
 import EditItemModal from "./EditItemModal";
 import ExtrasManagementForm from "../forms/ExtrasManagementForm";
 import AccessRestriction from "./AccessRestriction";
-import AddExtrasModal from "./AddExtrasModal";
 import AddItemSidebar from "./AddItemSidebar";
 import ModernLoader from "../ModernLoader";
 import DeleteConfirmModal from "./DeleteConfirmModal";
 import AccountTab from "./AccountTab";
 import EditMenuTab from "./EditMenuTab";
+import { listAsyncExtras } from "@/state/extraSlice";
+import { showErrorToast } from "./CustomToast";
+import { Trash2, Edit2 } from "lucide-react";
 
 const AddFoodItemForm = () => {
   const [activeTab, setActiveTab] = useState<
@@ -91,8 +92,7 @@ const AddFoodItemForm = () => {
   const [isCheckingAccess, setIsCheckingAccess] = useState(true);
   const [filteredRestaurants, setFilteredRestaurants] = useState<
     IRestaurantFetched[]
-  >([]); // Added state
-
+  >([]);
   // Edit state
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<
@@ -108,7 +108,6 @@ const AddFoodItemForm = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [restaurantName, setRestaurantName] = useState<string>("");
-
   // Extras state for menu items
   const [menuSelectedExtras, setMenuSelectedExtras] = useState<
     IFetchedExtras[]
@@ -121,10 +120,14 @@ const AddFoodItemForm = () => {
   const [popularSelectedExtras, setPopularSelectedExtras] = useState<
     IFetchedExtras[]
   >([]);
-  //Extras for discount
+  // Extras state for discount
   const [discountSelectedExtras, setDiscountSelectedExtras] = useState<
     IFetchedExtras[]
   >([]);
+  // State for selected extra ID (for MenuItemForm)
+  const [selectedExtraId, setSelectedExtraId] = useState<string | undefined>(
+    undefined
+  );
 
   const dispatch = useDispatch<AppDispatch>();
   const { restaurants } = useSelector((state: RootState) => state.restaurant);
@@ -138,7 +141,7 @@ const AddFoodItemForm = () => {
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
 
-  // Fetch vendor status if user?.role is vendor
+  // Fetch vendor status and extras if user is a vendor
   useEffect(() => {
     if (user?.role === "vendor" && user?.userId) {
       setIsCheckingAccess(true);
@@ -153,8 +156,9 @@ const AddFoodItemForm = () => {
           setVendorStatus("rejected");
           setIsCheckingAccess(false);
         });
+      dispatch(listAsyncExtras(user.userId));
     } else {
-      setIsCheckingAccess(false); // No need to check for non-vendor roles
+      setIsCheckingAccess(false);
     }
   }, [user?.role, user?.userId, dispatch]);
 
@@ -174,8 +178,11 @@ const AddFoodItemForm = () => {
       dispatch(listAsyncFeaturedItems());
       dispatch(listAsyncPopularItems());
       dispatch(listAsyncMenusItem());
+      if (user?.userId) {
+        dispatch(listAsyncExtras(user.userId)); // Ensure extras are fetched
+      }
     }
-  }, [dispatch, hasAccess]);
+  }, [dispatch, hasAccess, user?.userId]);
 
   // Redirect if no access
   useEffect(() => {
@@ -267,12 +274,13 @@ const AddFoodItemForm = () => {
       description: "",
       price: "",
       originalPrice: "",
-      rating: 0,
+      image: undefined,
       cookTime: "",
-      category: "veg",
+      category: undefined,
       restaurantId: "",
+      needsTakeawayContainer: false,
+      extraPortion: false,
     },
-    mode: "onChange",
   });
 
   const featuredItemForm = useForm<FeaturedItemFormData>({
@@ -321,7 +329,7 @@ const AddFoodItemForm = () => {
       minOrderValue: 0,
       maxUses: 0,
       code: "",
-      appliesTo: "all",
+      appliesTo: "new",
       targetId: "",
       image: undefined,
       isActive: true,
@@ -339,16 +347,16 @@ const AddFoodItemForm = () => {
   useEffect(() => {
     let options: { label: string; value: string }[] = [];
     switch (appliesTo) {
-      case "restaurant":
+      case "new":
         options = restaurants.map((r: IRestaurantFetched) => ({
           label: r.name,
           value: r.$id,
         }));
         break;
-      case "item":
+      case "deal":
         options = [];
         break;
-      case "category":
+      case "exclusive":
         options = [
           { label: "Veg", value: "veg" },
           { label: "Non-Veg", value: "non-veg" },
@@ -367,11 +375,15 @@ const AddFoodItemForm = () => {
     try {
       const payload: any = {
         ...data,
-        extras: menuSelectedExtras.map((extra) => extra.$id),
+        extras: [
+          ...menuSelectedExtras.map((extra) => extra.$id),
+          ...(selectedExtraId ? [selectedExtraId] : []),
+        ],
       };
       await dispatch(createAsyncMenuItem(payload)).unwrap();
       menuItemForm.reset();
       setMenuSelectedExtras([]);
+      setSelectedExtraId(undefined);
       toast.success("Menu item added successfully!");
     } catch (error) {
       toast.error("Failed to add menu item");
@@ -391,7 +403,6 @@ const AddFoodItemForm = () => {
       await dispatch(createAsyncFeaturedItem(payload)).unwrap();
       featuredItemForm.reset();
       setFeaturedSelectedExtras([]);
-      toast.success("Featured item added successfully!");
     } catch (error) {
       toast.error("Failed to add featured item");
     } finally {
@@ -410,7 +421,6 @@ const AddFoodItemForm = () => {
       await dispatch(createAsyncPopularItem(payload)).unwrap();
       popularItemForm.reset();
       setPopularSelectedExtras([]);
-      toast.success("Popular item added successfully!");
     } catch (error) {
       toast.error("Failed to add popular item");
     } finally {
@@ -420,6 +430,14 @@ const AddFoodItemForm = () => {
 
   const handleDiscountSubmit = async (data: DiscountFormData) => {
     if (user?.role === "user") return;
+    if (filteredDiscounts.length > 0) {
+      showErrorToast(
+        `You’ve reached the maximum of 5 discounts. Wait for a discount item to elapse to adjust your cart.`,
+        "",
+        () => {}
+      );
+      return;
+    }
     setLoading(true);
     try {
       const discountData: Partial<IDiscount> = {
@@ -444,7 +462,6 @@ const AddFoodItemForm = () => {
       await dispatch(createAsyncDiscount(discountData)).unwrap();
       discountForm.reset();
       setDiscountSelectedExtras([]);
-      toast.success("Discount added successfully!");
     } catch (error) {
       toast.error("Failed to add discount");
     } finally {
@@ -473,10 +490,12 @@ const AddFoodItemForm = () => {
           description: item.description || "",
           price: item.price,
           originalPrice: (item as IMenuItemFetched).originalPrice || "",
-          rating: item.rating,
           cookTime: (item as IMenuItemFetched).cookTime || "",
           category: item.category,
           restaurantId: item.restaurantId,
+          needsTakeawayContainer:
+            (item as IMenuItemFetched).needsTakeawayContainer || false,
+          extraPortion: (item as IMenuItemFetched).extraPortion || false,
         };
         break;
       case "featured":
@@ -529,8 +548,23 @@ const AddFoodItemForm = () => {
         break;
     }
     setEditFormData(formData);
+    console.log("The form data to be submitted  is :", formData);
+
     setNewImage(null);
     setShowEditModal(true);
+  };
+  // NEW: Delete handler - sets the selected item and opens the confirmation modal
+  const handleDelete = (
+    item:
+      | IMenuItemFetched
+      | IFeaturedItemFetched
+      | IPopularItemFetched
+      | IDiscountFetched,
+    type: "menu" | "featured" | "popular" | "discount"
+  ) => {
+    setSelectedItem(item);
+    setSubActiveTab(type); // Ensure the sub-tab is set correctly for the delete action
+    setShowDeleteModal(true);
   };
 
   const confirmDelete = async () => {
@@ -566,7 +600,6 @@ const AddFoodItemForm = () => {
 
       if (action) {
         await dispatch(action as any).unwrap();
-        toast.success("Item deleted successfully");
         setShowDeleteModal(false);
         // Refetch based on sub tab
         switch (subType) {
@@ -596,7 +629,7 @@ const AddFoodItemForm = () => {
       return "My Restaurants";
     }
     if (activeTab === "edit-menu") {
-      return "Edit Menu";
+      return "Manage contents";
     }
     return `Add New ${
       activeTab.charAt(0).toUpperCase() + activeTab.slice(1).replace("-", " ")
@@ -618,6 +651,7 @@ const AddFoodItemForm = () => {
       : popularBucketId;
   };
 
+  // UPDATED: Improved renderItemCard with better delete button (fixed text, added icon, improved accessibility and hover effects)
   const renderItemCard = (
     item:
       | IMenuItemFetched
@@ -700,13 +734,29 @@ const AddFoodItemForm = () => {
             <span className="text-xl font-bold text-orange-600 dark:text-orange-400">
               {displayPrice}
             </span>
-            <Button
-              onClick={() => handleEdit(item, type)}
-              aria-label={`Edit ${displayName}`}
-              className="flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-xl font-semibold text-sm hover:from-blue-600 hover:to-blue-700 transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-50 min-w-[80px]"
-            >
-              Edit
-            </Button>
+            <div className="flex space-x-2">
+              {/* Edit Button - Improved with icon */}
+              <Button
+                onClick={() => handleEdit(item, type)}
+                aria-label={`Edit ${displayName}`}
+                className="flex items-center justify-center gap-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-2 rounded-xl font-semibold text-sm hover:from-blue-600 hover:to-blue-700 transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-50 min-w-[70px]"
+              >
+                <Edit2 className="w-4 h-4" />
+                Edit
+              </Button>
+              {/* Delete Button - Fixed text to "Delete", added icon, improved hover/confirmation prompt */}
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(item, type);
+                }}
+                aria-label={`Delete ${displayName}`}
+                className="flex items-center justify-center gap-1 bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-2 rounded-xl font-semibold text-sm hover:from-red-600 hover:to-red-700 transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-opacity-50 min-w-[70px]"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -746,7 +796,7 @@ const AddFoodItemForm = () => {
             filteredRestaurants={filteredRestaurants}
             searchCategory={searchCategory}
             setSearchCategory={setSearchCategory}
-            setFilteredRestaurants={setFilteredRestaurants} // Pass the setter
+            setFilteredRestaurants={setFilteredRestaurants}
           />
         )}
         {activeTab === "edit-menu" && (
@@ -765,13 +815,22 @@ const AddFoodItemForm = () => {
           <div className="space-y-6">
             <MenuItemForm
               form={menuItemForm}
-              restaurants={filteredRestaurants}
+              restaurants={
+                user?.role === "admin" ? restaurants : filteredRestaurants
+              }
               onSubmit={handleMenuItemSubmit}
               loading={loading}
               onAddExtras={(selectedExtras) => {
                 setMenuSelectedExtras(selectedExtras);
                 toast.success(`${selectedExtras.length} extras added!`);
               }}
+              onSelectExtra={setSelectedExtraId}
+              excludeTypes={[
+                "pack",
+                "plastic container",
+                "take away container",
+                "take out pack",
+              ]}
             />
           </div>
         )}
@@ -779,7 +838,9 @@ const AddFoodItemForm = () => {
           <div className="space-y-6">
             <FeaturedItemForm
               form={featuredItemForm}
-              restaurants={filteredRestaurants}
+              restaurants={
+                user?.role === "admin" ? restaurants : filteredRestaurants
+              }
               onSubmit={handleFeaturedItemSubmit}
               loading={loading}
               onAddExtras={(selectedExtras) => {
@@ -793,7 +854,9 @@ const AddFoodItemForm = () => {
           <div className="space-y-6">
             <PopularItemForm
               form={popularItemForm}
-              restaurants={filteredRestaurants}
+              restaurants={
+                user?.role === "admin" ? restaurants : filteredRestaurants
+              }
               onSubmit={handlePopularItemSubmit}
               loading={loading}
               onAddExtras={(selectedExtras) => {
@@ -810,10 +873,11 @@ const AddFoodItemForm = () => {
               targetOptions={targetOptions}
               onSubmit={handleDiscountSubmit}
               loading={loading}
-              restaurants={filteredRestaurants}
+              restaurants={
+                user?.role === "admin" ? restaurants : filteredRestaurants
+              }
               onAddExtras={(selectedExtras) => {
                 setDiscountSelectedExtras(selectedExtras);
-                console.log("Selected extras for discount:", selectedExtras);
                 toast.success(`${selectedExtras.length} extras added!`);
               }}
             />

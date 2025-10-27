@@ -107,12 +107,17 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading, restaurants, onA
             <Sparkles className="w-4 h-4 text-yellow-500" />
           </CardTitle>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Create compelling discounts to drive more orders and customer loyalty
+            Create compelling discounts to drive more orders and customer
+            loyalty
           </p>
         </div>
       </CardHeader>
       <CardContent className="pt-4">
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" aria-busy={loading}>
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="space-y-6"
+          aria-busy={loading}
+        >
           {/* Basic Information Section */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
@@ -130,7 +135,7 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading, restaurants, onA
                 <Input
                   id="title"
                   {...form.register("title")}
-                  placeholder="e.g. 20% Off Biryani"
+                  placeholder="e.g. 25% off and free delivery"
                   className={`h-12 mt-1.5 transition-all ${
                     getFieldError("title")
                       ? "border-red-500 focus:ring-red-500"
@@ -150,7 +155,10 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading, restaurants, onA
 
               {/* Restaurant Field */}
               <div>
-                <Label htmlFor="restaurantId" className="flex items-center gap-1">
+                <Label
+                  htmlFor="restaurantId"
+                  className="flex items-center gap-1"
+                >
                   Restaurant <span className="text-red-500">*</span>
                 </Label>
                 <select
@@ -182,16 +190,18 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading, restaurants, onA
                 )}
               </div>
 
-
               {/* Description Field */}
               <div className="md:col-span-2">
-                <Label htmlFor="description" className="flex items-center gap-1">
+                <Label
+                  htmlFor="description"
+                  className="flex items-center gap-1"
+                >
                   Description <span className="text-red-500">*</span>
                 </Label>
                 <Textarea
                   id="description"
                   {...form.register("description")}
-                  placeholder="Provide details about this discount offer..."
+                  placeholder="eg. Chicken and chips served with coke"
                   className={`min-h-[100px] mt-1.5 transition-all ${
                     getFieldError("description")
                       ? "border-red-500 focus:ring-red-500"
@@ -226,14 +236,22 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading, restaurants, onA
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Discount Type */}
               <div>
-                <Label htmlFor="discountType" className="flex items-center gap-1">
+                <Label
+                  htmlFor="discountType"
+                  className="flex items-center gap-1"
+                >
                   Discount Type <span className="text-red-500">*</span>
                 </Label>
-                <Select onValueChange={(value) => {
-                  form.setValue("discountType", value as "percentage" | "fixed");
-                  clearErrors("discountValue");
-                  setCalculationWarning(null);
-                }}>
+                <Select
+                  onValueChange={(value) => {
+                    form.setValue(
+                      "discountType",
+                      value as "percentage" | "fixed"
+                    );
+                    clearErrors("discountValue");
+                    setCalculationWarning(null);
+                  }}
+                >
                   <SelectTrigger
                     className={`h-12 mt-1.5 transition-all border ${
                       getFieldError("discountType")
@@ -261,7 +279,10 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading, restaurants, onA
 
               {/* Discount Value */}
               <div>
-                <Label htmlFor="discountValue" className="flex items-center gap-1">
+                <Label
+                  htmlFor="discountValue"
+                  className="flex items-center gap-1"
+                >
                   Discount Value <span className="text-red-500">*</span>
                 </Label>
                 <div className="relative mt-1.5">
@@ -269,7 +290,7 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading, restaurants, onA
                     id="discountValue"
                     type="number"
                     step="0.01"
-                    {...form.register("discountValue", { 
+                    {...form.register("discountValue", {
                       valueAsNumber: true,
                     })}
                     placeholder={discountType === "percentage" ? "20" : "200"}
@@ -288,7 +309,9 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading, restaurants, onA
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {discountType === "percentage" ? "Percentage off (max 100%)" : "Fixed amount off"}
+                  {discountType === "percentage"
+                    ? "Percentage off (max 100%)"
+                    : "Fixed amount off"}
                 </p>
                 {getFieldError("discountValue") && (
                   <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
@@ -306,11 +329,16 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading, restaurants, onA
 
               {/* Original Price */}
               <div>
-                <Label htmlFor="originalPrice" className="flex items-center gap-1">
+                <Label
+                  htmlFor="originalPrice"
+                  className="flex items-center gap-1"
+                >
                   Original Price <span className="text-red-500">*</span>
                 </Label>
                 <div className="relative mt-1.5">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₦</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                    ₦
+                  </span>
                   <Input
                     id="originalPrice"
                     type="number"
@@ -331,7 +359,9 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading, restaurants, onA
                     disabled={loading}
                   />
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Full price before discount</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Full price before discount
+                </p>
                 {getFieldError("originalPrice") && (
                   <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
                     <Info className="w-3 h-3" />
@@ -342,17 +372,24 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading, restaurants, onA
 
               {/* Discounted Price */}
               <div>
-                <Label htmlFor="discountedPrice" className="flex items-center gap-1">
+                <Label
+                  htmlFor="discountedPrice"
+                  className="flex items-center gap-1"
+                >
                   Discounted Price (Auto-calculated)
                 </Label>
                 <div className="relative mt-1.5">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">₦</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                    ₦
+                  </span>
                   <Input
                     id="discountedPrice"
                     type="number"
                     step="0.01"
                     value={watch("discountedPrice")}
-                    {...form.register("discountedPrice", { valueAsNumber: true })}
+                    {...form.register("discountedPrice", {
+                      valueAsNumber: true,
+                    })}
                     placeholder="800"
                     className={`h-12 pl-8 transition-all bg-gray-100 dark:bg-gray-700 cursor-not-allowed ${
                       getFieldError("discountedPrice")
@@ -362,7 +399,9 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading, restaurants, onA
                     disabled={true}
                   />
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Final price after discount (read-only)</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Final price after discount (read-only)
+                </p>
                 {getFieldError("discountedPrice") && (
                   <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
                     <Info className="w-3 h-3" />
@@ -441,7 +480,10 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading, restaurants, onA
 
               {/* Min Order Value */}
               <div>
-                <Label htmlFor="minOrderValue" className="flex items-center gap-1">
+                <Label
+                  htmlFor="minOrderValue"
+                  className="flex items-center gap-1"
+                >
                   Min Order Value <span className="text-red-500">*</span>
                 </Label>
                 <div className="relative mt-1.5">
@@ -461,7 +503,9 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading, restaurants, onA
                     disabled={loading}
                   />
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Minimum order amount required</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Minimum order amount required
+                </p>
                 {getFieldError("minOrderValue") && (
                   <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
                     <Info className="w-3 h-3" />
@@ -490,7 +534,9 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading, restaurants, onA
                   }`}
                   disabled={loading}
                 />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Maximum number of times this discount can be used</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Maximum number of times this discount can be used
+                </p>
                 {getFieldError("maxUses") && (
                   <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
                     <Info className="w-3 h-3" />
@@ -515,7 +561,14 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading, restaurants, onA
                 <Label htmlFor="appliesTo" className="flex items-center gap-1">
                   Applies To <span className="text-red-500">*</span>
                 </Label>
-                <Select onValueChange={(value) => form.setValue("appliesTo", value as "all" | "restaurant" | "category" | "item")}>
+                <Select
+                  onValueChange={(value) =>
+                    form.setValue(
+                      "appliesTo",
+                      value as "new" | "deal" | "exclusive" | "limited-time"
+                    )
+                  }
+                >
                   <SelectTrigger
                     className={`h-12 mt-1.5 transition-all border ${
                       getFieldError("appliesTo")
@@ -529,10 +582,10 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading, restaurants, onA
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Orders</SelectItem>
-                    <SelectItem value="restaurant">Restaurant</SelectItem>
-                    <SelectItem value="category">Category</SelectItem>
-                    <SelectItem value="item">Specific Item</SelectItem>
+                    <SelectItem value="new">New</SelectItem>
+                    <SelectItem value="deal">Deal</SelectItem>
+                    <SelectItem value="exclusive">Exclusive</SelectItem>
+                    <SelectItem value="limited-time">Limited Time</SelectItem>
                   </SelectContent>
                 </Select>
                 {getFieldError("appliesTo") && (
@@ -546,9 +599,12 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading, restaurants, onA
               {/* Target ID */}
               <div>
                 <Label htmlFor="targetId" className="flex items-center gap-1">
-                  Target {form.watch("appliesTo") || "Selection"} ID <span className="text-red-500">*</span>
+                  Target {form.watch("appliesTo") || "Selection"} ID{" "}
+                  <span className="text-red-500">*</span>
                 </Label>
-                <Select onValueChange={(value) => form.setValue("targetId", value)}>
+                <Select
+                  onValueChange={(value) => form.setValue("targetId", value)}
+                >
                   <SelectTrigger
                     className={`h-12 mt-1.5 transition-all border ${
                       getFieldError("targetId")
@@ -559,7 +615,17 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading, restaurants, onA
                     } bg-white dark:bg-gray-800`}
                     disabled={loading}
                   >
-                    <SelectValue placeholder={`Select ${form.watch("appliesTo") === "restaurant" ? "restaurant" : form.watch("appliesTo") === "category" ? "category" : "item"}`} />
+                    <SelectValue
+                      placeholder={`Select ${
+                        form.watch("appliesTo") === "new"
+                          ? "new items"
+                          : form.watch("appliesTo") === "deal"
+                          ? "deals"
+                          : form.watch("appliesTo") === "exclusive"
+                          ? "exclusive items"
+                          : "limited time offers"
+                      }`}
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {targetOptions.map((option) => (
@@ -627,10 +693,7 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading, restaurants, onA
               </h3>
             </div>
             <div>
-              <AddExtrasModal
-                onAddExtras={onAddExtras}
-                loading={loading}
-              />
+              <AddExtrasModal onAddExtras={onAddExtras} loading={loading} />
             </div>
           </div>
 
@@ -639,7 +702,7 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading, restaurants, onA
             <div className="flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700">
               <Upload className="w-4 h-4 text-gray-600 dark:text-gray-400" />
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                Discount Image (Optional)
+                Discount Image <span className="text-red-500">*</span>
               </h3>
             </div>
 
@@ -648,7 +711,8 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading, restaurants, onA
                 <div className="flex items-start gap-2">
                   <Sparkles className="w-4 h-4 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" />
                   <p className="text-xs text-orange-800 dark:text-orange-300">
-                    <strong>Pro tip:</strong> Add an eye-catching image to make your discount stand out in promotions!
+                    <strong>Pro tip:</strong> Add an eye-catching image to make
+                    your discount stand out in promotions!
                   </p>
                 </div>
               </div>
@@ -685,7 +749,8 @@ const DiscountForm = ({ form, targetOptions, onSubmit, loading, restaurants, onA
                     label="Upload Image"
                   />
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                    Recommended: High-resolution JPG or PNG, max 5MB, landscape format for banners
+                    Recommended: High-resolution JPG or PNG, max 5MB, landscape
+                    format for banners
                   </p>
                 </div>
               )}
