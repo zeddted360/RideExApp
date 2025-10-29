@@ -48,6 +48,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { useAuth } from "@/context/authContext";
 import { Textarea } from "@/components/ui/textarea";
+import SupportModal from "./SupportModal";
+import CancelDialog from "./CancelDialog";
+import OrderFeedbackModal from "./OrderFeedbackModal";
+import LodingState from "./LodingState";
+import ErrorState from "./ErrorState";
+import NoBranchOrder from "./NoBranchOrder";
+import CanceledStatus from "./CanceledStatus";
 
 const statusSteps = [
   { key: "pending", label: "Pending", icon: Clock },
@@ -63,97 +70,6 @@ function getStatusIndex(status: string) {
     : 0;
 }
 
-interface OrderFeedbackModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (rating: number, comment: string) => Promise<void>;
-}
-
-const OrderFeedbackModal: React.FC<OrderFeedbackModalProps> = ({ isOpen, onClose, onSubmit }) => {
-  const [rating, setRating] = useState(0);
-  const [comment, setComment] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-
-  const handleSubmit = async () => {
-    if (rating === 0) {
-      toast.error("Please provide a rating");
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await onSubmit(rating, comment);
-      toast.success("Thank you for your feedback!");
-      onClose();
-    } catch (error) {
-      toast.error("Failed to submit feedback");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md mx-auto dark:bg-gray-800 rounded-2xl">
-        <DialogHeader className="space-y-3">
-          <div className="w-14 h-14 mx-auto bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center">
-            <Star className="w-8 h-8 text-orange-500" />
-          </div>
-          <DialogTitle className="dark:text-gray-100 text-xl font-bold text-center">
-            How was your experience?
-          </DialogTitle>
-        </DialogHeader>
-        <DialogDescription className="dark:text-gray-300 text-sm text-center leading-relaxed space-y-4">
-          <div className="flex justify-center gap-2">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <motion.button
-                key={star}
-                whileHover={{ scale: 1.2 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setRating(star)}
-                className="focus:outline-none"
-              >
-                <Star
-                  className={`w-8 h-8 ${
-                    star <= rating
-                      ? "fill-orange-500 text-orange-500"
-                      : "text-gray-300 dark:text-gray-600"
-                  }`}
-                />
-              </motion.button>
-            ))}
-          </div>
-          <Textarea
-            placeholder="Share your thoughts (optional)"
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            className="min-h-[100px] resize-none"
-          />
-        </DialogDescription>
-        <DialogFooter className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-2 mt-4">
-          <DialogClose asChild>
-            <Button variant="outline" className="w-full sm:w-auto h-11 font-medium">
-              Skip
-            </Button>
-          </DialogClose>
-          <Button
-            onClick={handleSubmit}
-            className="w-full sm:w-auto h-11 font-medium bg-orange-500 hover:bg-orange-600"
-            disabled={submitting || rating === 0}
-          >
-            {submitting ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Submitting...
-              </>
-            ) : (
-              "Submit Feedback"
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
 
 export default function OrderDetailsPage() {
   const { orderId } = useParams<{ orderId: string }>();
@@ -174,13 +90,13 @@ export default function OrderDetailsPage() {
   const { payWithPaystack, paying, paymentError } = usePayment();
   const [cancelDialogOpen, setCancelDialogOpen] = React.useState(false);
   const [showItems, setShowItems] = React.useState(false);
-  const [visibleCount, setVisibleCount] = React.useState(4);
-  const [cancelling, setCancelling] = React.useState(false);
+  const [visibleCount, setVisibleCount] = useState(4);
+  const [cancelling, setCancelling] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  const {user} = useAuth();
+  const { user } = useAuth();
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [prevStatus, setPrevStatus] = useState<string | null>(null);
-
+  const [showSupportModal, setShowSupportModal] = useState(false);
 
   const findItemById = (id: string) => {
     return (
@@ -188,6 +104,27 @@ export default function OrderDetailsPage() {
       featuredItems.find((item) => item.$id === id) ||
       popularItems.find((item) => item.$id === id)
     );
+  };
+
+  const getStatusMessage = (
+    status: string,
+    deliveryDuration: string,
+    deliveryTime: string
+  ) => {
+    switch (status) {
+      case "pending":
+        return "Your order is currently pending";
+      case "confirmed":
+        return "Your order has been confirmed by the admin";
+      case "preparing":
+        return "Your order is being prepared";
+      case "out_for_delivery":
+        return `Estimated arrival: ${deliveryDuration}`;
+      case "delivered":
+        return "Your order has been delivered!";
+      default:
+        return "Your order is being processed";
+    }
   };
 
   useEffect(() => {
@@ -217,25 +154,31 @@ export default function OrderDetailsPage() {
 
   // Detect status change to delivered
   useEffect(() => {
-    if (currentOrder?.status === "delivered" && prevStatus !== "delivered") {
+    if (currentOrder?.status === "delivered" && !currentOrder.feedbackRating && prevStatus !== "delivered") {
       // Assuming no existing feedback field; you can add check if feedback exists
       setShowFeedbackModal(true);
     }
     if (currentOrder?.status) {
       setPrevStatus(currentOrder.status);
     }
-  }, [currentOrder?.status, prevStatus]);
+  }, [currentOrder?.status, prevStatus, currentOrder?.feedbackRating]);
 
   const branch = currentOrder
     ? branches.find((b) => b.id === currentOrder.selectedBranchId)
     : null;
   const statusIdx = currentOrder ? getStatusIndex(currentOrder.status) : 0;
 
-  const riderCode = currentOrder?.riderCode || currentOrder?.orderId?.slice(-4).toUpperCase() || '';
+  const riderCode =
+    currentOrder?.riderCode ||
+    currentOrder?.orderId?.slice(-4).toUpperCase() ||
+    "";
 
   const canCancel =
-    currentOrder &&
-    ["pending", "confirmed", "preparing"].includes(currentOrder.status);
+    currentOrder && ["pending", "confirmed"].includes(currentOrder.status);
+
+  const supportPhone = branch
+    ? branch.phone || "+234 800 000 0000"
+    : "+234 800 000 0000";
 
   const handleCopyCode = async () => {
     if (riderCode) {
@@ -267,12 +210,10 @@ export default function OrderDetailsPage() {
     }
   };
 
-
   const handlePayNow = () => {
     if (!currentOrder) return;
     payWithPaystack({
-      email:
-        user?.email || "user@example.com",
+      email: user?.email || "user@example.com",
       amount: currentOrder.total,
       reference: currentOrder.orderId || currentOrder.$id,
       orderId: currentOrder.$id,
@@ -296,118 +237,23 @@ export default function OrderDetailsPage() {
     );
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100 dark:from-gray-900 dark:to-gray-800 p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center space-y-4"
-        >
-          <div className="relative w-20 h-20 mx-auto">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-              className="w-20 h-20 rounded-full border-4 border-orange-200 dark:border-orange-800 border-t-orange-500"
-            />
-          </div>
-          <div className="text-lg font-semibold text-gray-700 dark:text-gray-200">
-            Loading order details...
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
+  if (loading) return <LodingState />;
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100 dark:from-gray-900 dark:to-gray-800 p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center space-y-6 max-w-sm bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-xl"
-        >
-          <div className="w-16 h-16 mx-auto bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-            <XCircle className="w-10 h-10 text-red-500" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Error Loading Order</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">{error}</p>
-          </div>
-          <Button onClick={() => router.push("/myorders")} className="w-full bg-orange-500 hover:bg-orange-600">
-            Back to Orders
-          </Button>
-        </motion.div>
-      </div>
-    );
-  }
+  if (error) return <ErrorState error={error} />
 
-  if (!currentOrder || !branch) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100 dark:from-gray-900 dark:to-gray-800 p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center space-y-6 max-w-sm bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-xl"
-        >
-          <div className="w-16 h-16 mx-auto bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
-            <Package className="w-10 h-10 text-gray-400" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Order Not Found</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">The order you're looking for doesn't exist</p>
-          </div>
-          <Button onClick={() => router.push("/myorders")} className="w-full bg-orange-500 hover:bg-orange-600">
-            View All Orders
-          </Button>
-        </motion.div>
-      </div>
-    );
-  }
+  if (!currentOrder || !branch) return <NoBranchOrder/>
 
-  if (currentOrder.status === "cancelled") {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-red-100 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900 px-4 py-6">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="max-w-md w-full bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-8 text-center border border-red-200 dark:border-red-900/40"
-        >
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", stiffness: 200 }}
-            className="w-24 h-24 mx-auto mb-6 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center"
-          >
-            <XCircle className="w-16 h-16 text-red-500" />
-          </motion.div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-            Order Cancelled
-          </h2>
-          <p className="text-gray-600 dark:text-gray-300 mb-6 leading-relaxed">
-            This order has been cancelled. For more details or assistance, please contact our support team.
-          </p>
-          <div className="space-y-3">
-            <Button
-              onClick={() => router.push("/menu")}
-              className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-xl"
-            >
-              Place New Order
-            </Button>
-            <Button
-              onClick={() => router.push("/myorders")}
-              variant="outline"
-              className="w-full h-12 border-2 border-orange-500 text-orange-600 font-semibold rounded-xl hover:bg-orange-50 dark:hover:bg-orange-900/20"
-            >
-              View My Orders
-            </Button>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
+  if (currentOrder.status === "cancelled") return <CanceledStatus/>
 
   const itemIds: string[] = (currentOrder as any).itemIds || [];
+
+  const statusMessage = getStatusMessage(
+    currentOrder.status,
+    currentOrder.deliveryDuration || "",
+    currentOrder.deliveryTime || ""
+  );
+
+  const isCash = currentOrder.paymentMethod === "cash";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-100 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900 px-4 py-6">
@@ -438,30 +284,44 @@ export default function OrderDetailsPage() {
           <div className="bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-6 text-white">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-lg opacity-90 mb-1 font-bold">Hi {user?.username},</h3>
-                <p className="text-xl">Your order will be ready in {currentOrder.deliveryDuration}.</p>
+                <h3 className="text-lg opacity-90 mb-1 font-bold">
+                  Hi {user?.username}👋
+                </h3>
+                <p className="text-xl">{statusMessage}.</p>
               </div>
-              <div className="flex items-center justify-center w-16 h-16 bg-white/20 rounded-full">
+              <motion.div
+                className="flex items-center justify-center w-16 h-16 bg-white/20 rounded-full cursor-pointer hover:bg-white/30 transition-colors"
+                onClick={() => setShowSupportModal(true)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
                 <Phone className="w-8 h-8 text-white/80" />
-              </div>
+              </motion.div>
             </div>
             <div className="flex items-center justify-between gap-2 gap-x-4 bg-white/20 backdrop-blur-sm px-4 py-3 rounded-md border border-white/30">
               <div className="">
-              <p className="text-white/80 font-medium text-xs tracking-wide">Delivery confirmation code</p>
-              <p className="text-white/80 text-sm font-bold mt-1 tracking-wide">Show this code to your rider</p>
+                <p className="text-white/80 font-medium text-xs tracking-wide">
+                  Delivery confirmation code
+                </p>
+                <p className="text-white/80 text-sm font-bold mt-1 tracking-wide">
+                  Show this code to your rider
+                </p>
               </div>
-              
+
               <div className="relative flex items-center gap-2">
                 <div className="relative group">
                   <div className="flex gap-1">
-                    {riderCode.toUpperCase().split('').map((digit, index) => (
-                      <div
-                        key={index}
-                        className="w-10 h-10 bg-white/50 dark:bg-white/30 rounded-lg flex items-center justify-center text-xl font-extrabold text-gray-900 dark:text-white shadow-md"
-                      >
-                        {digit}
-                      </div>
-                    ))}
+                    {riderCode
+                      .toUpperCase()
+                      .split("")
+                      .map((digit, index) => (
+                        <div
+                          key={index}
+                          className="w-10 h-10 bg-white/50 dark:bg-white/30 rounded-lg flex items-center justify-center text-xl font-extrabold text-gray-900 dark:text-white shadow-md"
+                        >
+                          {digit}
+                        </div>
+                      ))}
                   </div>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
@@ -500,7 +360,10 @@ export default function OrderDetailsPage() {
                         }`}
                       >
                         {idx < statusIdx ? (
-                          <CheckCircle className="w-6 h-6 text-white" strokeWidth={2.5} />
+                          <CheckCircle
+                            className="w-6 h-6 text-white"
+                            strokeWidth={2.5}
+                          />
                         ) : idx === statusIdx ? (
                           <motion.div
                             animate={{ scale: [1, 1.2, 1] }}
@@ -561,32 +424,45 @@ export default function OrderDetailsPage() {
               </div>
             </div>
 
-            {/* Payment Method */}
+            {/* Conditional Payment Method / Delivery Fee Section */}
             <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-200 dark:border-gray-700">
               <div className="flex items-center gap-3">
-                {currentOrder.paymentMethod === "card" ? (
+                {!isCash ? (
+                  <Truck className="w-5 h-5 text-orange-500" />
+                ) : currentOrder.paymentMethod === "card" ? (
                   <CreditCard className="w-5 h-5 text-orange-500" />
                 ) : (
                   <Landmark className="w-5 h-5 text-orange-500" />
                 )}
-                <span className="font-medium text-gray-600 dark:text-gray-400">Payment Method</span>
+                <span className="font-medium text-gray-600 dark:text-gray-400">
+                  {!isCash ? "Delivery Fee" : "Payment Method"}
+                </span>
               </div>
-              <span className="font-bold text-gray-900 dark:text-white capitalize">
-                {currentOrder.paymentMethod.replace(/_/g, " ")}
-              </span>
+              <div className="text-right">
+                {!isCash ? (
+                  <>
+                    <span className="font-bold text-gray-900 dark:text-white block">
+                      ₦{currentOrder.deliveryFee?.toLocaleString()}
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      Cash on Delivery
+                    </span>
+                  </>
+                ) : (
+                  <span className="font-bold text-gray-900 dark:text-white capitalize">
+                    {currentOrder.paymentMethod.replace(/_/g, " ")}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Order Summary */}
             <div className="p-5 bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-900/20 dark:to-orange-900/10 rounded-2xl border border-orange-200 dark:border-orange-900/30">
               <div className="space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Delivery Fee</span>
-                  <span className="font-semibold text-gray-900 dark:text-white">
-                    ₦{currentOrder.deliveryFee?.toLocaleString()}
+                <div className="border-orange-200 dark:border-orange-900/30 flex justify-between items-center">
+                  <span className="text-lg font-bold text-gray-900 dark:text-white">
+                    Total
                   </span>
-                </div>
-                <div className="pt-3 border-t border-orange-200 dark:border-orange-900/30 flex justify-between items-center">
-                  <span className="text-lg font-bold text-gray-900 dark:text-white">Total</span>
                   <span className="text-2xl font-bold text-orange-600">
                     ₦{currentOrder.total?.toLocaleString()}
                   </span>
@@ -658,8 +534,14 @@ export default function OrderDetailsPage() {
                           {item && item.image ? (
                             <Image
                               src={
-                                fileUrl(validateEnv().featuredBucketId, item.image) ||
-                                fileUrl(validateEnv().popularBucketId, item.image) ||
+                                fileUrl(
+                                  validateEnv().featuredBucketId,
+                                  item.image
+                                ) ||
+                                fileUrl(
+                                  validateEnv().popularBucketId,
+                                  item.image
+                                ) ||
                                 fileUrl(validateEnv().menuBucketId, item.image)
                               }
                               alt={item.name}
@@ -680,7 +562,8 @@ export default function OrderDetailsPage() {
                             {item && (
                               <>
                                 <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 mb-2">
-                                  {item.description || "No description available"}
+                                  {item.description ||
+                                    "No description available"}
                                 </p>
                                 <div className="flex items-center gap-2">
                                   {item.category && (
@@ -774,63 +657,36 @@ export default function OrderDetailsPage() {
           transition={{ delay: 0.5 }}
           className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6"
         >
-          Thank you for choosing <span className="font-bold text-orange-600">RideEx</span>
+          Thank you for choosing{" "}
+          <span className="font-bold text-orange-600">RideEx</span>
         </motion.p>
       </div>
 
       {/* Cancel Dialog */}
-      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
-        <DialogContent className="max-w-md mx-auto dark:bg-gray-800 rounded-2xl">
-          <DialogHeader className="space-y-3">
-            <div className="w-14 h-14 mx-auto bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-              <XCircle className="w-8 h-8 text-red-500" />
-            </div>
-            <DialogTitle className="text-xl font-bold text-center dark:text-white">
-              Cancel Order?
-            </DialogTitle>
-          </DialogHeader>
-          <DialogDescription className="text-center space-y-3">
-            {currentOrder?.status === "preparing" && (
-              <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-900/30">
-                <p className="text-xs font-medium text-orange-700 dark:text-orange-300">
-                  ⚠️ Your order may already be in preparation
-                </p>
-              </div>
-            )}
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Are you sure you want to cancel order <span className="font-semibold">{currentOrder?.riderCode?.toUpperCase()}</span>? This action cannot be undone.
-            </p>
-          </DialogDescription>
-          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-2 mt-4">
-            <DialogClose asChild>
-              <Button variant="outline" className="w-full sm:w-auto h-11 font-medium">
-                Keep Order
-              </Button>
-            </DialogClose>
-            <Button
-              variant="destructive"
-              onClick={handleCancelOrder}
-              className="w-full sm:w-auto h-11 font-medium bg-red-500 hover:bg-red-600"
-              disabled={cancelling}
-            >
-              {cancelling ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Cancelling...
-                </>
-              ) : (
-                "Confirm Cancel"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <CancelDialog
+        cancelDialogOpen={cancelDialogOpen}
+        cancelling={cancelling}
+        currentOrder={currentOrder}
+        handleCancelOrder={handleCancelOrder}
+        setCancelDialogOpen={setCancelDialogOpen}
+      />
+      {/* Support Modal */}
+      <SupportModal
+        isOpen={showSupportModal}
+        onClose={() => setShowSupportModal(false)}
+        branchName={branch.name}
+        supportPhone={supportPhone}
+        currentOrder={currentOrder}
+        supportEmail="rideexlogistics@gmail.com"
+        whatsappNumber="+2348161427755"
+      />
 
       {/* Feedback Modal */}
       <OrderFeedbackModal
         isOpen={showFeedbackModal}
         onClose={() => setShowFeedbackModal(false)}
         onSubmit={handleFeedbackSubmit}
+        customerPhone={currentOrder.phone}
       />
     </div>
   );

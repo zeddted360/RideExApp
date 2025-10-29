@@ -1,6 +1,5 @@
 import { Models } from "appwrite";
 
-
 export interface IUser {
   userId: string;
   username: string;
@@ -9,12 +8,12 @@ export interface IUser {
   phoneNumber?: string;
   phoneVerified?: boolean;
   isAdmin?: boolean;
-  fullName?:string;
-  code?:string | null;
+  fullName?: string;
+  code?: string | null;
 }
 
 export interface IUserFectched extends IUser, Models.Document {
-  isVendor:boolean;
+  isVendor: boolean;
   verificationCode?: string;
   codeExpiration?: string;
 }
@@ -64,6 +63,7 @@ export interface IRestaurant {
   distance: string;
   vendorId?: string;
   schedule?: IScheduleDay[];
+  address: string;
 }
 
 export interface IRestaurantFetched extends IRestaurant, Models.Document {}
@@ -316,9 +316,7 @@ export interface IDiscount {
   restaurantId?: string;
   isApproved?: boolean;
 }
-export interface IDiscountFetched extends IDiscount, Models.Document {};
-
-
+export interface IDiscountFetched extends IDiscount, Models.Document {}
 
 export interface IExtras {
   name: string;
@@ -334,4 +332,3 @@ export interface ISelectedExtra {
   extraId: string;
   quantity: number;
 }
-

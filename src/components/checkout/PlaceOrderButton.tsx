@@ -15,7 +15,7 @@ interface PlaceOrderButtonProps {
   setShowConfirmation: (open: boolean) => void;
   handleConfirmOrder: () => void;
   error: string | null;
-  totalAmount:number;
+  totalAmount: number;
 }
 
 const PlaceOrderButton: React.FC<PlaceOrderButtonProps> = ({
@@ -30,12 +30,14 @@ const PlaceOrderButton: React.FC<PlaceOrderButtonProps> = ({
   setShowConfirmation,
   handleConfirmOrder,
   error,
-  totalAmount
+  totalAmount,
 }) => (
   <>
     <Button
       onClick={handlePlaceOrder}
-      disabled={!address || !phoneNumber || orders.length === 0 || isOrderLoading}
+      disabled={
+        !address || !phoneNumber || orders.length === 0 || isOrderLoading
+      }
       className="w-full py-5 text-xl font-bold bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-2xl shadow-lg transition-all duration-200"
     >
       Place Order - ₦{(subtotal + deliveryFee).toLocaleString()}
@@ -90,4 +92,4 @@ const PlaceOrderButton: React.FC<PlaceOrderButtonProps> = ({
   </>
 );
 
-export default PlaceOrderButton; 
+export default PlaceOrderButton;

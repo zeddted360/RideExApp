@@ -1,27 +1,45 @@
 /// <reference types="google.maps" />
 "use client";
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import { motion } from "framer-motion";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "@/state/store";
 import { createNotification } from "@/state/notificationSlice";
 import { account, databases, validateEnv } from "@/utils/appwrite";
 import { ID } from "appwrite";
-import { OrderStatus, INotification, ICartItemFetched, ISelectedExtra } from "../../../types/types";
+import {
+  OrderStatus,
+  INotification,
+  ICartItemFetched,
+  ISelectedExtra,
+} from "../../../types/types";
 import { calculateDeliveryFee } from "@/utils/deliveryFeeCalculator";
 import { Loader } from "@googlemaps/js-api-loader";
 import { useRouter } from "next/navigation";
 import { deleteOrderAsync, resetOrders } from "@/state/orderSlice";
 import BranchSelector from "@/components/checkout/BranchSelector";
-import BranchMap from "@/components/checkout/BranchMap";
+import UserLocationMap from "@/components/checkout/UserLocationMap";
 import DeliveryOptions from "@/components/checkout/DeliveryOptions";
 import OrderSummary from "@/components/checkout/OrderSummary";
 import AddressSection from "@/components/checkout/AddressSection";
-import PaymentMethodSelector, { PaymentMethod } from "@/components/checkout/PaymentMethodSelector";
+import PaymentMethodSelector, {
+  PaymentMethod,
+} from "@/components/checkout/PaymentMethodSelector";
 import PlaceOrderButton from "@/components/checkout/PlaceOrderButton";
 import { generateTimeSlots, formatDeliveryTime } from "@/utils/checkoutUtils";
 import { branches } from "../../../data/branches";
 import { useAuth } from "@/context/authContext";
+import ShowCashModal from "./ShowCashModal";
+import LoadingClient from "./LoadingClient";
+import OffLocationModal from "./OffLocationModal";
+import { Button } from "@/components/ui/button";
+import ExceededModal from "./ExceededModal";
 
 export default function CheckoutClient() {
   const [selectedBranch, setSelectedBranch] = useState(1);
@@ -36,7 +54,7 @@ export default function CheckoutClient() {
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
-  const [deliveryFee, setDeliveryFee] = useState(1000);
+  const [deliveryFee, setDeliveryFee] = useState(333);
   const [deliveryDistance, setDeliveryDistance] = useState("");
   const [deliveryDuration, setDeliveryDuration] = useState("");
   const [isCalculatingFee, setIsCalculatingFee] = useState(false);
@@ -47,10 +65,21 @@ export default function CheckoutClient() {
   const [userAddresses, setUserAddresses] = useState<string[]>([]);
   const [addressMode, setAddressMode] = useState<"select" | "add">("select");
   const [googlePlaceSelected, setGooglePlaceSelected] = useState(false);
+  const [offLocationModal, setOffLocationModal] = useState<boolean>(false);
   const [selectedPlace, setSelectedPlace] =
     useState<google.maps.places.PlaceResult | null>(null);
   const [lastPickedAddress, setLastPickedAddress] = useState("");
-
+  const [restaurantAddresses, setRestaurantAddresses] = useState<{
+    [key: string]: string;
+  }>({});
+  const [userLocation, setUserLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+  const [showMapPickConfirmation, setShowMapPickConfirmation] = useState(false);
+  const [pickedMapAddress, setPickedMapAddress] = useState("");
+  const [showDistanceExceededModal, setShowDistanceExceededModal] =
+    useState(false);
   const dialogAutocompleteInput = useRef<HTMLInputElement | null>(null);
   const dialogAutocompleteRef = useRef<google.maps.places.Autocomplete | null>(
     null
@@ -99,6 +128,24 @@ export default function CheckoutClient() {
     setTimeout(() => setError(null), 5000);
   };
 
+  // Fetch user location
+  useEffect(() => {
+    if (window.google?.maps) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          const accuracy = pos.coords.accuracy;
+          if (accuracy > 1000) setOffLocationModal(true);
+          setUserLocation(loc);
+        },
+        (err) => {
+          console.error("Geolocation error:", err);
+        },
+        { enableHighAccuracy: true, maximumAge: 0 }
+      );
+    }
+  }, []);
+
   // Google Maps initialization
   const initMap = useCallback(() => {
     if (!dialogAutocompleteInput.current || !window.google?.maps) return;
@@ -144,7 +191,7 @@ export default function CheckoutClient() {
     const loader = new Loader({
       apiKey: googleMapsApiKey,
       version: "weekly",
-      libraries: ["places"],
+      libraries: ["places", "geometry"],
     });
 
     loader
@@ -168,6 +215,32 @@ export default function CheckoutClient() {
       dialogAutocompleteRef.current = null;
     };
   }, [googleMapsApiKey, initMap]);
+  // Fetch restaurant addresses for orders
+
+  useEffect(() => {
+    const fetchRestaurantAddresses = async () => {
+      const uniqueRestaurantIds = [
+        ...new Set(orders.map((item) => item.restaurantId)),
+      ];
+      const { databaseId, restaurantsCollectionId } = validateEnv();
+      const addresses: { [key: string]: string } = {};
+      for (const id of uniqueRestaurantIds) {
+        try {
+          const doc = await databases.getDocument(
+            databaseId,
+            restaurantsCollectionId,
+            id
+          );
+          addresses[id] = doc.address || "";
+        } catch (err) {}
+      }
+      setRestaurantAddresses(addresses);
+    };
+
+    if (orders.length > 0) {
+      fetchRestaurantAddresses();
+    }
+  }, [orders]);
 
   // Calculate delivery fee
   useEffect(() => {
@@ -181,10 +254,11 @@ export default function CheckoutClient() {
 
       setIsCalculatingFee(true);
       try {
+        const restoAddrs = Object.values(restaurantAddresses).filter(Boolean);
         const result = await calculateDeliveryFee(
           debouncedAddress,
-          selectedBranch,
-          selectedBranchData
+          selectedBranchData,
+          restoAddrs
         );
         setDeliveryFee(result.fee);
         setDeliveryDistance(result.distance);
@@ -200,7 +274,12 @@ export default function CheckoutClient() {
     };
 
     calculateFee();
-  }, [debouncedAddress, selectedBranch, selectedBranchData]);
+  }, [
+    debouncedAddress,
+    selectedBranch,
+    selectedBranchData,
+    restaurantAddresses,
+  ]);
 
   // Handle payment method change for cash modal
   useEffect(() => {
@@ -286,6 +365,21 @@ export default function CheckoutClient() {
     }
   };
 
+  // Handle map pick confirmation
+  const handleMapPickConfirmation = async (useIt: boolean) => {
+    setShowMapPickConfirmation(false);
+    if (useIt && pickedMapAddress.trim()) {
+      await handleSaveNewAddress(pickedMapAddress);
+      setAddress(pickedMapAddress);
+    }
+  };
+
+  // Handle new address picked from map
+  const handleNewAddressPicked = (newAddress: string) => {
+    setPickedMapAddress(newAddress);
+    setShowMapPickConfirmation(true);
+  };
+
   // Calculate delivery time
   const calculateDeliveryTime = useCallback(() => {
     const now = new Date();
@@ -361,6 +455,13 @@ export default function CheckoutClient() {
     setShowConfirmation(true);
   }, []);
 
+  // Helper to parse distance in km
+  const parseDistanceKm = useCallback((distanceStr: string): number => {
+    if (!distanceStr) return 0;
+    const match = distanceStr.match(/(\d+(?:\.\d+)?)\s*km/);
+    return parseFloat(match?.[1] || "0");
+  }, []);
+
   // Handle confirm order
   const handleConfirmOrder = useCallback(async () => {
     if (!address || !phoneNumber || orders.length === 0) {
@@ -375,6 +476,13 @@ export default function CheckoutClient() {
       return;
     }
 
+    // Check delivery distance
+    const distanceKm = parseDistanceKm(deliveryDistance);
+    if (distanceKm > 30) {
+      setShowDistanceExceededModal(true);
+      return;
+    }
+
     setIsOrderLoading(true);
     try {
       const orderId = ID.unique();
@@ -382,15 +490,20 @@ export default function CheckoutClient() {
         JSON.stringify({
           itemId: cartItem.itemId,
           quantity: cartItem.quantity || 1,
-          extrasIds: cartItem.selectedExtras?.map((extra:ISelectedExtra | string) => {
-            try {
-              const parsedExtra: ISelectedExtra = JSON.parse(extra as string);
-              return `${parsedExtra.extraId}_${parsedExtra.quantity}`; 
-            } catch (e) {
-              console.error("Failed to parse extra:", extra, e);
-              return null;
-            }
-          }).filter((id): id is string => id !== null) || [],
+          extrasIds:
+            cartItem.selectedExtras
+              ?.map((extra: ISelectedExtra | string) => {
+                try {
+                  const parsedExtra: ISelectedExtra = JSON.parse(
+                    extra as string
+                  );
+                  return `${parsedExtra.extraId}_${parsedExtra.quantity}`;
+                } catch (e) {
+                  console.error("Failed to parse extra:", extra, e);
+                  return null;
+                }
+              })
+              .filter((id): id is string => id !== null) || [],
           priceAtOrder: cartItem.price,
         })
       );
@@ -429,7 +542,9 @@ export default function CheckoutClient() {
       ]);
 
       await Promise.all(
-        orders.map((item: ICartItemFetched) => dispatch(deleteOrderAsync(item.$id)))
+        orders.map((item: ICartItemFetched) =>
+          dispatch(deleteOrderAsync(item.$id))
+        )
       );
       dispatch(resetOrders());
 
@@ -464,29 +579,10 @@ export default function CheckoutClient() {
     router,
     calculateDeliveryTime,
     formatDeliveryTime,
+    parseDistanceKm,
   ]);
 
-  if (!isClient) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-100 via-white to-orange-50 dark:from-gray-900 dark:via-gray-950 dark:to-gray-900 flex items-center justify-center py-12 px-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          className="flex flex-col items-center space-y-4 text-center"
-        >
-          <div className="relative">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-orange-200 dark:border-gray-700"></div>
-            <div className="absolute inset-0 rounded-full h-16 w-16 border-4 border-orange-500 border-t-transparent animate-spin"></div>
-          </div>
-          <div className="space-y-2">
-            <p className="text-xl font-semibold text-gray-700 dark:text-gray-300">Setting up your checkout</p>
-            <p className="text-sm text-gray-500 dark:text-gray-500">Loading maps and options...</p>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
+  if (!isClient) return <LoadingClient />;
 
   return (
     <>
@@ -507,11 +603,16 @@ export default function CheckoutClient() {
             </section>
 
             <section className="rounded-2xl shadow-xl bg-white/95 dark:bg-gray-900/90 border border-orange-100 dark:border-gray-800 p-6 mb-2">
-              <BranchMap selectedBranch={selectedBranch} branches={branches} />
+              <UserLocationMap
+                userLocation={userLocation}
+                address={address}
+                onNewAddressPicked={handleNewAddressPicked}
+              />
             </section>
 
             <section className="rounded-2xl shadow-xl bg-white/95 dark:bg-gray-900/90 border border-orange-100 dark:border-gray-800 p-6 mb-2">
               <AddressSection
+                offLocationModal={offLocationModal}
                 address={address}
                 phoneNumber={phoneNumber}
                 showAddressForm={showAddressForm}
@@ -552,7 +653,6 @@ export default function CheckoutClient() {
                 setSelectedTimeSlot={setSelectedTimeSlot}
               />
             </section>
-            
           </motion.div>
 
           <motion.div
@@ -604,37 +704,38 @@ export default function CheckoutClient() {
           </motion.div>
         </div>
       </div>
-
-      {showCashModal && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-          onClick={() => setShowCashModal(false)}
-        >
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            className="bg-white dark:bg-gray-900 rounded-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              Cash on Delivery Details
-            </h3>
-            <p className="text-gray-700 dark:text-gray-300 mb-6 text-sm leading-relaxed">
-              Only delivery fees are paid on delivery. Payment for the items
-              must be made before preparation begins.
+      {showCashModal && <ShowCashModal setShowCashModal={setShowCashModal} />}
+      {offLocationModal && (
+        <OffLocationModal setOffLocationModal={setOffLocationModal} />
+      )}
+      {/* Inline Map Pick Confirmation */}
+      {showMapPickConfirmation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Use This Location?</h3>
+            <p className="mb-6">
+              Do you want to use this address: {pickedMapAddress}?
             </p>
-            <button
-              onClick={() => setShowCashModal(false)}
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-medium py-2.5 px-4 rounded-xl transition-colors duration-200"
-            >
-              Got it, continue
-            </button>
-          </motion.div>
-        </motion.div>
+            <div className="flex gap-4">
+              <Button onClick={() => handleMapPickConfirmation(true)}>
+                Yes
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleMapPickConfirmation(false)}
+              >
+                No
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Distance Exceeded Modal */}
+      {showDistanceExceededModal && (
+        <ExceededModal
+          deliveryDistance={deliveryDistance}
+          setShowDistanceExceededModal={setShowDistanceExceededModal}
+        />
       )}
     </>
   );

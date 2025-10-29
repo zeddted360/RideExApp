@@ -1,5 +1,5 @@
 import React from 'react'
-import MyOrders from '@/components/MyOrders'
+import MyOrders from "@/components/MyOrders/MyOrders";
 
 export const metadata = {
   title: "My Orders | RideEx",

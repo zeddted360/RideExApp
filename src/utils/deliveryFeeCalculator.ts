@@ -1,4 +1,5 @@
-import { validateEnv } from './appwrite';
+import { validateEnv } from "./appwrite";
+
 export interface DeliveryFeeResult {
   fee: number;
   distance: string;
@@ -16,19 +17,19 @@ export interface Branch {
 }
 
 const branches: Branch[] = [
-  { 
-    id: 1, 
-    name: "FAVGRAB OWERRI-1 (main)", 
-    lat: 5.4862, 
+  {
+    id: 1,
+    name: "FAVGRAB OWERRI-1 (main)",
+    lat: 5.4862,
     lng: 7.0256,
-    address: "Obinze, Owerri, Imo State, Nigeria"
+    address: "Obinze, Owerri, Imo State, Nigeria",
   },
-  { 
-    id: 2, 
-    name: "FavGrab FUTO (OWERRI)", 
-    lat: 5.3846, 
+  {
+    id: 2,
+    name: "FavGrab FUTO (OWERRI)",
+    lat: 5.3846,
     lng: 6.996,
-    address: "Federal University of Technology, Owerri, Imo State, Nigeria"
+    address: "Federal University of Technology, Owerri, Imo State, Nigeria",
   },
 ];
 
@@ -37,12 +38,13 @@ const BASE_DURATION_MINUTES = 15;
 const TIME_SURCHARGE_PER_MINUTE = 100;
 const PRICE_PER_KM = 333; // Based on table
 const MAX_TABLE_DISTANCE_KM = 25; // Table goes up to 25km
+const CLOSER_THRESHOLD_METERS = 10000; // 10km
 
 // === HELPERS ===
 function cleanAddress(address: string): string {
-  let cleaned = address.trim().replace(/\s+/g, ' ');
-  if (!cleaned.toLowerCase().includes('nigeria')) {
-    cleaned += ', Nigeria';
+  let cleaned = address.trim().replace(/\s+/g, " ");
+  if (!cleaned.toLowerCase().includes("nigeria")) {
+    cleaned += ", Nigeria";
   }
   return cleaned;
 }
@@ -50,107 +52,133 @@ function cleanAddress(address: string): string {
 // === MAIN DELIVERY FEE CALCULATION ===
 export async function calculateDeliveryFee(
   deliveryAddress: string,
-  selectedBranchId: number,
-  branchData?: { id: number; name: string; lat: number; lng: number; address?: string }
+  selectedBranch: Branch,
+  restaurantAddresses: string[]
 ): Promise<DeliveryFeeResult> {
   try {
-    const { googleMapsApiKey } = validateEnv();
-
-    let selectedBranch: Branch | undefined;
-    if (branchData) {
-      selectedBranch = {
-        id: branchData.id,
-        name: branchData.name,
-        lat: branchData.lat,
-        lng: branchData.lng,
-        address: branchData.address || `${branchData.name}, Owerri, Imo State, Nigeria`
-      };
-    } else {
-      selectedBranch = branches.find(b => b.id === selectedBranchId);
-    }
 
     if (!selectedBranch) {
-      throw new Error('Selected branch not found');
+      throw new Error("Selected branch not found");
     }
 
-    const cleanOrigin = cleanAddress(selectedBranch.address);
     const cleanDestination = cleanAddress(deliveryAddress);
 
-    const response = await fetch(
-      `/api/distance-matrix?origins=${encodeURIComponent(cleanOrigin)}&destinations=${encodeURIComponent(cleanDestination)}`
-    );
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch distance data');
-    }
-
-    const data = await response.json();
-
-    if (data.status !== 'OK' || !data.rows[0]?.elements[0]) {
-      throw new Error('Invalid response from Google Maps API');
-    }
-
-    const element = data.rows[0].elements[0];
-
-    if (element.status !== 'OK') {
-      console.warn(`Distance calculation failed: ${element.status} for ${selectedBranch.address} to ${deliveryAddress}`);
-
-      if (element.status === 'ZERO_RESULTS') {
-        return {
-          fee: PRICE_PER_KM * MAX_TABLE_DISTANCE_KM, // fallback to 25km fee
-          distance: 'Distance unavailable',
-          duration: 'Duration unavailable',
-          distanceValue: MAX_TABLE_DISTANCE_KM * 1000,
-          durationValue: 1800 // 30 minutes fallback
-        };
+    if (!restaurantAddresses.length) {
+      // Fallback to branch-to-user
+      const cleanOrigin = cleanAddress(selectedBranch.address);
+      const response = await fetch(
+        `/api/distance-matrix?origins=${encodeURIComponent(
+          cleanOrigin
+        )}&destinations=${encodeURIComponent(cleanDestination)}`
+      );
+      const data = await response.json();
+      if (data.status !== "OK") throw new Error("Fallback failed");
+      const element = data.rows[0].elements[0];
+      if (element.status !== "OK") throw new Error("Fallback element failed");
+      const distanceValue = element.distance.value;
+      const durationValue = element.duration.value;
+      const distanceKm = distanceValue / 1000;
+      let fee = Math.round(PRICE_PER_KM * distanceKm);
+      const durationMinutes = durationValue / 60;
+      if (durationMinutes > BASE_DURATION_MINUTES) {
+        const additionalMinutes = Math.ceil(
+          durationMinutes - BASE_DURATION_MINUTES
+        );
+        fee += additionalMinutes * TIME_SURCHARGE_PER_MINUTE;
       }
-
-      throw new Error(`Distance calculation failed: ${element.status}`);
+      return {
+        fee,
+        distance: element.distance.text,
+        duration: element.duration.text,
+        distanceValue,
+        durationValue,
+      };
     }
 
-    const distanceValue = element.distance.value; // in meters
-    const durationValue = element.duration.value; // in seconds
-    const distance = element.distance.text;
-    const duration = element.duration.text;
+    const cleanBranch = cleanAddress(selectedBranch.address);
+    const cleanRestos = restaurantAddresses.map(cleanAddress).filter(Boolean);
 
-    // Convert meters → km
-    const distanceKm = distanceValue / 1000;
+    // Filter closer restaurants
+    const filterResponse = await fetch(
+      `/api/distance-matrix?origins=${encodeURIComponent(
+        cleanBranch
+      )}&destinations=${cleanRestos.map(encodeURIComponent).join("|")}`
+    );
+    const filterData = await filterResponse.json();
+    if (filterData.status !== "OK") throw new Error("Filter failed");
 
-    // === Delivery fee calculation ===
+    const filterElements = filterData.rows[0].elements;
+    let closerRestos: string[] = [];
+    filterElements.forEach((el: any, i: number) => {
+      if (el.status === "OK" && el.distance.value < CLOSER_THRESHOLD_METERS) {
+        closerRestos.push(cleanRestos[i]);
+      }
+    });
+
+    if (!closerRestos.length) {
+      closerRestos = cleanRestos; // Fallback to all
+    }
+
+    // Calculate user distances
+    const userResponse = await fetch(
+      `/api/distance-matrix?origins=${closerRestos
+        .map(encodeURIComponent)
+        .join("|")}&destinations=${encodeURIComponent(cleanDestination)}`
+    );
+    const userData = await userResponse.json();
+    if (userData.status !== "OK") throw new Error("User distance failed");
+
+    const userElements = userData.rows.map((row: any) => row.elements[0]);
+    let maxDistanceValue = 0;
+    let maxDurationValue = 0;
+    let maxDistanceText = "";
+    let maxDurationText = "";
+    userElements.forEach((el: any) => {
+      if (el.status === "OK" && el.distance.value > maxDistanceValue) {
+        maxDistanceValue = el.distance.value;
+        maxDurationValue = el.duration.value;
+        maxDistanceText = el.distance.text;
+        maxDurationText = el.duration.text;
+      }
+    });
+
+    if (maxDistanceValue === 0) {
+      throw new Error("No valid distances");
+    }
+
+    const distanceKm = maxDistanceValue / 1000;
     let fee = Math.round(PRICE_PER_KM * distanceKm);
-
-    // Add time-based surcharge if duration > base
-    const durationMinutes = durationValue / 60;
+    const durationMinutes = maxDurationValue / 60;
     if (durationMinutes > BASE_DURATION_MINUTES) {
-      const additionalMinutes = Math.ceil(durationMinutes - BASE_DURATION_MINUTES);
-      const timeSurcharge = additionalMinutes * TIME_SURCHARGE_PER_MINUTE;
-      fee += timeSurcharge;
+      const additionalMinutes = Math.ceil(
+        durationMinutes - BASE_DURATION_MINUTES
+      );
+      fee += additionalMinutes * TIME_SURCHARGE_PER_MINUTE;
     }
 
     return {
       fee,
-      distance,
-      duration,
-      distanceValue,
-      durationValue
+      distance: maxDistanceText,
+      duration: maxDurationText,
+      distanceValue: maxDistanceValue,
+      durationValue: maxDurationValue,
     };
-
   } catch (error) {
-    console.error('Error calculating delivery fee:', error);
+    console.error("Error calculating delivery fee:", error);
 
     return {
       fee: PRICE_PER_KM * 5, // fallback = 5km fee
-      distance: 'Unknown',
-      duration: 'Unknown',
+      distance: "Unknown",
+      duration: "Unknown",
       distanceValue: 0,
-      durationValue: 0
+      durationValue: 0,
     };
   }
 }
 
 // === BRANCH HELPERS ===
 export function getBranchById(branchId: number): Branch | undefined {
-  return branches.find(b => b.id === branchId);
+  return branches.find((b) => b.id === branchId);
 }
 
 export function getAllBranches(): Branch[] {

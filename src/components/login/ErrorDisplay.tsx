@@ -19,9 +19,6 @@ const ErrorDisplay = ({
   getFriendlyErrorMessage,
 }: ErrorDisplayProps) => {
   if (!networkError && !error) return null;
-console.log("The networkError :", networkError);
-console.log("The error  is:", error);
-console.log(getFriendlyErrorMessage(error || ""));
   return (
     <>
       {networkError && (

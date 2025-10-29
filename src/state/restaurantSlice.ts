@@ -57,10 +57,11 @@ export const createAsyncRestaurant = createAsyncThunk<
         // Stringify each schedule object to store as string[]
         schedule: data.schedule?.map((day) => JSON.stringify(day)),
         createdAt: new Date().toISOString(),
+        address: data.address || "",
       }
     );
 
-    toast.success("Restaurant created successfully!");
+    toast.success("Restaurant added successfully!");
     return createdDocument as IRestaurantFetched;
   } catch (error) {
     toast.error(

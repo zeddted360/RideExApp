@@ -1,3 +1,4 @@
+// utils/schema.ts
 import { z } from "zod";
 
 // Custom refinement to validate FileList and extract the first File
@@ -26,46 +27,64 @@ const fileListSchema = z
     return true; // Allow during SSR
   }, "File must be JPEG, PNG, JPG, or WebP");
 
-const scheduleDaySchema = z.object({
-  day: z.enum(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]),
-  openTime: z
-    .string()
-    .regex(/^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/, "Open time must be in HH:MM format (e.g., 09:00)")
-    .nullable()
-    .optional(),
-  closeTime: z
-    .string()
-    .regex(/^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/, "Close time must be in HH:MM format (e.g., 22:00)")
-    .nullable()
-    .optional(),
-  isClosed: z.boolean(),
-}).refine(
-  (data) => {
-    if (data.isClosed) {
-      return data.openTime === null && data.closeTime === null;
+const scheduleDaySchema = z
+  .object({
+    day: z.enum([
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday",
+    ]),
+    openTime: z
+      .string()
+      .regex(
+        /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/,
+        "Open time must be in HH:MM format (e.g., 09:00)"
+      )
+      .nullable()
+      .optional(),
+    closeTime: z
+      .string()
+      .regex(
+        /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/,
+        "Close time must be in HH:MM format (e.g., 22:00)"
+      )
+      .nullable()
+      .optional(),
+    isClosed: z.boolean(),
+  })
+  .refine(
+    (data) => {
+      if (data.isClosed) {
+        return data.openTime === null && data.closeTime === null;
+      }
+      return data.openTime !== null && data.closeTime !== null;
+    },
+    {
+      message:
+        "If not closed, both open and close times must be provided; if closed, both must be null",
+      path: ["openTime"],
     }
-    return data.openTime !== null && data.closeTime !== null;
-  },
-  {
-    message: "If not closed, both open and close times must be provided; if closed, both must be null",
-    path: ["openTime"],
-  }
-).refine(
-  (data) => {
-    if (!data.isClosed && data.openTime && data.closeTime) {
-      const [openH, openM] = data.openTime.split(":").map(Number);
-      const [closeH, closeM] = data.closeTime.split(":").map(Number);
-      const openMinutes = openH * 60 + openM;
-      const closeMinutes = closeH * 60 + closeM;
-      return openMinutes <= closeMinutes;
+  )
+  .refine(
+    (data) => {
+      if (!data.isClosed && data.openTime && data.closeTime) {
+        const [openH, openM] = data.openTime.split(":").map(Number);
+        const [closeH, closeM] = data.closeTime.split(":").map(Number);
+        const openMinutes = openH * 60 + openM;
+        const closeMinutes = closeH * 60 + closeM;
+        return openMinutes <= closeMinutes;
+      }
+      return true;
+    },
+    {
+      message: "Open time must be before or equal to close time",
+      path: ["closeTime"],
     }
-    return true;
-  },
-  {
-    message: "Open time must be before or equal to close time",
-    path: ["closeTime"],
-  }
-);
+  );
 
 export const restaurantSchema = z.object({
   name: z
@@ -90,9 +109,14 @@ export const restaurantSchema = z.object({
     .min(1, "Distance is required")
     .max(100, "Distance is too long"),
   vendorId: z.string().optional(),
-  schedule: z.array(scheduleDaySchema).length(7, "Schedule must include exactly 7 days"),
+  schedule: z
+    .array(scheduleDaySchema)
+    .length(7, "Schedule must include exactly 7 days"),
+  address: z
+    .string()
+    .min(1, "Address is required")
+    .max(500, "Address is too long"),
 });
-
 
 export const menuItemSchema = z.object({
   name: z.string().min(1, "Item name is required").max(255, "Name is too long"),
@@ -276,15 +300,25 @@ export const vendorRegistrationSchema = z
     phoneNumber: z
       .string()
       .min(10, "Phone number must be at least 10 digits")
-      .regex(/^(\+234|0)[789]\d{9}$/, "Please enter a valid Nigerian phone number"),
+      .regex(
+        /^(\+234|0)[789]\d{9}$/,
+        "Please enter a valid Nigerian phone number"
+      ),
     email: z.string().email("Please enter a valid email address"),
     catchmentArea: z.string().min(1, "Please select a catchment area"),
     location: z.string().min(3, "Location must be at least 3 characters"),
-    businessName: z.string().min(2, "Business name must be at least 2 characters"),
+    businessName: z
+      .string()
+      .min(2, "Business name must be at least 2 characters"),
     category: z.string().min(1, "Please select a category"),
     password: z.string().min(6, "Password must be at least 6 characters"),
     confirmPassword: z.string(),
-    agreeTerms: z.boolean().refine((val) => val === true, "You must agree to the terms and conditions"),
+    agreeTerms: z
+      .boolean()
+      .refine(
+        (val) => val === true,
+        "You must agree to the terms and conditions"
+      ),
     whatsappUpdates: z.boolean().optional(),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -292,8 +326,8 @@ export const vendorRegistrationSchema = z
     path: ["confirmPassword"],
   });
 
-  // promo offers schema below
- export const PromofferItemSchema = z.object({
+// promo offers schema below
+export const PromofferItemSchema = z.object({
   name: z
     .string()
     .min(1, "Promo offer name is required")
@@ -320,8 +354,9 @@ export const vendorRegistrationSchema = z
   }),
 });
 
-
-export type VendorRegistrationFormData = z.infer<typeof vendorRegistrationSchema>;
+export type VendorRegistrationFormData = z.infer<
+  typeof vendorRegistrationSchema
+>;
 export type FeaturedItemFormData = z.infer<typeof featuredItemSchema>;
 export type PromoOfferItemFormData = z.infer<typeof PromofferItemSchema>;
 export type RestaurantFormData = z.infer<typeof restaurantSchema>;

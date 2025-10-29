@@ -5,6 +5,7 @@ export const branches = [
     lat: 5.4862,
     lng: 7.0256,
     address: "Obinze, Owerri, Imo State, Nigeria",
+    phone: "+2347025786581",
   },
   {
     id: 2,
@@ -12,5 +13,6 @@ export const branches = [
     lat: 5.3846,
     lng: 6.996,
     address: "Federal University of Technology, Owerri, Imo State, Nigeria",
+    phone: "+2347025786581",
   },
 ];

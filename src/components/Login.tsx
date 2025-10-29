@@ -62,7 +62,6 @@ const Login = () => {
 
   const getFriendlyErrorMessage = (error: string): string => {
     const errorLower = error.toLowerCase();
-    console.log("The errorLower is:", errorLower);
     if (errorLower.includes("invalid credentials") || errorLower.includes("user not found")) {
       return "Invalid email or password. Please check your credentials.";
     }
@@ -104,7 +103,6 @@ const Login = () => {
         }
       } else if (loginAsync.rejected.match(result)) {
         const errorMessage = result.payload as string;
-        console.log("The errorMessage is:", errorMessage);
         if (
           errorMessage.toLowerCase().includes("network") ||
           errorMessage.toLowerCase().includes("fetch") ||

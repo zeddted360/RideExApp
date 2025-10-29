@@ -6,11 +6,34 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/state/store";
 import { validateEnv, storage } from "@/utils/appwrite";
-import { createAsyncRestaurant, deleteAsyncRestaurant, updateAsyncRestaurant } from "@/state/restaurantSlice";
-import { listAsyncVendors } from "@/state/vendorSlice"; 
+import {
+  createAsyncRestaurant,
+  deleteAsyncRestaurant,
+  updateAsyncRestaurant,
+} from "@/state/restaurantSlice";
+import { listAsyncVendors } from "@/state/vendorSlice";
 import toast from "react-hot-toast";
-import { Search, Edit3, Trash2, Loader2, X, ChevronLeft, ChevronRight, AlertCircle, PlusCircle, Upload, Star, Building2, Clock } from "lucide-react";
-import { IRestaurantFetched, IRestaurant, IVendorFetched, IScheduleDay } from "../../types/types";
+import {
+  Search,
+  Edit3,
+  Trash2,
+  Loader2,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  AlertCircle,
+  PlusCircle,
+  Upload,
+  Star,
+  Building2,
+  Clock,
+} from "lucide-react";
+import {
+  IRestaurantFetched,
+  IRestaurant,
+  IVendorFetched,
+  IScheduleDay,
+} from "../../types/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,7 +62,15 @@ const categories = [
   { value: "Snacks", label: "Snacks" },
 ];
 
-const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const daysOfWeek = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
 
 const defaultSchedule: IScheduleDay[] = daysOfWeek.map((day) => ({
   day: day as IScheduleDay["day"],
@@ -62,7 +93,9 @@ export default function RestaurantsTab({
   const dispatch = useDispatch<AppDispatch>();
   const { restaurantBucketId } = validateEnv();
 
-  const { vendors, loading: vendorsLoading } = useSelector((state: RootState) => state.vendors); 
+  const { vendors, loading: vendorsLoading } = useSelector(
+    (state: RootState) => state.vendors
+  );
 
   // Fetch vendors on mount
   useEffect(() => {
@@ -82,8 +115,12 @@ export default function RestaurantsTab({
   const [formLoading, setFormLoading] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
-  const [editingRestaurant, setEditingRestaurant] = useState<IRestaurantFetched | null>(null);
-  const [deletingRestaurant, setDeletingRestaurant] = useState<{ id: string; name: string } | null>(null);
+  const [editingRestaurant, setEditingRestaurant] =
+    useState<IRestaurantFetched | null>(null);
+  const [deletingRestaurant, setDeletingRestaurant] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [editFormData, setEditFormData] = useState({
     name: "",
     rating: 0,
@@ -91,7 +128,8 @@ export default function RestaurantsTab({
     category: "",
     distance: "",
     vendorId: "",
-    logo:"",
+    logo: "",
+    address: "",
   });
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -109,6 +147,7 @@ export default function RestaurantsTab({
       logo: undefined,
       vendorId: "",
       schedule: defaultSchedule,
+      address: "",
     },
     mode: "onChange",
   });
@@ -164,7 +203,8 @@ export default function RestaurantsTab({
         category: editingRestaurant.category,
         distance: editingRestaurant.distance,
         vendorId: editingRestaurant.vendorId || "",
-        logo:"",
+        logo: "",
+        address: editingRestaurant.address || "",
       });
     }
   }, [editingRestaurant]);
@@ -188,12 +228,12 @@ export default function RestaurantsTab({
         distance: data.distance,
         vendorId: data.vendorId,
         schedule: processedSchedule,
+        address: data.address,
       };
       await dispatch(createAsyncRestaurant(restaurantData)).unwrap();
       addForm.reset();
       setLogoPreview(null);
       setAddModalOpen(false);
-      toast.success("Restaurant added successfully!");
     } catch (error) {
       toast.error("Failed to add restaurant");
     } finally {
@@ -213,11 +253,10 @@ export default function RestaurantsTab({
 
   const confirmDelete = async () => {
     if (!deletingRestaurant) return;
-    
+
     setDeleting(true);
     try {
       await dispatch(deleteAsyncRestaurant(deletingRestaurant.id)).unwrap();
-      toast.success("Restaurant deleted successfully!");
       setDeleteModalOpen(false);
       setDeletingRestaurant(null);
     } catch (err) {
@@ -232,13 +271,14 @@ export default function RestaurantsTab({
 
     setUpdating(true);
     try {
-      await dispatch(updateAsyncRestaurant({
-        id: editingRestaurant.$id,
-        data: editFormData,
-      })).unwrap();
+      await dispatch(
+        updateAsyncRestaurant({
+          id: editingRestaurant.$id,
+          data: editFormData,
+        })
+      ).unwrap();
       setEditModalOpen(false);
       setEditingRestaurant(null);
-      toast.success("Restaurant updated successfully!");
     } catch (err) {
       toast.error("Failed to update restaurant");
     } finally {
@@ -274,17 +314,32 @@ export default function RestaurantsTab({
     }
 
     if (currentPage <= 3) {
-      pages.push(1, 2, 3, 4, '...', totalPages);
+      pages.push(1, 2, 3, 4, "...", totalPages);
     } else if (currentPage >= totalPages - 2) {
-      pages.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      pages.push(
+        1,
+        "...",
+        totalPages - 3,
+        totalPages - 2,
+        totalPages - 1,
+        totalPages
+      );
     } else {
-      pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages);
+      pages.push(
+        1,
+        "...",
+        currentPage - 1,
+        currentPage,
+        currentPage + 1,
+        "...",
+        totalPages
+      );
     }
 
     return pages;
   };
 
-  if (loading === "pending" || vendorsLoading ) {
+  if (loading === "pending" || vendorsLoading) {
     return (
       <div className="flex flex-col justify-center items-center py-20">
         <Loader2 className="w-12 h-12 animate-spin text-orange-600 mb-4" />
@@ -300,7 +355,9 @@ export default function RestaurantsTab({
           <div className="flex items-start gap-3">
             <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
             <div>
-              <h3 className="text-lg font-semibold text-red-900 dark:text-red-100 mb-1">Error Loading Restaurants</h3>
+              <h3 className="text-lg font-semibold text-red-900 dark:text-red-100 mb-1">
+                Error Loading Restaurants
+              </h3>
               <p className="text-red-700 dark:text-red-300">{error}</p>
             </div>
           </div>
@@ -335,8 +392,12 @@ export default function RestaurantsTab({
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-            <span className="font-medium text-gray-900 dark:text-white">{filteredRestaurants.length}</span>
-            <span>{filteredRestaurants.length === 1 ? 'restaurant' : 'restaurants'}</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              {filteredRestaurants.length}
+            </span>
+            <span>
+              {filteredRestaurants.length === 1 ? "restaurant" : "restaurants"}
+            </span>
           </div>
           <Button
             onClick={() => setAddModalOpen(true)}
@@ -374,6 +435,9 @@ export default function RestaurantsTab({
                     <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                       Distance
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                      Address
+                    </th>
                     <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                       Actions
                     </th>
@@ -381,17 +445,28 @@ export default function RestaurantsTab({
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                   {restaurants.map((restaurant) => (
-                    <tr key={restaurant.$id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <tr
+                      key={restaurant.$id}
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                    >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700">
                             {!imageError[restaurant.$id] ? (
                               <img
-                                src={storage.getFilePreview(restaurantBucketId, restaurant.logo as unknown as string, 128, 128)}
+                                src={storage.getFilePreview(
+                                  restaurantBucketId,
+                                  restaurant.logo as unknown as string,
+                                  128,
+                                  128
+                                )}
                                 alt={restaurant.name}
                                 className="w-full h-full object-cover"
                                 onError={() => {
-                                  setImageError(prev => ({ ...prev, [restaurant.$id]: true }));
+                                  setImageError((prev) => ({
+                                    ...prev,
+                                    [restaurant.$id]: true,
+                                  }));
                                 }}
                               />
                             ) : (
@@ -411,7 +486,9 @@ export default function RestaurantsTab({
                         <div className="flex items-center gap-2">
                           <Building2 className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
                           <span className="text-sm text-gray-700 dark:text-gray-300 truncate max-w-[150px]">
-                            {restaurant.vendorId ? getVendorBusinessName(restaurant.vendorId) : "N/A"}
+                            {restaurant.vendorId
+                              ? getVendorBusinessName(restaurant.vendorId)
+                              : "N/A"}
                           </span>
                         </div>
                       </td>
@@ -434,6 +511,9 @@ export default function RestaurantsTab({
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
                         {restaurant.distance}
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                        {restaurant.address || "N/A"}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
@@ -445,7 +525,9 @@ export default function RestaurantsTab({
                             <Edit3 className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => handleDeleteClick(restaurant.$id, restaurant.name)}
+                            onClick={() =>
+                              handleDeleteClick(restaurant.$id, restaurant.name)
+                            }
                             className="inline-flex items-center justify-center w-8 h-8 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                             title="Delete restaurant"
                             aria-label="Delete restaurant"
@@ -465,9 +547,22 @@ export default function RestaurantsTab({
           {totalPages > 1 && (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2">
               <div className="text-sm text-gray-600 dark:text-gray-400">
-                Showing <span className="font-medium text-gray-900 dark:text-white">{(currentPage - 1) * restaurantsPerPage + 1}</span> to{" "}
-                <span className="font-medium text-gray-900 dark:text-white">{Math.min(currentPage * restaurantsPerPage, filteredRestaurants.length)}</span> of{" "}
-                <span className="font-medium text-gray-900 dark:text-white">{filteredRestaurants.length}</span> results
+                Showing{" "}
+                <span className="font-medium text-gray-900 dark:text-white">
+                  {(currentPage - 1) * restaurantsPerPage + 1}
+                </span>{" "}
+                to{" "}
+                <span className="font-medium text-gray-900 dark:text-white">
+                  {Math.min(
+                    currentPage * restaurantsPerPage,
+                    filteredRestaurants.length
+                  )}
+                </span>{" "}
+                of{" "}
+                <span className="font-medium text-gray-900 dark:text-white">
+                  {filteredRestaurants.length}
+                </span>{" "}
+                results
               </div>
               <nav className="flex items-center gap-2" aria-label="Pagination">
                 <button
@@ -478,9 +573,9 @@ export default function RestaurantsTab({
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                
-                {getPageNumbers().map((page, index) => (
-                  typeof page === 'number' ? (
+
+                {getPageNumbers().map((page, index) =>
+                  typeof page === "number" ? (
                     <button
                       key={index}
                       onClick={() => handlePageChange(page)}
@@ -493,12 +588,15 @@ export default function RestaurantsTab({
                       {page}
                     </button>
                   ) : (
-                    <span key={index} className="inline-flex items-center justify-center min-w-[2.25rem] h-9 text-gray-500 dark:text-gray-400">
+                    <span
+                      key={index}
+                      className="inline-flex items-center justify-center min-w-[2.25rem] h-9 text-gray-500 dark:text-gray-400"
+                    >
                       {page}
                     </span>
                   )
-                ))}
-                
+                )}
+
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
@@ -516,9 +614,13 @@ export default function RestaurantsTab({
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 mb-4">
             <Search className="w-8 h-8 text-gray-400 dark:text-gray-500" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">No restaurants found</h3>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">
+            No restaurants found
+          </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            {searchTerm ? `No results for "${searchTerm}". Try adjusting your search.` : "Get started by adding your first restaurant."}
+            {searchTerm
+              ? `No results for "${searchTerm}". Try adjusting your search.`
+              : "Get started by adding your first restaurant."}
           </p>
           {!searchTerm && (
             <Button
@@ -541,7 +643,9 @@ export default function RestaurantsTab({
                 <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center">
                   <PlusCircle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Add New Restaurant</h3>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Add New Restaurant
+                </h3>
               </div>
               <button
                 onClick={handleCloseAddModal}
@@ -552,7 +656,7 @@ export default function RestaurantsTab({
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <div className="p-6 max-h-[calc(100vh-200px)] overflow-y-auto">
               <form onSubmit={addForm.handleSubmit(handleAddRestaurantSubmit)}>
                 <div className="space-y-6">
@@ -613,7 +717,10 @@ export default function RestaurantsTab({
                   {/* Form Fields Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                      <Label htmlFor="add-name" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">
+                      <Label
+                        htmlFor="add-name"
+                        className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block"
+                      >
                         Restaurant Name <span className="text-red-500">*</span>
                       </Label>
                       <Input
@@ -630,7 +737,10 @@ export default function RestaurantsTab({
                     </div>
 
                     <div>
-                      <Label htmlFor="add-category" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">
+                      <Label
+                        htmlFor="add-category"
+                        className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block"
+                      >
                         Category <span className="text-red-500">*</span>
                       </Label>
                       <select
@@ -653,7 +763,10 @@ export default function RestaurantsTab({
                     </div>
 
                     <div>
-                      <Label htmlFor="add-vendor" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">
+                      <Label
+                        htmlFor="add-vendor"
+                        className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block"
+                      >
                         Vendor <span className="text-red-500">*</span>
                       </Label>
                       <select
@@ -662,11 +775,13 @@ export default function RestaurantsTab({
                         className="w-full h-11 px-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-shadow appearance-none"
                       >
                         <option value="">Select vendor</option>
-                        {vendors.filter(ven=> ven.status === "approved").map((vendor: IVendorFetched) => (
-                          <option key={vendor.$id} value={vendor.$id}>
-                            {vendor.businessName}
-                          </option>
-                        ))}
+                        {vendors
+                          .filter((ven) => ven.status === "approved")
+                          .map((vendor: IVendorFetched) => (
+                            <option key={vendor.$id} value={vendor.$id}>
+                              {vendor.businessName}
+                            </option>
+                          ))}
                       </select>
                       {addForm.formState.errors.vendorId && (
                         <p className="text-red-500 text-sm mt-1.5">
@@ -676,7 +791,10 @@ export default function RestaurantsTab({
                     </div>
 
                     <div>
-                      <Label htmlFor="add-rating" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1.5">
+                      <Label
+                        htmlFor="add-rating"
+                        className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1.5"
+                      >
                         Rating <span className="text-red-500">*</span>
                         <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
                       </Label>
@@ -698,7 +816,10 @@ export default function RestaurantsTab({
                     </div>
 
                     <div>
-                      <Label htmlFor="add-deliveryTime" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">
+                      <Label
+                        htmlFor="add-deliveryTime"
+                        className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block"
+                      >
                         Delivery Time <span className="text-red-500">*</span>
                       </Label>
                       <Input
@@ -715,7 +836,10 @@ export default function RestaurantsTab({
                     </div>
 
                     <div>
-                      <Label htmlFor="add-distance" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">
+                      <Label
+                        htmlFor="add-distance"
+                        className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block"
+                      >
                         Distance <span className="text-red-500">*</span>
                       </Label>
                       <Input
@@ -730,6 +854,26 @@ export default function RestaurantsTab({
                         </p>
                       )}
                     </div>
+
+                    <div>
+                      <Label
+                        htmlFor="add-address"
+                        className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block"
+                      >
+                        Address <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="add-address"
+                        {...addForm.register("address")}
+                        placeholder="e.g., 123 Main St, City, State"
+                        className="h-11 focus:ring-2 focus:ring-orange-500 border-gray-300 dark:border-gray-600"
+                      />
+                      {addForm.formState.errors.address && (
+                        <p className="text-red-500 text-sm mt-1.5">
+                          {addForm.formState.errors.address.message}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   {/* Operating Hours */}
@@ -741,54 +885,76 @@ export default function RestaurantsTab({
                       {daysOfWeek.map((day, index) => {
                         const isClosed = watch(`schedule.${index}.isClosed`);
                         return (
-                          <div 
-                            key={day} 
+                          <div
+                            key={day}
                             className={`p-4 rounded-lg border transition-all duration-200 ${
-                              isClosed 
-                                ? 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700' 
-                                : 'bg-orange-50/50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-900/30'
+                              isClosed
+                                ? "bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700"
+                                : "bg-orange-50/50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-900/30"
                             }`}
                           >
                             <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                               <div className="w-28 flex-shrink-0">
-                                <Label className="text-sm font-bold text-gray-900 dark:text-gray-100">{day}</Label>
+                                <Label className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                                  {day}
+                                </Label>
                               </div>
                               <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                  <Label htmlFor={`schedule[${index}].openTime`} className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">
+                                  <Label
+                                    htmlFor={`schedule[${index}].openTime`}
+                                    className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block"
+                                  >
                                     Open Time
                                   </Label>
                                   <Input
                                     id={`schedule[${index}].openTime`}
                                     type="time"
-                                    {...addForm.register(`schedule.${index}.openTime`)}
+                                    {...addForm.register(
+                                      `schedule.${index}.openTime`
+                                    )}
                                     disabled={isClosed}
                                     className={`h-10 border-gray-300 dark:border-gray-600 transition-colors ${
-                                      !isClosed && 'focus:border-orange-500 focus:ring-orange-500'
+                                      !isClosed &&
+                                      "focus:border-orange-500 focus:ring-orange-500"
                                     }`}
                                   />
-                                  {addForm.formState.errors.schedule?.[index]?.openTime && (
+                                  {addForm.formState.errors.schedule?.[index]
+                                    ?.openTime && (
                                     <p className="text-red-500 text-xs mt-1.5 font-medium">
-                                      {addForm.formState.errors.schedule[index]?.openTime?.message}
+                                      {
+                                        addForm.formState.errors.schedule[index]
+                                          ?.openTime?.message
+                                      }
                                     </p>
                                   )}
                                 </div>
                                 <div>
-                                  <Label htmlFor={`schedule[${index}].closeTime`} className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block">
+                                  <Label
+                                    htmlFor={`schedule[${index}].closeTime`}
+                                    className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5 block"
+                                  >
                                     Close Time
                                   </Label>
                                   <Input
                                     id={`schedule[${index}].closeTime`}
                                     type="time"
-                                    {...addForm.register(`schedule.${index}.closeTime`)}
+                                    {...addForm.register(
+                                      `schedule.${index}.closeTime`
+                                    )}
                                     disabled={isClosed}
                                     className={`h-10 border-gray-300 dark:border-gray-600 transition-colors ${
-                                      !isClosed && 'focus:border-orange-500 focus:ring-orange-500'
+                                      !isClosed &&
+                                      "focus:border-orange-500 focus:ring-orange-500"
                                     }`}
                                   />
-                                  {addForm.formState.errors.schedule?.[index]?.closeTime && (
+                                  {addForm.formState.errors.schedule?.[index]
+                                    ?.closeTime && (
                                     <p className="text-red-500 text-xs mt-1.5 font-medium">
-                                      {addForm.formState.errors.schedule[index]?.closeTime?.message}
+                                      {
+                                        addForm.formState.errors.schedule[index]
+                                          ?.closeTime?.message
+                                      }
                                     </p>
                                   )}
                                 </div>
@@ -797,12 +963,27 @@ export default function RestaurantsTab({
                                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2.5 cursor-pointer select-none">
                                   <input
                                     type="checkbox"
-                                    {...addForm.register(`schedule.${index}.isClosed`, {
-                                      onChange: (e) => handleIsClosedChange(index, e.target.checked),
-                                    })}
+                                    {...addForm.register(
+                                      `schedule.${index}.isClosed`,
+                                      {
+                                        onChange: (e) =>
+                                          handleIsClosedChange(
+                                            index,
+                                            e.target.checked
+                                          ),
+                                      }
+                                    )}
                                     className="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500 cursor-pointer transition-colors"
                                   />
-                                  <span className={isClosed ? 'text-gray-500 dark:text-gray-400' : ''}>Closed</span>
+                                  <span
+                                    className={
+                                      isClosed
+                                        ? "text-gray-500 dark:text-gray-400"
+                                        : ""
+                                    }
+                                  >
+                                    Closed
+                                  </span>
                                 </Label>
                               </div>
                             </div>
@@ -858,11 +1039,15 @@ export default function RestaurantsTab({
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex-1 min-w-0">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">Edit Restaurant</h3>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
+                  Edit Restaurant
+                </h3>
                 <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                  <Building2 className="w-4 h-4 flex-shrink-0" />
+                  <Building2 className="w-4 h-4" />
                   <span className="truncate">
-                    {editingRestaurant.vendorId ? getVendorBusinessName(editingRestaurant.vendorId) : "No vendor assigned"}
+                    {editingRestaurant.vendorId
+                      ? getVendorBusinessName(editingRestaurant.vendorId)
+                      : "No vendor assigned"}
                   </span>
                 </div>
               </div>
@@ -874,30 +1059,43 @@ export default function RestaurantsTab({
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <div className="p-6 space-y-5 overflow-y-auto max-h-[calc(90vh-8rem)]">
               <div>
-                <label htmlFor="edit-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                <label
+                  htmlFor="edit-name"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+                >
                   Restaurant Name
                 </label>
                 <input
                   type="text"
                   id="edit-name"
                   value={editFormData.name}
-                  onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                  onChange={(e) =>
+                    setEditFormData({ ...editFormData, name: e.target.value })
+                  }
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-shadow"
                   required
                 />
               </div>
-              
+
               <div>
-                <label htmlFor="edit-category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                <label
+                  htmlFor="edit-category"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+                >
                   Category
                 </label>
                 <select
                   id="edit-category"
                   value={editFormData.category}
-                  onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value })}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      category: e.target.value,
+                    })
+                  }
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-shadow appearance-none"
                   required
                 >
@@ -911,14 +1109,22 @@ export default function RestaurantsTab({
               </div>
 
               <div>
-                <label htmlFor="edit-vendor" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-2">
+                <label
+                  htmlFor="edit-vendor"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-2"
+                >
                   <Building2 className="w-4 h-4 text-gray-400" />
                   Vendor
                 </label>
                 <select
                   id="edit-vendor"
                   value={editFormData.vendorId}
-                  onChange={(e) => setEditFormData({ ...editFormData, vendorId: e.target.value })}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      vendorId: e.target.value,
+                    })
+                  }
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-shadow appearance-none"
                   required
                 >
@@ -930,9 +1136,12 @@ export default function RestaurantsTab({
                   ))}
                 </select>
               </div>
-              
+
               <div>
-                <label htmlFor="edit-rating" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                <label
+                  htmlFor="edit-rating"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+                >
                   Rating (0-5)
                 </label>
                 <input
@@ -942,37 +1151,81 @@ export default function RestaurantsTab({
                   max="5"
                   step="0.1"
                   value={editFormData.rating}
-                  onChange={(e) => setEditFormData({ ...editFormData, rating: parseFloat(e.target.value) || 0 })}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      rating: parseFloat(e.target.value) || 0,
+                    })
+                  }
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-shadow"
                   required
                 />
               </div>
-              
+
               <div>
-                <label htmlFor="edit-deliveryTime" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                <label
+                  htmlFor="edit-deliveryTime"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+                >
                   Delivery Time
                 </label>
                 <input
                   type="text"
                   id="edit-deliveryTime"
                   value={editFormData.deliveryTime}
-                  onChange={(e) => setEditFormData({ ...editFormData, deliveryTime: e.target.value })}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      deliveryTime: e.target.value,
+                    })
+                  }
                   placeholder="e.g., 25-35 min"
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-shadow"
                   required
                 />
               </div>
-              
+
               <div>
-                <label htmlFor="edit-distance" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                <label
+                  htmlFor="edit-distance"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+                >
                   Distance
                 </label>
                 <input
                   type="text"
                   id="edit-distance"
                   value={editFormData.distance}
-                  onChange={(e) => setEditFormData({ ...editFormData, distance: e.target.value })}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      distance: e.target.value,
+                    })
+                  }
                   placeholder="e.g., 2.5 km"
+                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-shadow"
+                  required
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="edit-address"
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5"
+                >
+                  Address
+                </label>
+                <input
+                  type="text"
+                  id="edit-address"
+                  value={editFormData.address}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      address: e.target.value,
+                    })
+                  }
+                  placeholder="e.g., 123 Main St, City, State"
                   className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-shadow"
                   required
                 />
@@ -1010,14 +1263,20 @@ export default function RestaurantsTab({
                   <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Delete Restaurant</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    Delete Restaurant
+                  </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Are you sure you want to delete <span className="font-medium text-gray-900 dark:text-white">"{deletingRestaurant.name}"</span>? This action cannot be undone.
+                    Are you sure you want to delete{" "}
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      "{deletingRestaurant.name}"
+                    </span>
+                    ? This action cannot be undone.
                   </p>
                 </div>
               </div>
             </div>
-            
+
             <div className="flex items-center justify-end gap-3 px-6 py-4 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700">
               <button
                 type="button"

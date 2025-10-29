@@ -24,16 +24,18 @@ interface EnvConfig {
   guestUserCollectionId: string;
   newsLetterCollectionId: string;
   vendorsCollectionId: string;
-  ridersCollectionId:string;
-  driversLicenceBucketId:string;
-  promoOfferCollectionId:string;
-  promoOfferBucketId:string;
-  discountsCollectionId:string;
-  discountBucketId:string;
-  promoImagesBucketId:string;
-  categoryLogosBucketId:string;
-  extrasCollectionId:string;
-  extrasBucketId:string;
+  ridersCollectionId: string;
+  driversLicenceBucketId: string;
+  promoOfferCollectionId: string;
+  promoOfferBucketId: string;
+  discountsCollectionId: string;
+  discountBucketId: string;
+  promoImagesBucketId: string;
+  categoryLogosBucketId: string;
+  extrasCollectionId: string;
+  extrasBucketId: string;
+  smartSmsApiToken: string;
+  smartSmsSenderId: string;
 }
 
 // Validate environment variables
@@ -63,25 +65,32 @@ export function validateEnv(): EnvConfig {
     payStackPublicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
     guestUserCollectionId:
       process.env.NEXT_PUBLIC_APPWRITE_GUEST_USER_COLLECTION_ID,
-    newsLetterCollectionId: process.env.NEXT_PUBLIC_APPWRITE_NEWSLETTER_COLLECTION_ID,
-    vendorsCollectionId:process.env.NEXT_PUBLIC_VENDORS_COLLECTION_ID,
-    ridersCollectionId:process.env.NEXT_PUBLIC_RIDERS_COLLECTION_ID,
-    driversLicenceBucketId:process.env.NEXT_PUBLIC_APPWRITE_DRIVERS_LICENCE_COLLECTION_ID,
-    promoOfferCollectionId:process.env.NEXT_PUBLIC_APPWRITE_PROMO_OFFER_COLLECTION_ID,
-    promoOfferBucketId:process.env.NEXT_PUBLIC_APPWRITE_PROMO_OFFER_BUCKET_ID,
-    discountsCollectionId:process.env.NEXT_PUBLIC_APPWRITE_DISCOUNTS_COLLECTION_ID,
-    discountBucketId:process.env.NEXT_PUBLIC_APPWRITE_DISCOUNT_BUCKET_ID,
-    promoImagesBucketId:process.env.NEXT_PUBLIC_APPWRITE_PROMO_IMAGES_BUCKET_ID,
-    categoryLogosBucketId:process.env.NEXT_PUBLIC_APPWRITE_CATEGORY_LOGO_BUCKET_ID,
-    extrasCollectionId:process.env.NEXT_PUBLIC_EXTRAS_COLLECTION_ID,
-    extrasBucketId:process.env.NEXT_PUBLIC_EXTRAS_BUCKET_ID,
+    newsLetterCollectionId:
+      process.env.NEXT_PUBLIC_APPWRITE_NEWSLETTER_COLLECTION_ID,
+    vendorsCollectionId: process.env.NEXT_PUBLIC_VENDORS_COLLECTION_ID,
+    ridersCollectionId: process.env.NEXT_PUBLIC_RIDERS_COLLECTION_ID,
+    driversLicenceBucketId:
+      process.env.NEXT_PUBLIC_APPWRITE_DRIVERS_LICENCE_COLLECTION_ID,
+    promoOfferCollectionId:
+      process.env.NEXT_PUBLIC_APPWRITE_PROMO_OFFER_COLLECTION_ID,
+    promoOfferBucketId: process.env.NEXT_PUBLIC_APPWRITE_PROMO_OFFER_BUCKET_ID,
+    discountsCollectionId:
+      process.env.NEXT_PUBLIC_APPWRITE_DISCOUNTS_COLLECTION_ID,
+    discountBucketId: process.env.NEXT_PUBLIC_APPWRITE_DISCOUNT_BUCKET_ID,
+    promoImagesBucketId:
+      process.env.NEXT_PUBLIC_APPWRITE_PROMO_IMAGES_BUCKET_ID,
+    categoryLogosBucketId:
+      process.env.NEXT_PUBLIC_APPWRITE_CATEGORY_LOGO_BUCKET_ID,
+    extrasCollectionId: process.env.NEXT_PUBLIC_EXTRAS_COLLECTION_ID,
+    extrasBucketId: process.env.NEXT_PUBLIC_EXTRAS_BUCKET_ID,
+    smartSmsApiToken: process.env.NEXT_PUBLIC_RIDEX_SMS_TOKEN,
+    smartSmsSenderId: process.env.NEXT_PUBLIC_SENDER_ID,
   };
 
   // Check for undefined environment variables
   const missingVars = Object.entries(requiredEnvVars)
     .filter(([_, value]) => value === undefined)
     .map(([key]) => key);
-
 
   if (missingVars.length > 0) {
     console.log("The missing vars are", missingVars);
@@ -105,24 +114,26 @@ export function validateEnv(): EnvConfig {
     popularItemsCollectionId: requiredEnvVars.popularItemsCollectionId!,
     popularBucketId: requiredEnvVars.popularBucketId!,
     userCollectionId: requiredEnvVars.userCollectionId!,
-    googleMapsApiKey: requiredEnvVars.googleMapsApiKey!, 
+    googleMapsApiKey: requiredEnvVars.googleMapsApiKey!,
     bookedOrdersCollectionId: requiredEnvVars.bookedOrdersCollectionId!,
     mapBoxAccessToken: requiredEnvVars.mapBoxAccessToken!,
     notificationCollectionId: requiredEnvVars.notificationCollectionId!,
     payStackPublickKey: requiredEnvVars.payStackPublicKey!,
     guestUserCollectionId: requiredEnvVars.guestUserCollectionId!,
-    newsLetterCollectionId:requiredEnvVars.newsLetterCollectionId!,
-    vendorsCollectionId:requiredEnvVars.vendorsCollectionId!,
-    ridersCollectionId:requiredEnvVars.ridersCollectionId!,
-    driversLicenceBucketId:requiredEnvVars.driversLicenceBucketId!,
-    promoOfferCollectionId:requiredEnvVars.promoOfferCollectionId!,
-    promoOfferBucketId:requiredEnvVars.promoOfferBucketId!,
-    discountsCollectionId:requiredEnvVars.discountsCollectionId!,
-    discountBucketId:requiredEnvVars.discountBucketId!,
-    promoImagesBucketId:requiredEnvVars.promoImagesBucketId!,
-    categoryLogosBucketId:requiredEnvVars.categoryLogosBucketId!,
-    extrasBucketId:requiredEnvVars.extrasBucketId!,
-    extrasCollectionId:requiredEnvVars.extrasCollectionId!,
+    newsLetterCollectionId: requiredEnvVars.newsLetterCollectionId!,
+    vendorsCollectionId: requiredEnvVars.vendorsCollectionId!,
+    ridersCollectionId: requiredEnvVars.ridersCollectionId!,
+    driversLicenceBucketId: requiredEnvVars.driversLicenceBucketId!,
+    promoOfferCollectionId: requiredEnvVars.promoOfferCollectionId!,
+    promoOfferBucketId: requiredEnvVars.promoOfferBucketId!,
+    discountsCollectionId: requiredEnvVars.discountsCollectionId!,
+    discountBucketId: requiredEnvVars.discountBucketId!,
+    promoImagesBucketId: requiredEnvVars.promoImagesBucketId!,
+    categoryLogosBucketId: requiredEnvVars.categoryLogosBucketId!,
+    extrasBucketId: requiredEnvVars.extrasBucketId!,
+    extrasCollectionId: requiredEnvVars.extrasCollectionId!,
+    smartSmsApiToken: requiredEnvVars.smartSmsApiToken!,
+    smartSmsSenderId: requiredEnvVars.smartSmsSenderId!,
   };
 }
 
