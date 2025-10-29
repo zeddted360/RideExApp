@@ -1,9 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { databases, fileUrl, validateEnv } from "@/utils/appwrite";
+import { databases,  validateEnv } from "@/utils/appwrite";
 import { Query } from "appwrite";
-import { Loader2 } from "lucide-react";
-import Image from "next/image";
 import { IPromoOfferFetched } from "../../types/types";
 import PromotionalImageManager from "./PromotionalImageManager";
 

@@ -78,6 +78,7 @@ const AccountTab: FC<IAccountTabProps> = ({
           vendorId: data.vendorId,
           logo: data.logo as string | FileList,
           schedule: normalizedSchedule,
+          address:data.address
         };
 
         // Update the restaurant

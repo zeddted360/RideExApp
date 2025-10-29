@@ -36,6 +36,7 @@ interface EnvConfig {
   extrasBucketId: string;
   smartSmsApiToken: string;
   smartSmsSenderId: string;
+  adminPhoneNumber:string;
 }
 
 // Validate environment variables
@@ -85,6 +86,7 @@ export function validateEnv(): EnvConfig {
     extrasBucketId: process.env.NEXT_PUBLIC_EXTRAS_BUCKET_ID,
     smartSmsApiToken: process.env.NEXT_PUBLIC_RIDEX_SMS_TOKEN,
     smartSmsSenderId: process.env.NEXT_PUBLIC_SENDER_ID,
+    adminPhoneNumber: process.env.NEXT_PUBLIC_ADMIN_PHONE_NUMBER,
   };
 
   // Check for undefined environment variables
@@ -134,6 +136,7 @@ export function validateEnv(): EnvConfig {
     extrasCollectionId: requiredEnvVars.extrasCollectionId!,
     smartSmsApiToken: requiredEnvVars.smartSmsApiToken!,
     smartSmsSenderId: requiredEnvVars.smartSmsSenderId!,
+    adminPhoneNumber:requiredEnvVars.adminPhoneNumber!,
   };
 }
 

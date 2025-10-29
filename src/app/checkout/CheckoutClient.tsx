@@ -18,6 +18,7 @@ import {
   INotification,
   ICartItemFetched,
   ISelectedExtra,
+  IBookedOrderFetched,
 } from "../../../types/types";
 import { calculateDeliveryFee } from "@/utils/deliveryFeeCalculator";
 import { Loader } from "@googlemaps/js-api-loader";
@@ -40,6 +41,10 @@ import LoadingClient from "./LoadingClient";
 import OffLocationModal from "./OffLocationModal";
 import { Button } from "@/components/ui/button";
 import ExceededModal from "./ExceededModal";
+import {
+  formatNigerianPhone,
+  sendOrderFeedback,
+} from "@/utils/sendSmsToNumber";
 
 export default function CheckoutClient() {
   const [selectedBranch, setSelectedBranch] = useState(1);
@@ -529,7 +534,7 @@ export default function CheckoutClient() {
       };
 
       const { databaseId, bookedOrdersCollectionId } = validateEnv();
-      await databases.createDocument(
+      const placedOrder: IBookedOrderFetched = await databases.createDocument(
         databaseId,
         bookedOrdersCollectionId,
         orderId,
@@ -548,6 +553,15 @@ export default function CheckoutClient() {
       );
       dispatch(resetOrders());
 
+      const smsResult = await sendOrderFeedback({
+        customer: user.fullName || "Guest_user",
+        number: formatNigerianPhone(phoneNumber),
+        orderId: placedOrder.riderCode || "",
+        status: placedOrder.status,
+      });
+      if (!smsResult.success) {
+        console.warn("SMS failed, but order is confirmed");
+      }
       router.push("/order-confirmation");
     } catch (err) {
       handleError(

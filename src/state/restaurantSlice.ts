@@ -154,6 +154,7 @@ export const updateAsyncRestaurant = createAsyncThunk<
       distance: data.distance,
       rating: data.rating,
       schedule: data.schedule && data.schedule?.map((day) => JSON.stringify(day)),
+      address:data.address,
     };
     // Handle logo update if new file provided
     if (data.logo instanceof FileList && data.logo.length > 0) {

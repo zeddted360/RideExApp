@@ -1,95 +1,82 @@
-import { validateEnv } from "./appwrite";
+import toast from "react-hot-toast";
 
-// Utility function to send SMS using Smart SMS Solutions API
-async function sendSMSToNumber(to: string, message: string) {
-  const { smartSmsSenderId } = validateEnv();
-  const token = "01kdOKcv0332xYSWjjRe6soZWV1BWuziZnY8vjNQAIWUip8TyH";
-
-  const formData = new FormData();
-  formData.append("token", token);
-  formData.append("sender", smartSmsSenderId);
-  formData.append("to", to);
-  formData.append("message", message);
-  formData.append("type", "0");
-  formData.append("routing", "3"); // Routing for DND numbers in Nigeria
-
-  const response = await fetch(
-    "https://app.smartsmssolutions.com/io/api/client/v1/sms/",
-    {
-      method: "POST",
-      body: formData,
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-  const data = await response.text(); // As per example, response is text
-
-  // Parse response if it's JSON, or handle as text
-  let parsedData;
-  try {
-    parsedData = JSON.parse(data);
-  } catch {
-    parsedData = { state: "success" }; // Assume success if not JSON
-  }
-
-  if (parsedData.state !== "success") {
-    throw new Error(parsedData.Message || "Failed to send SMS");
-  }
-
-  return parsedData;
-}
-
-// Reusable function for sending order feedback SMS
-async function sendOrderFeedback({
+// utils/sendSmsToNumber.ts
+export async function sendOrderFeedback({
   customer,
   number,
   status,
   adminNumber,
   orderId,
-  message,
+  message, // Optional custom message
 }: {
   customer: string;
   number: string;
   status: string;
   adminNumber?: string;
   orderId: string;
-  message?: string;
+  message?: string; // Optional - if provided, uses this; else builds default
 }) {
   try {
-    // Custom message if not provided
-    const customerMessage =
-      message ||
-      `Dear ${customer}, your order #${orderId} is now ${status
-        .replace(/_/g, " ")
-        .toLowerCase()}. Thank you for choosing us!`;
+    const response = await fetch("/api/send-sms", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: number,
+        message, // Send as-is (backend will handle if undefined)
+        adminNumber,
+        customer,
+        status,
+        orderId,
+      }),
+    });
 
-    // Send to customer
-    await sendSMSToNumber(number, customerMessage);
+    const data = await response.json();
 
-    // Send to admin if adminNumber is provided
-    if (adminNumber) {
-      const adminMessage = `Admin Alert: Order #${orderId} for ${customer} (${number}) is now ${status
-        .replace(/_/g, " ")
-        .toLowerCase()}.`;
-      await sendSMSToNumber(adminNumber, adminMessage);
+    if (!response.ok) {
+      toast.error(`SMS notification failed: ${data.error || response.status}`,{duration:8000});
+      console.warn("SMS failed but order processing continues:", data);
+      return { success: false }; // Non-blocking: return failure but don't throw
     }
 
-    console.log("SMS sent successfully");
+    console.log("SMS sent successfully:", data);
+    return { success: true }; // Success indicator
   } catch (error) {
     console.error("Error sending SMS:", error);
-    throw error;
+    toast.error(
+      `SMS notification failed: ${(error as Error).message}`
+    );
+    return { success: false }; // Non-blocking: continue order flow
   }
 }
 
-// Example usage:
-// await sendOrderFeedback({
-//   customer: 'John Doe',
-//   number: '08012345678',
-//   status: 'out_for_delivery',
-//   adminNumber: '08098765432', // Optional
-//   orderId: 'ORD12345',
-//   message: 'Optional custom message' // Optional, overrides default
-// });
+
+// Handles formats like: +234xxxxxxxxx, 234xxxxxxxxx, 0xxxxxxxxx
+// Assumes input is a valid Nigerian mobile number (10 digits after country code)
+export function formatNigerianPhone(phone: string): string {
+  // Remove all non-digits
+  const digitsOnly = phone.replace(/\D/g, '');
+
+  // Check if it starts with 234 (international without +)
+  if (digitsOnly.startsWith('234')) {
+    return '0' + digitsOnly.slice(3); // Convert to 0xxxxxxxxx
+  }
+
+  // Check if it starts with +234
+  if (phone.startsWith('+234')) {
+    return '0' + digitsOnly.slice(3);
+  }
+
+  // If already starts with 0 and has 11 digits, return as-is
+  if (digitsOnly.startsWith('0') && digitsOnly.length === 11) {
+    return digitsOnly;
+  }
+
+  // If it's 10 digits (assuming local format), prepend 0 if needed
+  if (digitsOnly.length === 10) {
+    return '0' + digitsOnly;
+  }
+
+  // Invalid: throw or return original (customize as needed)
+  throw new Error('Invalid Nigerian phone number format');
+}
+
